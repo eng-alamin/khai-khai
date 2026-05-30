@@ -64,3 +64,30 @@ Route::middleware(['auth', 'role:vendor'])->group(function () {
 
 // Rider 
 Route::get('rider/register', App\Livewire\VendorRegistrationWizard::class)->name('rider.register');
+
+
+
+
+
+    Route::get('clear', function () {
+        Artisan::call('optimize:clear');
+        return redirect()->back()->with('success','Thanks for the fast site!');
+    })->name('clear');
+    Route::get('backup', function () {
+        // Artisan::call('backup:clean');
+        Artisan::call('backup:run');
+        return redirect()->back()->with('success','Thanks for the backup!');
+    })->name('backup');
+    Route::get('link', function () {
+        Artisan::call('storage:link');
+        return redirect()->back()->with('success','Thanks for the link storage!');
+    });
+    Route::get('fresh', function () {
+        Artisan::call('migrate:fresh --seed');
+    });
+    Route::get('migrate', function () {
+        Artisan::call('migrate');
+    });
+      Route::get('key', function () {
+        Artisan::call('key:generate');
+    });
