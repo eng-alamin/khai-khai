@@ -18,8 +18,8 @@ return new class extends Migration
             $table->decimal('discount_value', 10, 2);
             $table->enum('applies_to', ['all_items', 'category', 'specific_item']);
             $table->unsignedBigInteger('target_id')->nullable()->comment('category_id or menu_item_id');
-            $table->timestamp('starts_at');
-            $table->timestamp('ends_at');
+            $table->timestamp('starts_at')->nullable();
+            $table->timestamp('ends_at')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 

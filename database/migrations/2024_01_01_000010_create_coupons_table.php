@@ -19,8 +19,8 @@ return new class extends Migration
             $table->unsignedInteger('usage_limit')->nullable()->comment('null = unlimited');
             $table->unsignedInteger('used_count')->default(0);
             $table->unsignedInteger('per_user_limit')->nullable();
-            $table->timestamp('valid_from');
-            $table->timestamp('valid_until');
+            $table->timestamp('valid_from')->nullable();
+            $table->timestamp('valid_until')->nullable();
             $table->boolean('is_active')->default(true);
             $table->foreignId('created_by')->constrained('users');
             $table->timestamps();

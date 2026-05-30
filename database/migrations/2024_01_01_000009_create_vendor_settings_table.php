@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedInteger('prep_time_min')->default(20)->comment('default prep time in minutes');
             $table->boolean('notification_sound')->default(true);
             $table->unsignedInteger('min_order_amount')->nullable()->comment('BDT paisa');
-            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->timestamps();
         });
     }
 
