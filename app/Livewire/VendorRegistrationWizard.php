@@ -6,6 +6,7 @@ use Livewire\Component;
 use App\Models\Restaurant;
 use App\Models\User;
 use App\Models\VendorSetting;
+use App\Models\MenuCategory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -166,32 +167,31 @@ class VendorRegistrationWizard extends Component
             $this->rulesForStep(4),
             $this->messagesForStep(4)
         );
- 
+
         DB::transaction(function () {
+
             // 1. Create user
             $user = User::create([
-                'uuid'          => Str::uuid(),
-                'name'          => $this->name,
-                'phone'         => $this->phone,
-                'email'         => $this->email ?: null,
-                'password'      => $this->password,
-                'role'          => 'vendor',
-                'is_verified'   => false,
-                'is_active'     => true,
-                'points'     => 0,
+                'uuid'        => Str::uuid(),
+                'name'        => $this->name,
+                'phone'       => $this->phone,
+                'email'       => $this->email ?: null,
+                'password'    => $this->password,
+                'role'        => 'vendor',
+                'is_verified' => false,
+                'is_active'   => true,
+                'points'      => 0,
             ]);
- 
-            // 2. Handle file uploads
-            $logoPath   = null;
-            $bannerPath = null;
- 
-            if ($this->logo) {
-                $logoPath = $this->logo->store('restaurants/logos', 'public');
-            }
-            if ($this->banner) {
-                $bannerPath = $this->banner->store('restaurants/banners', 'public');
-            }
- 
+
+            // 2. Upload files
+            $logoPath = $this->logo
+                ? $this->logo->store('restaurants/logos', 'public')
+                : null;
+
+            $bannerPath = $this->banner
+                ? $this->banner->store('restaurants/banners', 'public')
+                : null;
+
             // 3. Create restaurant
             $restaurant = Restaurant::create([
                 'owner_id'         => $user->id,
@@ -201,29 +201,52 @@ class VendorRegistrationWizard extends Component
                 'phone'            => $this->restaurant_phone,
                 'address'          => $this->address,
                 'city'             => $this->city,
-                // 'postal_code'      => $this->postal_code ?: null,
                 'logo_url'         => $logoPath ? Storage::url($logoPath) : null,
                 'banner_url'       => $bannerPath ? Storage::url($bannerPath) : null,
-                'delivery_fee'     => $this->delivery_fee * 100,       // BDT → paisa
+                'delivery_fee'     => $this->delivery_fee * 100,
                 'avg_delivery_min' => $this->avg_delivery_min,
                 'avg_delivery_max' => $this->avg_delivery_max,
-                'commission_rate'  => 15.00,                            // default platform rate
+                'commission_rate'  => 15.00,
                 'is_open'          => false,
-                'is_approved'      => false,                            // pending admin review
+                'is_approved'      => false,
                 'is_active'        => true,
             ]);
- 
-            // 4. Create vendor settings
+
+            // 4. DEFAULT MENU CATEGORIES CREATE (IMPORTANT)
+            $categories = [
+                ['name' => 'Burger', 'emoji' => '🍔'],
+                ['name' => 'Pizza', 'emoji' => '🍕'],
+                ['name' => 'Fried Chicken', 'emoji' => '🍗'],
+                ['name' => 'Biryani', 'emoji' => '🍛'],
+                ['name' => 'Drinks', 'emoji' => '🥤'],
+                ['name' => 'Dessert', 'emoji' => '🍰'],
+            ];
+
+            foreach ($categories as $index => $cat) {
+                \App\Models\MenuCategory::firstOrCreate(
+                    [
+                        'restaurant_id' => $restaurant->id,
+                        'name' => $cat['name'],
+                    ],
+                    [
+                        'emoji'      => $cat['emoji'],
+                        'sort_order' => $index + 1,
+                        'is_active'  => true,
+                    ]
+                );
+            }
+
+            // 5. Vendor settings
             VendorSetting::create([
-                'restaurant_id'     => $restaurant->id,
-                'auto_accept'       => $this->auto_accept,
-                'prep_time_min'     => $this->prep_time_min,
-                'notification_sound'=> true,
-                'min_order_amount'  => $this->min_order_amount * 100,  // BDT → paisa
+                'restaurant_id'      => $restaurant->id,
+                'auto_accept'        => $this->auto_accept,
+                'prep_time_min'      => $this->prep_time_min,
+                'notification_sound' => true,
+                'min_order_amount'   => $this->min_order_amount * 100,
             ]);
         });
- 
-        // Redirect to success page
+
+        // Redirect
         $this->redirect(route('vendor.registration.success'), navigate: true);
     }
  

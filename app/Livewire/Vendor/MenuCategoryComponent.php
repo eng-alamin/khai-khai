@@ -3,7 +3,6 @@
 namespace App\Livewire\Vendor;
 
 use App\Models\MenuCategory;
-use App\Models\Restaurant;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -14,31 +13,32 @@ class MenuCategoryComponent extends Component
 
     protected string $paginationTheme = 'bootstrap';
 
-    // ── List ─────────────────────────────────────────────
+    // ── List / Filter ─────────────────────────────────────
     public string $search        = '';
     public int    $perPage       = 10;
     public string $sortField     = 'sort_order';
     public string $sortDirection = 'asc';
+    public string $filterStatus  = '';   // '' | 'active' | 'inactive'
 
-    // ── Modal ────────────────────────────────────────────
-    public bool  $showModal     = false;
-    public bool  $confirmDelete = false;
-    public ?int  $deleteId      = null;
+    // ── Modal ─────────────────────────────────────────────
+    public bool $showModal     = false;
+    public bool $confirmDelete = false;
+    public ?int $deleteId      = null;
 
-    // ── Form ─────────────────────────────────────────────
+    // ── Form ──────────────────────────────────────────────
     public ?int   $editId     = null;
     public string $name       = '';
     public string $emoji      = '';
     public int    $sort_order = 0;
     public bool   $is_active  = true;
 
-    // ── Restaurant of logged-in vendor ───────────────────
+    // ── Restaurant helper ─────────────────────────────────
     private function restaurantId(): int
     {
         return Auth::user()->restaurant->id;
     }
 
-    // ── Validation ───────────────────────────────────────
+    // ── Validation ────────────────────────────────────────
     protected function rules(): array
     {
         return [
@@ -52,16 +52,14 @@ class MenuCategoryComponent extends Component
     protected function messages(): array
     {
         return [
-            'name.required' => 'ক্যাটাগরির নাম দিন।',
-            'name.max'      => 'নাম সর্বোচ্চ ৮০ অক্ষর হতে পারবে।',
+            'name.required' => 'Please enter a category name.',
+            'name.max'      => 'Name must not exceed 80 characters.',
         ];
     }
 
-    // ── Pagination reset on search ────────────────────────
-    public function updatingSearch(): void
-    {
-        $this->resetPage();
-    }
+    // ── Watchers ─────────────────────────────────────────
+    public function updatingSearch(): void       { $this->resetPage(); }
+    public function updatingFilterStatus(): void { $this->resetPage(); }
 
     // ── Sorting ───────────────────────────────────────────
     public function sortBy(string $field): void
@@ -96,7 +94,7 @@ class MenuCategoryComponent extends Component
         $this->showModal  = true;
     }
 
-    // ── Save (create or update) ───────────────────────────
+    // ── Save ─────────────────────────────────────────────
     public function save(): void
     {
         $this->validate();
@@ -113,32 +111,42 @@ class MenuCategoryComponent extends Component
             MenuCategory::where('restaurant_id', $this->restaurantId())
                 ->findOrFail($this->editId)
                 ->update($data);
-            session()->flash('success', 'ক্যাটাগরি সফলভাবে আপডেট হয়েছে!');
+            session()->flash('success', 'Category updated successfully!');
         } else {
             MenuCategory::create($data);
-            session()->flash('success', 'নতুন ক্যাটাগরি তৈরি হয়েছে!');
+            session()->flash('success', 'New category created!');
         }
 
         $this->showModal = false;
         $this->resetForm();
     }
 
-    // ── Confirm delete ────────────────────────────────────
+    // ── Quick toggle ──────────────────────────────────────
+    public function toggleActive(int $id): void
+    {
+        $category = MenuCategory::where('restaurant_id', $this->restaurantId())
+            ->findOrFail($id);
+        $category->update(['is_active' => ! $category->is_active]);
+        session()->flash(
+            'success',
+            $category->is_active ? 'Category activated.' : 'Category deactivated.'
+        );
+    }
+
+    // ── Confirm / Delete ─────────────────────────────────
     public function confirmDeleteRecord(int $id): void
     {
         $this->deleteId      = $id;
         $this->confirmDelete = true;
     }
 
-    // ── Delete ────────────────────────────────────────────
     public function deleteRecord(): void
     {
         $record = MenuCategory::where('restaurant_id', $this->restaurantId())
             ->findOrFail($this->deleteId);
 
-        // Prevent delete if items exist
         if ($record->menuItems()->count() > 0) {
-            session()->flash('error', 'এই ক্যাটাগরিতে আইটেম আছে। আগে আইটেমগুলো মুছুন।');
+            session()->flash('error', 'This category has items. Please remove the items first.');
             $this->confirmDelete = false;
             $this->deleteId      = null;
             return;
@@ -147,10 +155,10 @@ class MenuCategoryComponent extends Component
         $record->delete();
         $this->confirmDelete = false;
         $this->deleteId      = null;
-        session()->flash('success', 'ক্যাটাগরি মুছে ফেলা হয়েছে!');
+        session()->flash('success', 'Category deleted successfully!');
     }
 
-    // ── Reset form fields ─────────────────────────────────
+    // ── Reset form ────────────────────────────────────────
     private function resetForm(): void
     {
         $this->reset(['name', 'emoji', 'editId']);
@@ -164,15 +172,23 @@ class MenuCategoryComponent extends Component
     {
         $categories = MenuCategory::query()
             ->where('restaurant_id', $this->restaurantId())
-            ->when(
-                $this->search,
-                fn ($q) => $q->where('name', 'like', "%{$this->search}%")
+            ->when($this->search, fn ($q) =>
+                $q->where('name', 'like', "%{$this->search}%")
+            )
+            ->when($this->filterStatus === 'active', fn ($q) =>
+                $q->where('is_active', true)
+            )
+            ->when($this->filterStatus === 'inactive', fn ($q) =>
+                $q->where('is_active', false)
             )
             ->withCount('menuItems')
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
 
         return view('livewire.vendor.menu-category-component', compact('categories'))
-            ->layout('layouts.app', ['title' => 'মেনু ক্যাটাগরি | KhaiKhai']);
+            ->layout('layouts.vendor', [
+                'title'           => 'Menu Category | KhaiKhai',
+                'breadcrumbTitle' => 'Categories',
+            ]);
     }
 }

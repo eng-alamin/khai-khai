@@ -187,19 +187,6 @@
 
   @push('scripts')
       <script>
-          function toggleSidebar() {
-            document.getElementById('mainSidebar').classList.toggle('open');
-            document.getElementById('sidebarOverlay').classList.toggle('show');
-          }
-          function closeSidebar() {
-            document.getElementById('mainSidebar').classList.remove('open');
-            document.getElementById('sidebarOverlay').classList.remove('show');
-          }
-          function toggleNav1(el) {
-            el.classList.toggle('open');
-            el.nextElementSibling.classList.toggle('open');
-          }
-
           /* ─── Chart ─── */
           new Chart(document.getElementById('vendorChart'), {
             type: 'bar',

@@ -17,28 +17,29 @@ class MenuItemComponent extends Component
     protected string $paginationTheme = 'bootstrap';
 
     // ── List / Filter ─────────────────────────────────────
-    public string $search      = '';
-    public int    $perPage     = 10;
-    public string $sortField   = 'sort_order';
-    public string $sortDirection = 'asc';
-    public string $filterCategory = '';   // '' = all
+    public string $search          = '';
+    public int    $perPage         = 10;
+    public string $sortField       = 'sort_order';
+    public string $sortDirection   = 'asc';
+    public string $filterCategory  = '';   // '' = all
+    public string $filterStatus    = '';   // '' | 'available' | 'unavailable'
 
     // ── Modal ─────────────────────────────────────────────
-    public bool  $showModal     = false;
-    public bool  $confirmDelete = false;
-    public ?int  $deleteId      = null;
+    public bool $showModal     = false;
+    public bool $confirmDelete = false;
+    public ?int $deleteId      = null;
 
     // ── Form ──────────────────────────────────────────────
-    public ?int   $editId      = null;
-    public int    $category_id = 0;
-    public string $name        = '';
-    public string $description = '';
-    public int    $price       = 0;       // BDT (stored as paisa internally)
-    public string $emoji       = '';
-    public $image              = null;    // new upload
-    public ?string $existingImage = null; // current saved image URL
-    public int    $sort_order  = 0;
-    public bool   $is_available = true;
+    public ?int    $editId        = null;
+    public int     $category_id   = 0;
+    public string  $name          = '';
+    public string  $description   = '';
+    public int     $price         = 0;
+    public string  $emoji         = '';
+    public         $image         = null;
+    public ?string $existingImage = null;
+    public int     $sort_order    = 0;
+    public bool    $is_available  = true;
 
     // ── Restaurant helper ─────────────────────────────────
     private function restaurantId(): int
@@ -73,19 +74,20 @@ class MenuItemComponent extends Component
     protected function messages(): array
     {
         return [
-            'category_id.required' => 'ক্যাটাগরি নির্বাচন করুন।',
-            'category_id.min'      => 'ক্যাটাগরি নির্বাচন করুন।',
-            'name.required'        => 'আইটেমের নাম দিন।',
-            'name.max'             => 'নাম সর্বোচ্চ ১২০ অক্ষর হতে পারবে।',
-            'price.required'       => 'মূল্য দিন।',
-            'price.min'            => 'মূল্য কমপক্ষে ১ টাকা হতে হবে।',
-            'image.max'            => 'ছবি সর্বোচ্চ ২ MB হতে পারবে।',
+            'category_id.required' => 'Please select a category.',
+            'category_id.min'      => 'Please select a category.',
+            'name.required'        => 'Please enter an item name.',
+            'name.max'             => 'Name must not exceed 120 characters.',
+            'price.required'       => 'Please enter a price.',
+            'price.min'            => 'Price must be at least ৳1.',
+            'image.max'            => 'Image must not exceed 2 MB.',
         ];
     }
 
-    // ── Reset page on search/filter change ───────────────
-    public function updatingSearch(): void        { $this->resetPage(); }
+    // ── Watchers ─────────────────────────────────────────
+    public function updatingSearch(): void         { $this->resetPage(); }
     public function updatingFilterCategory(): void { $this->resetPage(); }
+    public function updatingFilterStatus(): void   { $this->resetPage(); }
 
     // ── Sorting ───────────────────────────────────────────
     public function sortBy(string $field): void
@@ -116,7 +118,7 @@ class MenuItemComponent extends Component
         $this->category_id   = $record->category_id ?? 0;
         $this->name          = $record->name;
         $this->description   = $record->description ?? '';
-        $this->price         = (int) ($record->price / 100); // paisa → BDT
+        $this->price         = (int) ($record->price / 100);
         $this->emoji         = $record->emoji ?? '';
         $this->existingImage = $record->image_url;
         $this->sort_order    = $record->sort_order;
@@ -129,16 +131,14 @@ class MenuItemComponent extends Component
     {
         $this->validate();
 
-        // Handle image upload
         $imagePath = $this->existingImage;
         if ($this->image) {
-            // Delete old image if replacing
             if ($this->existingImage && str_starts_with($this->existingImage, '/storage/')) {
                 Storage::disk('public')->delete(
                     str_replace('/storage/', '', $this->existingImage)
                 );
             }
-            $stored   = $this->image->store('menu-items', 'public');
+            $stored    = $this->image->store('menu-items', 'public');
             $imagePath = Storage::url($stored);
         }
 
@@ -147,7 +147,7 @@ class MenuItemComponent extends Component
             'category_id'   => $this->category_id ?: null,
             'name'          => $this->name,
             'description'   => $this->description ?: null,
-            'price'         => $this->price * 100,   // BDT → paisa
+            'price'         => $this->price * 100,
             'emoji'         => $this->emoji ?: null,
             'image_url'     => $imagePath,
             'sort_order'    => $this->sort_order,
@@ -158,10 +158,10 @@ class MenuItemComponent extends Component
             MenuItem::where('restaurant_id', $this->restaurantId())
                 ->findOrFail($this->editId)
                 ->update($data);
-            session()->flash('success', 'মেনু আইটেম সফলভাবে আপডেট হয়েছে!');
+            session()->flash('success', 'Menu item updated successfully!');
         } else {
             MenuItem::create($data);
-            session()->flash('success', 'নতুন মেনু আইটেম তৈরি হয়েছে!');
+            session()->flash('success', 'New menu item created!');
         }
 
         $this->showModal = false;
@@ -173,23 +173,21 @@ class MenuItemComponent extends Component
     {
         $item = MenuItem::where('restaurant_id', $this->restaurantId())->findOrFail($id);
         $item->update(['is_available' => ! $item->is_available]);
-        session()->flash('success', $item->is_available ? 'আইটেম উপলব্ধ করা হয়েছে।' : 'আইটেম অনুপলব্ধ করা হয়েছে।');
+        session()->flash('success', $item->is_available ? 'Item marked as available.' : 'Item marked as unavailable.');
     }
 
-    // ── Confirm delete ────────────────────────────────────
+    // ── Confirm / Delete ─────────────────────────────────
     public function confirmDeleteRecord(int $id): void
     {
         $this->deleteId      = $id;
         $this->confirmDelete = true;
     }
 
-    // ── Delete ────────────────────────────────────────────
     public function deleteRecord(): void
     {
         $record = MenuItem::where('restaurant_id', $this->restaurantId())
             ->findOrFail($this->deleteId);
 
-        // Delete image file
         if ($record->image_url && str_starts_with($record->image_url, '/storage/')) {
             Storage::disk('public')->delete(
                 str_replace('/storage/', '', $record->image_url)
@@ -199,7 +197,7 @@ class MenuItemComponent extends Component
         $record->delete();
         $this->confirmDelete = false;
         $this->deleteId      = null;
-        session()->flash('success', 'মেনু আইটেম মুছে ফেলা হয়েছে!');
+        session()->flash('success', 'Menu item deleted successfully!');
     }
 
     // ── Reset form ────────────────────────────────────────
@@ -219,13 +217,17 @@ class MenuItemComponent extends Component
         $items = MenuItem::query()
             ->where('restaurant_id', $this->restaurantId())
             ->with('category')
-            ->when(
-                $this->search,
-                fn ($q) => $q->where('name', 'like', "%{$this->search}%")
+            ->when($this->search, fn ($q) =>
+                $q->where('name', 'like', "%{$this->search}%")
             )
-            ->when(
-                $this->filterCategory,
-                fn ($q) => $q->where('category_id', $this->filterCategory)
+            ->when($this->filterCategory, fn ($q) =>
+                $q->where('category_id', $this->filterCategory)
+            )
+            ->when($this->filterStatus === 'available', fn ($q) =>
+                $q->where('is_available', true)
+            )
+            ->when($this->filterStatus === 'unavailable', fn ($q) =>
+                $q->where('is_available', false)
             )
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
@@ -233,6 +235,9 @@ class MenuItemComponent extends Component
         return view('livewire.vendor.menu-item-component', [
             'items'      => $items,
             'categories' => $this->getCategories(),
-        ])->layout('layouts.app', ['title' => 'মেনু আইটেম | KhaiKhai']);
+        ])->layout('layouts.vendor', [
+            'title'           => 'Menu Items | KhaiKhai',
+            'breadcrumbTitle' => 'Items',
+        ]);
     }
 }

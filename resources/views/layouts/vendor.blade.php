@@ -33,15 +33,16 @@
       <li class="nav-section">Dashboard</li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'dashboard') == true ? 'active' : '' }}" href="{{ route('vendor.dashboard') }}"><span class="material-icons-round nav-icon">dashboard</span><span class="nav-label">Dashboard</span></a></li>
       <li class="nav1-item"><a class="nav1-link" href="vendor-orders.html"><span class="material-icons-round nav-icon">shopping_bag</span><span class="nav-label">লাইভ অর্ডার</span><span class="nav-badge">7</span></a></li>
-      <li class="nav-section">রেস্তোরাঁ</li>
+      <li class="nav-section">Restaurant</li>
       
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'menu/items') == true ? 'active' : '' }}" href="{{ route('menu.items') }}"><span class="material-icons-round nav-icon">restaurant_menu</span><span class="nav-label">Items</span></a></li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'menu/categories') == true ? 'active' : '' }}" href="{{ route('menu.categories') }}"><span class="material-icons-round nav-icon">category</span><span class="nav-label">Categories</span></a></li>
-      <li class="nav1-item"><a class="nav1-link" href="vendor-promo.html"><span class="material-icons-round nav-icon">local_offer</span><span class="nav-label">প্রমোশন</span></a></li>
-      <li class="nav-section">রিপোর্ট</li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'promotions') == true ? 'active' : '' }}" href="{{ route('promotions') }}"><span class="material-icons-round nav-icon">local_offer</span><span class="nav-label">Promotions</span></a></li>
+      <li class="nav-section">Report</li>
       <li class="nav1-item"><a class="nav1-link" href="vendor-earnings.html"><span class="material-icons-round nav-icon">payments</span><span class="nav-label">আয়-ব্যয়</span></a></li>
       <li class="nav1-item"><a class="nav1-link" href="vendor-reviews.html"><span class="material-icons-round nav-icon">star_rate</span><span class="nav-label">রিভিউ</span></a></li>
-      <li class="nav1-item">
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'settings') == true ? 'active' : '' }}" href="{{ route('settings') }}"><span class="material-icons-round nav-icon">manage_accounts</span><span class="nav-label">Settings</span></a></li>
+      {{-- <li class="nav1-item">
         <div class="nav1-link" onclick="toggleNav1(this)">
           <span class="material-icons-round nav-icon">manage_accounts</span>
           <span class="nav-label">সেটিংস</span>
@@ -54,13 +55,20 @@
             <li class="nav2-item"><div class="nav2-link"><span class="nav2-icon">P</span><span class="nav2-label">পেমেন্ট</span></div></li>
           </ul>
         </div>
-      </li>
+      </li> --}}
     </ul>
   </div>
   <div class="sidebar-footer">
     <div class="sf-user">
-      <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=80&q=70" class="sf-avatar" alt="Vendor"/>
-      <div><div class="sf-name">মা'র রান্নাঘর</div><div class="sf-role">Restaurant Owner</div></div>
+      <img 
+    src="{{ auth()->user()->restaurant?->logo_url
+        ? asset('storage/' . auth()->user()->restaurant->logo_url) 
+        : asset('assets/img/default-restaurant.png') }}"
+    class="sf-avatar"
+    alt="{{ auth()->user()->restaurant?->name ?? 'Vendor' }}"
+/>
+      {{-- <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=80&q=70" class="sf-avatar" alt="{{ auth()->user()->restaurant?->name ?? 'Vendor' }}"/> --}}
+      <div><div class="sf-name">{{ auth()->user()->restaurant?->name ?? 'Unknown' }}</div><div class="sf-role">Restaurant Owner</div></div>
     </div>
   </div>
 </aside>
@@ -70,8 +78,8 @@
   <nav class="topnav">
     <button class="topnav-toggle" onclick="toggleSidebar()"><span class="material-icons-round">menu</span></button>
     <div class="breadcrumb-wrap">
-      <div class="breadcrumb-title">Vendor Dashboard</div>
-      <div class="breadcrumb-sub">মা'র রান্নাঘর — গাজীপুর বাজার</div>
+      <div class="breadcrumb-title">{{ $breadcrumbTitle ?? config('app.name') }}</div>
+      {{-- <div class="breadcrumb-sub">মা'র রান্নাঘর — গাজীপুর বাজার</div> --}}
     </div>
     <div class="topnav-search d-none d-md-flex">
       <span class="material-icons-round">search</span>
@@ -102,7 +110,7 @@
         <div class="dropdown-menu dropdown-menu-end user-dropdown-menu">
           <div class="user-info-block">
             <img src="https://i.pravatar.cc/80?img=12" class="user-avatar-lg" alt="Vendor"/>
-            <div><div class="user-name">মা'র রান্নাঘর <span class="badge-pro">Vendor</span></div><a href="#" class="user-email">maa@example.com</a></div>
+            <div><div class="user-name">{{ auth()->user()->restaurant?->name ?? 'Unknown' }} <span class="badge-pro">Vendor</span></div><a href="#" class="user-email">maa@example.com</a></div>
           </div>
           <hr class="dropdown-sep"/>
           <div class="ud-item"><a href="#" class="ud-link signout"><span class="d-flex align-items-center"><span class="material-icons-round ud-icon">logout</span>লগআউট</span></a></div>
@@ -177,6 +185,21 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+      function toggleSidebar() {
+        document.getElementById('mainSidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+      }
+      function closeSidebar() {
+        document.getElementById('mainSidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('show');
+      }
+      function toggleNav1(el) {
+        el.classList.toggle('open');
+        el.nextElementSibling.classList.toggle('open');
+      }
+  </script>
 
 @stack('scripts')
 @livewireScripts

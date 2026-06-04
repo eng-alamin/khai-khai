@@ -9,9 +9,9 @@
 :root {
     --pink: #e91e8c;
     --pink-dark: #c0167a;
-    --pink-light: #ff4dab;
+    --pink-light: #ffe8f3;
     --pink-soft: #fde8f4;
-    --pink-mid: #f9c5e3;
+    --pink-mid: #ff6fab;
     --pink-shadow: rgba(233, 30, 140, 0.28);
     --blue: #1a73e8;
     --orange: #fb8c00;
@@ -20,19 +20,27 @@
     --danger: #ef5350;
     --warning: #fb8c00;
     --success: #43a047;
-    --dark: #111;
+    --dark: #1a1a2e;
     --dark2: #2d2a6e;
-    --muted: #8b909a;
     --border: #f0e6f6;
-    --bg: #f8f5ff;
     --card: #ffffff;
+    --soft-dark: #3d3d5c;
+    --muted: #9494aa;
+    --border: #f0f0f8;
+    --bg: #f7f7fc;
+    --card-bg: #ffffff;
     --sidebar-w: 258px;
     --topnav-h: 62px;
     --radius: 14px;
+    --radius-lg: 18px;
+    --radius-md: 12px;
     --radius-sm: 8px;
     --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.06);
     --shadow: 0 4px 24px rgba(233, 30, 140, 0.12);
-    --font: "Plus Jakarta Sans", "Hind Siliguri", sans-serif;
+    --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.06);
+    --shadow-hover: 0 8px 32px rgba(255, 61, 139, 0.12);
+    --font: "Hind Siliguri", "Noto Sans Bengali", sans-serif;
+    --transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ─── RESET ─── */
@@ -1793,13 +1801,11 @@ img {
        CARD
 ═══════════════════════════════════════ */
 .card {
+    background: var(--card);
+    border-radius: var(--radius);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-    background: #fff;
-    border-radius: var(--radius-card);
-    box-shadow: var(--card-shadow);
-    overflow: visible;
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
 }
 .card-header {
     background: #fff;
@@ -1854,7 +1860,7 @@ img {
 
 /* floating card header */
 .kk-card-header {
-    margin: -20px 20px 0;
+    margin: -36px 20px 0;
     border-radius: 12px;
     padding: 16px 20px;
     position: relative;
@@ -3038,7 +3044,7 @@ footer a {
         padding: 20px 14px 40px;
     }
     .kk-card-header {
-        margin: -20px 12px 0;
+        margin: -36px 12px 0;
         padding: 12px 14px;
     }
     .card-toolbar {
@@ -3049,6 +3055,13 @@ footer a {
     .card-toolbar .btn-pink,
     .card-toolbar .btn-outline {
         justify-content: center;
+    }
+    .card-toolbar button,
+    .card-toolbar input,
+    .card-toolbar optgroup,
+    .card-toolbar select,
+    .card-toolbar textarea {
+        width: 100% !important;
     }
     .topnav-dropdown {
         min-width: 240px !important;
@@ -3459,7 +3472,7 @@ body.dark-mode .pd-menu-item:hover {
         padding: 20px 14px 40px;
     }
     .kk-card-header {
-        margin: -20px 12px 0;
+        margin: -36px 12px 0;
         padding: 12px 14px;
     }
 }
