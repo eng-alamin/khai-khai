@@ -290,7 +290,7 @@
                         @if ($logoUpload)
                             <img src="{{ $logoUpload->temporaryUrl() }}" alt="Logo Preview">
                         @elseif ($logo_url)
-                            <img src="{{ Storage::url($logo_url) }}" alt="Logo">
+                            <img src="{{ asset($logo_url) }}" alt="Logo">
                         @else
                             <div class="kk-img-placeholder">
                                 <i class="fa fa-store" style="font-size:32px;color:var(--muted);"></i>
@@ -326,7 +326,7 @@
                         @if ($bannerUpload)
                             <img src="{{ $bannerUpload->temporaryUrl() }}" alt="Banner Preview">
                         @elseif ($banner_url)
-                            <img src="{{ Storage::url($banner_url) }}" alt="Banner">
+                            <img src="{{ asset($banner_url) }}" alt="Banner">
                         @else
                             <div class="kk-img-placeholder">
                                 <i class="fa fa-image" style="font-size:32px;color:var(--muted);"></i>

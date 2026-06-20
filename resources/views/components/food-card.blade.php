@@ -2,24 +2,23 @@
 @props(['item'])
 
 @php
-    $thumb = $item->image_url
+    $thumb    = $item->image_url
         ?? asset('assets/images/default-menu-image-placeholder.png');
-
-    $price = '৳' . number_format($item->price / 100);
-
-    $catName  = $item->category?->name ?? '';
+    $price    = '৳' . number_format($item->price / 100);
+    $catName  = $item->category?->name  ?? '';
     $catEmoji = $item->category?->emoji ?? '';
     $restName = $item->restaurant?->name ?? '';
 @endphp
 
 <div class="food-card" style="position:relative; overflow:hidden;">
+
     <div style="position:relative; overflow:hidden;">
         <img
             src="{{ $thumb }}"
             class="food-img"
             alt="{{ $item->name }}"
             style="transition: transform 0.4s ease;"
-            onerror="this.src='{{ asset('assetsimages/default-menu-image-placeholder.png') }}'"
+            onerror="this.src='{{ asset('assets/images/default-menu-image-placeholder.png') }}'"
             onmouseover="this.style.transform='scale(1.08)'"
             onmouseout="this.style.transform='scale(1)'"
         >
@@ -50,16 +49,28 @@
 
         <div class="food-footer">
             <span class="food-price">{{ $price }}</span>
+
+            {{--
+                ✅ FIX: wire:click দিয়ে Livewire server event dispatch করো।
+                food-card একটা Blade component — Livewire না।
+                তাই $dispatch() দিয়ে browser event না পাঠিয়ে
+                Livewire.dispatch() দিয়ে server-side CartComponent-কে জানাও।
+            --}}
             <button
                 class="food-add"
                 title="কার্টে যোগ করুন"
-                wire:click="$dispatch('add-to-cart', { id: {{ $item->id }}, name: '{{ addslashes($item->name) }}', price: {{ $item->price }} })"
                 onclick="
-                    this.innerHTML='<i class=\'fa fa-check\'></i>';
-                    this.style.background='var(--success)';
+                    Livewire.dispatch('add-to-cart', {
+                        id:    {{ $item->id }},
+                        name:  '{{ addslashes($item->name) }}',
+                        price: {{ $item->price }}
+                    });
+                    this.innerHTML = '<i class=\'fa fa-check\'></i>';
+                    this.style.background = 'var(--success)';
+                    const btn = this;
                     setTimeout(() => {
-                        this.innerHTML='<i class=\'fa fa-plus\'></i>';
-                        this.style.background='var(--pink)';
+                        btn.innerHTML = '<i class=\'fa fa-plus\'></i>';
+                        btn.style.background = 'var(--pink)';
                     }, 1200);
                 "
             >

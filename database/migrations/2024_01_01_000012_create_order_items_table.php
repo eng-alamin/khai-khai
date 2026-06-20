@@ -17,7 +17,7 @@ return new class extends Migration
             $table->unsignedSmallInteger('quantity');
             $table->unsignedInteger('line_total')->comment('item_price × quantity');
             $table->string('emoji', 10)->nullable()->comment('Snapshot emoji');
-            // No timestamps needed — order creation is the timestamp
+            $table->timestamps();
 
             $table->index('order_id');
         });

@@ -32,16 +32,18 @@
     <ul class="list-unstyled mb-0">
       <li class="nav-section">Dashboard</li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'dashboard') == true ? 'active' : '' }}" href="{{ route('vendor.dashboard') }}"><span class="material-icons-round nav-icon">dashboard</span><span class="nav-label">Dashboard</span></a></li>
-      <li class="nav1-item"><a class="nav1-link" href="vendor-orders.html"><span class="material-icons-round nav-icon">shopping_bag</span><span class="nav-label">লাইভ অর্ডার</span><span class="nav-badge">7</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'orders/live') == true ? 'active' : '' }}" href="{{ route('vendor.orders.live') }}"><span class="material-icons-round nav-icon">shopping_bag</span><span class="nav-label">Live Orders</span>@livewire('vendor.live-order-count')</a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'orders/all') == true ? 'active' : '' }}" href="{{ route('vendor.orders.list') }}"><span class="material-icons-round nav-icon">list_alt</span><span class="nav-label">All Orders</span></a></li>
       <li class="nav-section">Restaurant</li>
       
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'menu/items') == true ? 'active' : '' }}" href="{{ route('menu.items') }}"><span class="material-icons-round nav-icon">restaurant_menu</span><span class="nav-label">Items</span></a></li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'menu/categories') == true ? 'active' : '' }}" href="{{ route('menu.categories') }}"><span class="material-icons-round nav-icon">category</span><span class="nav-label">Categories</span></a></li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'promotions') == true ? 'active' : '' }}" href="{{ route('promotions') }}"><span class="material-icons-round nav-icon">local_offer</span><span class="nav-label">Promotions</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'menu/items') == true ? 'active' : '' }}" href="{{ route('vendor.menu.items') }}"><span class="material-icons-round nav-icon">restaurant_menu</span><span class="nav-label">Items</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'menu/categories') == true ? 'active' : '' }}" href="{{ route('vendor.menu.categories') }}"><span class="material-icons-round nav-icon">category</span><span class="nav-label">Categories</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'promotions') == true ? 'active' : '' }}" href="{{ route('vendor.promotions') }}"><span class="material-icons-round nav-icon">local_offer</span><span class="nav-label">Promotions</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'coupons') == true ? 'active' : '' }}" href="{{ route('vendor.coupons') }}"><span class="material-icons-round nav-icon">local_offer</span><span class="nav-label">Coupons</span></a></li>
       <li class="nav-section">Report</li>
-      <li class="nav1-item"><a class="nav1-link" href="vendor-earnings.html"><span class="material-icons-round nav-icon">payments</span><span class="nav-label">আয়-ব্যয়</span></a></li>
-      <li class="nav1-item"><a class="nav1-link" href="vendor-reviews.html"><span class="material-icons-round nav-icon">star_rate</span><span class="nav-label">রিভিউ</span></a></li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'settings') == true ? 'active' : '' }}" href="{{ route('settings') }}"><span class="material-icons-round nav-icon">manage_accounts</span><span class="nav-label">Settings</span></a></li>
+      <li class="nav1-item"><a class="nav1-link" {{ str_contains(request()->url(), 'finances') == true ? 'active' : '' }}" href="{{ route('vendor.finances') }}"><span class="material-icons-round nav-icon">payments</span><span class="nav-label">Finances</span></a></li>
+      <li class="nav1-item"><a class="nav1-link" {{ str_contains(request()->url(), 'reviews') == true ? 'active' : '' }}" href="{{ route('vendor.reviews') }}"><span class="material-icons-round nav-icon">star_rate</span><span class="nav-label">Reviews</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'settings') == true ? 'active' : '' }}" href="{{ route('vendor.settings') }}"><span class="material-icons-round nav-icon">manage_accounts</span><span class="nav-label">Settings</span></a></li>
       {{-- <li class="nav1-item">
         <div class="nav1-link" onclick="toggleNav1(this)">
           <span class="material-icons-round nav-icon">manage_accounts</span>
@@ -62,7 +64,7 @@
     <div class="sf-user">
       <img 
     src="{{ auth()->user()->restaurant?->logo_url
-        ? asset('storage/' . auth()->user()->restaurant->logo_url) 
+        ? asset(auth()->user()->restaurant->logo_url) 
         : asset('assets/img/default-restaurant.png') }}"
     class="sf-avatar"
     alt="{{ auth()->user()->restaurant?->name ?? 'Vendor' }}"
@@ -131,10 +133,10 @@
 <!-- MOBILE BOTTOM NAV -->
 <nav class="mob-bottom-nav">
   <div class="mob-nav-items">
-    <a href="vendor-dashboard.html" class="mob-nav-item active"><span class="material-icons-round">dashboard</span><span>Dashboard</span></a>
-    <a href="vendor-orders.html" class="mob-nav-item"><span class="material-icons-round">shopping_bag</span><span>অর্ডার</span></a>
-    <a href="vendor-menu.html" class="mob-nav-item"><span class="material-icons-round">restaurant_menu</span><span>মেনু</span></a>
-    <a href="vendor-earnings.html" class="mob-nav-item"><span class="material-icons-round">payments</span><span>আয়</span></a>
+    <a href="{{ route('vendor.dashboard') }}" class="mob-nav-item active"><span class="material-icons-round">dashboard</span><span>Dashboard</span></a>
+    <a href="{{ route('vendor.orders.live') }}" class="mob-nav-item"><span class="material-icons-round">shopping_bag</span><span>Orders</span></a>
+    <a href="{{ route('vendor.menu.items') }}" class="mob-nav-item"><span class="material-icons-round">restaurant_menu</span><span>Food</span></a>
+    <a href="{{ route('vendor.finances') }}" class="mob-nav-item"><span class="material-icons-round">payments</span><span>Finances</span></a>
     <a href="#" class="mob-nav-item"><span class="material-icons-round">person</span><span>Profile</span></a>
   </div>
 </nav>

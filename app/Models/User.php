@@ -78,4 +78,29 @@ class User extends Authenticatable
     {
         return $this->hasRestaurant() && $this->restaurant->is_approved;
     }
+
+    // User → CustomerProfile (1 to 1)
+    public function customerProfile()
+    {
+        return $this->hasOne(\App\Models\CustomerProfile::class, 'user_id');
+    }
+    
+    // User → CustomerAddresses (1 to many)  [already exists, keeping for reference]
+    public function addresses()
+    {
+        return $this->hasMany(\App\Models\CustomerAddress::class, 'customer_id');
+    }
+    
+    // Default address shortcut
+    public function defaultAddress()
+    {
+        return $this->hasOne(\App\Models\CustomerAddress::class, 'customer_id')
+                    ->where('is_default', true);
+    }
+
+    // Rider 
+    public function riderProfile()
+    {
+        return $this->hasOne(\App\Models\RiderProfile::class, 'user_id');
+    }
 }

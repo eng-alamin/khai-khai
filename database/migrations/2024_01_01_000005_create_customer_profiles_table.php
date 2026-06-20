@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('customer_profiles', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->unique()->constrained('users')->cascadeOnDelete();
+            $table->foreignId('customer_id')->unique()->constrained('users')->cascadeOnDelete();
             $table->foreignId('default_address_id')->nullable()->constrained('customer_addresses')->nullOnDelete();
             $table->unsignedInteger('total_orders')->default(0);
             $table->decimal('avg_rating_given', 3, 2)->nullable();

@@ -10,7 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  @livewireStyles
   <style>
     :root {
       --pink: #e91e8c; --pink-dark: #c0167a; --pink-light: #ff4dab;
@@ -238,6 +237,8 @@
       .stat-info .change { font-size:8px;}
     }
   </style>
+  @stack('styles')
+  @livewireStyles
 </head>
 <body>
 
@@ -246,50 +247,53 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <div class="brand-name"><span>Khai</span>Khai</div>
-    <div class="mode-badge">Customer</div>
+    @auth<div class="mode-badge">Customer</div>@endauth
   </div>
+  @auth
   <div class="sidebar-user">
-    <div class="sidebar-avatar">{{ mb_substr(auth()->user()->name ?? 'র', 0, 1) }}</div>
+    <div class="sidebar-avatar">{{ mb_substr(auth()->user()->name ?? 'U', 0, 1) }}</div>
     <div>
-      <div class="uname">{{ auth()->user()->name ?? 'রাহেলা বেগম' }}</div>
+      <div class="uname">{{ auth()->user()->name ?? 'User' }}</div>
       <div class="urole">Customer Account</div>
     </div>
   </div>
+  @endauth
+  
   <nav class="sidebar-nav">
-    <div class="nav-section">মেনু</div>
+    <div class="nav-section">Menu</div>
     <a href="{{ route('customer.home') }}"        class="nav-item {{ request()->routeIs('customer.home') ? 'active' : '' }}">
-      <i class="fa fa-home"></i> হোম
+      <i class="fa fa-home"></i> Home
     </a>
     <a href="{{ route('customer.restaurants') }}" class="nav-item {{ request()->routeIs('customer.restaurants') ? 'active' : '' }}">
-      <i class="fa fa-store"></i> রেস্তোরাঁ
+      <i class="fa fa-store"></i> Resturents
     </a>
     <a href="{{ route('customer.items') }}"        class="nav-item {{ request()->routeIs('customer.items') ? 'active' : '' }}">
-      <i class="fa fa-utensils"></i> খাবারের মেনু
+      <i class="fa fa-utensils"></i> Food Menu
     </a>
     <a href="{{ route('customer.orders') }}"      class="nav-item {{ request()->routeIs('customer.orders') ? 'active' : '' }}">
-      <i class="fa fa-clipboard-list"></i> আমার অর্ডার
+      <i class="fa fa-clipboard-list"></i> My Order
       <span class="nav-badge">3</span>
     </a>
     <a href="{{ route('customer.track') }}"       class="nav-item {{ request()->routeIs('customer.track') ? 'active' : '' }}">
-      <i class="fa fa-map-marker-alt"></i> অর্ডার ট্র্যাক
+      <i class="fa fa-map-marker-alt"></i> Order Track
     </a>
-    <div class="nav-section">আমার অ্যাকাউন্ট</div>
+    <div class="nav-section">My Account</div>
     <a href="{{ route('customer.profile') }}"     class="nav-item {{ request()->routeIs('customer.profile') ? 'active' : '' }}">
-      <i class="fa fa-user"></i> প্রোফাইল
+      <i class="fa fa-user"></i> Profile
     </a>
     <a href="{{ route('customer.addresses') }}"   class="nav-item {{ request()->routeIs('customer.addresses') ? 'active' : '' }}">
-      <i class="fa fa-map-pin"></i> ঠিকানা
+      <i class="fa fa-map-pin"></i> Address
     </a>
     <a href="{{ route('customer.offers') }}"      class="nav-item {{ request()->routeIs('customer.offers') ? 'active' : '' }}">
-      <i class="fa fa-tag"></i> অফার ও কুপন
+      <i class="fa fa-tag"></i> Offer & Coupon
     </a>
-    <div class="nav-section">সাহায্য</div>
+    <div class="nav-section">Help</div>
     <a href="{{ route('customer.support') }}" class="nav-item">
-      <i class="fa fa-headset"></i> সাপোর্ট
+      <i class="fa fa-headset"></i> Support
     </a>
     <a href="{{ route('logout') }}" class="nav-item"
       onclick="event.preventDefault(); document.getElementById('logout-form').submit()">
-        <i class="fa fa-sign-out-alt"></i> লগআউট
+        <i class="fa fa-sign-out-alt"></i> Logout
     </a>
     <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display:none;">
         @csrf
@@ -303,12 +307,9 @@
     <i class="fa fa-bars"></i>
   </button>
 
-  <div class="topbar-title">{{ $breadcrumbTitle ?? 'হোম' }}</div>
+  <div class="topbar-title">{{ $breadcrumbTitle ?? 'Home' }}</div>
 
   <div class="topbar-actions">
-    <a href="{{ route('customer.items') }}" class="topbar-btn">
-      <i class="fa fa-search"></i>
-    </a>
 
     <a href="{{ route('customer.orders') }}" class="topbar-btn position-relative">
       <i class="fa fa-shopping-bag"></i>
@@ -320,7 +321,7 @@
       <span class="dot"></span>
     </a>
     
-    <div class="top-avatar">{{ mb_substr(auth()->user()->name ?? 'র', 0, 1) }}</div>
+    <a class="top-avatar text-decoration-none" href="{{route('customer.profile')}}">{{ mb_substr(auth()->user()->name ?? 'C', 0, 1) }}</a>
   </div>
 </header>
 
@@ -381,7 +382,7 @@
     });
   });
 </script>
-@livewireScripts
 @stack('scripts')
+@livewireScripts
 </body>
 </html>

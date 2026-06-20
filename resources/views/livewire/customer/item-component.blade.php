@@ -1,6 +1,13 @@
 {{-- resources/views/livewire/customer/item-component.blade.php --}}
 <div>
 
+    {{-- DEBUG — error দেখার জন্য, পরে সরিয়ে দেবেন --}}
+@if(session('error'))
+    <div style="position:fixed;top:10px;left:50%;transform:translateX(-50%);background:red;color:white;padding:12px 20px;border-radius:8px;z-index:999999;font-size:13px;max-width:80vw;text-align:center;">
+        {{ session('error') }}
+    </div>
+@endif
+
     {{-- Category pills --}}
     <div class="cat-pills mb-4">
 
@@ -42,5 +49,11 @@
         </div>
         @endforelse
     </div>
+
+    {{--
+        ✅ Cart Conflict Modal এখানে নেই।
+        Modal এখন cart-component.blade.php-এ আছে
+        এবং CartComponent.php $showConflict দিয়ে control করছে।
+    --}}
 
 </div>

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('customer_addresses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('customer_id')->constrained('users')->cascadeOnDelete();
             $table->enum('label', ['home', 'office', 'other'])->default('home');
             $table->text('full_address');
             $table->string('city', 60)->default('Dhaka');
@@ -20,8 +20,8 @@ return new class extends Migration
             $table->boolean('is_default')->default(false);
             $table->timestamps();
 
-            $table->index('user_id');
-            $table->index(['user_id', 'is_default']);
+            $table->index('customer_id');
+            $table->index(['customer_id', 'is_default']);
         });
     }
 

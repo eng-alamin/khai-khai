@@ -27,4 +27,9 @@ class Restaurant extends Model
     {
         return $this->hasOne(VendorSetting::class);
     }
+
+    public function payouts(): HasMany
+    {
+        return $this->hasMany(Payout::class);
+    }
 }

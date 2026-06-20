@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('rider_payout_requests', function (Blueprint $table) {
+        Schema::create('rider_payouts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('rider_id')->constrained('users');
             $table->unsignedInteger('amount')->comment('Requested payout amount (BDT paisa)');
@@ -26,6 +26,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('rider_payout_requests');
+        Schema::dropIfExists('rider_payouts');
     }
 };

@@ -2,89 +2,163 @@
 
 namespace App\Livewire\Customer;
 
+use App\Models\Order;
+use App\Models\OrderStatusLog;
+use App\Models\Review;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class OrderListComponent extends Component
 {
-    public string $activeFilter = 'সব';
+    use WithPagination;
 
-    public array $filters = ['সব', 'চলমান', 'ডেলিভারড', 'বাতিল'];
+    public string $activeFilter = 'all';
+    public string $searchQuery  = '';
 
-    // In a real app this comes from: Auth::user()->orders()->latest()->get()
-    public array $orders = [
-        [
-            'id'          => '#KK2601',
-            'rest'        => "মা'র রান্নাঘর",
-            'items'       => 'ভাত + মুরগির তরকারি',
-            'time'        => 'আজ ৩:৪৫ PM',
-            'total'       => 220,
-            'status'      => 'delivered',
-            'statusLabel' => 'ডেলিভারড',
-        ],
-        [
-            'id'          => '#KK2599',
-            'rest'        => 'City Burger House',
-            'items'       => 'Chicken Burger × 2',
-            'time'        => 'গতকাল ৭:৩০ PM',
-            'total'       => 380,
-            'status'      => 'cancelled',
-            'statusLabel' => 'বাতিল',
-        ],
-        [
-            'id'          => '#KK2598',
-            'rest'        => 'Dhaka Biryani',
-            'items'       => 'মুরগির বিরিয়ানি',
-            'time'        => '২ দিন আগে',
-            'total'       => 180,
-            'status'      => 'delivered',
-            'statusLabel' => 'ডেলিভারড',
-        ],
+    // Review modal state
+    public ?int   $reviewOrderId = null;
+    public int    $reviewRating  = 0;
+    public string $reviewComment = '';
+
+    public array $filters = [
+        ['key' => 'all',        'label' => 'All Orders', 'emoji' => '📋'],
+        ['key' => 'pending',    'label' => 'Pending',    'emoji' => '⏳'],
+        ['key' => 'confirmed',  'label' => 'Confirmed',  'emoji' => '👍'],
+        ['key' => 'preparing',  'label' => 'Preparing',  'emoji' => '🍳'],
+        ['key' => 'picked_up',  'label' => 'On the Way', 'emoji' => '🛵'],
+        ['key' => 'delivered',  'label' => 'Delivered',  'emoji' => '✅'],
+        ['key' => 'cancelled',  'label' => 'Cancelled',  'emoji' => '❌'],
     ];
 
-    public function setFilter(string $filter): void
+    protected $queryString = ['activeFilter' => ['except' => 'all']];
+
+    public function updatedSearchQuery(): void
     {
-        $this->activeFilter = $filter;
+        $this->resetPage();
     }
 
-    public function getFilteredOrdersProperty(): array
+    /* ── Computed: filtered + searched orders (ডাটাবেস থেকে, paginated) ── */
+    public function getFilteredOrdersProperty()
     {
-        if ($this->activeFilter === 'সব') {
-            return $this->orders;
+        return Order::query()
+            ->where('customer_id', Auth::id())
+            ->with(['restaurant', 'items', 'review'])
+            ->when($this->activeFilter !== 'all', fn ($q) => $q->where('status', $this->activeFilter))
+            ->when(trim($this->searchQuery) !== '', function ($q) {
+                $term = trim($this->searchQuery);
+                $q->where(function ($q) use ($term) {
+                    $q->where('order_number', 'like', "%{$term}%")
+                      ->orWhereHas('restaurant', fn ($q) => $q->where('name', 'like', "%{$term}%"));
+                });
+            })
+            ->latest()
+            ->paginate(8);
+    }
+
+    /* ── Filter tab click ── */
+    public function setFilter(string $key): void
+    {
+        $this->activeFilter = $key;
+        $this->searchQuery  = '';
+        $this->resetPage();
+    }
+
+    /* ── Reorder ── */
+    public function reorder(int $orderId): void
+    {
+        $order = Order::where('customer_id', Auth::id())->findOrFail($orderId);
+
+        // TODO: app(CartService::class)->fillFromOrder($order);
+        $this->dispatch('show-toast', message: '🛒 Items added to cart!', type: 'success');
+        $this->dispatch('toggle-cart');
+    }
+
+    /* ── Cancel order ── */
+    public function cancelOrder(int $orderId): void
+    {
+        $order = Order::where('customer_id', Auth::id())->findOrFail($orderId);
+
+        if (! in_array($order->status, Order::CANCELLABLE_STATUSES, true)) {
+            $this->dispatch('show-toast', message: 'This order can no longer be cancelled.', type: 'error');
+            return;
         }
 
-        $map = [
-            'চলমান'   => 'active',
-            'ডেলিভারড' => 'delivered',
-            'বাতিল'   => 'cancelled',
-        ];
+        $previousStatus = $order->status;
 
-        $key = $map[$this->activeFilter] ?? null;
+        $order->update([
+            'status'        => 'cancelled',
+            'cancelled_at'  => now(),
+            'cancel_reason' => 'Cancelled by customer',
+        ]);
 
-        return $key
-            ? array_values(array_filter($this->orders, fn($o) => $o['status'] === $key))
-            : $this->orders;
+        OrderStatusLog::create([
+            'order_id'    => $order->id,
+            'from_status' => $previousStatus,
+            'to_status'   => 'cancelled',
+            'changed_by'  => Auth::id(),
+            'note'        => 'Cancelled by customer from order list',
+        ]);
+
+        $this->dispatch('show-toast', message: 'Order has been cancelled.', type: 'info');
     }
 
-    public function reorder(string $orderId): void
+    /* ── Open review modal ── */
+    public function openReviewModal(int $orderId): void
     {
-        // TODO: pre-fill cart with previous order items
-        $this->dispatch('show-toast', message: 'পুনরায় অর্ডার দেওয়া হচ্ছে...', type: 'info');
-        $this->dispatch('navigate-to', page: 'menu');
+        $order = Order::where('customer_id', Auth::id())->findOrFail($orderId);
+
+        if ($order->status !== 'delivered') {
+            $this->dispatch('show-toast', message: 'You can only review delivered orders.', type: 'error');
+            return;
+        }
+
+        $this->reviewOrderId = $order->id;
+        $this->reviewRating  = $order->review?->rating ?? 0;
+        $this->reviewComment = $order->review?->comment ?? '';
     }
 
-    public function submitReview(string $orderId): void
+    /* ── Set star rating ── */
+    public function setRating(int $value): void
     {
-        // TODO: open review modal
-        $this->dispatch('show-toast', message: 'রিভিউ দেওয়ার জন্য ধন্যবাদ! ⭐', type: 'success');
+        $this->reviewRating = $value;
+    }
+
+    /* ── Submit review ── */
+    public function submitReview(): void
+    {
+        $this->validate([
+            'reviewRating'  => 'required|integer|min:1|max:5',
+            'reviewComment' => 'nullable|string|max:500',
+        ], [
+            'reviewRating.min' => 'Please select a rating!',
+        ]);
+
+        $order = Order::where('customer_id', Auth::id())
+            ->where('status', 'delivered')
+            ->findOrFail($this->reviewOrderId);
+
+        Review::updateOrCreate(
+            ['order_id' => $order->id],
+            [
+                'customer_id'   => Auth::id(),
+                'restaurant_id' => $order->restaurant_id,
+                'food_rating'        => $this->reviewRating,
+                'comment'       => $this->reviewComment,
+            ]
+        );
+
+        $this->reset(['reviewOrderId', 'reviewRating', 'reviewComment']);
+        $this->dispatch('show-toast', message: '⭐ Review submitted successfully!', type: 'success');
     }
 
     public function render()
     {
         return view('livewire.customer.order-list-component', [
-                 'filteredOrders' => $this->filteredOrders,
-            ])
-            ->layout('layouts.customer', [
-                'title' => 'Orders | KhaiKhai', 'breadcrumbTitle' => 'Orders'
-            ]);
+            'filteredOrders' => $this->filteredOrders,
+        ])->layout('layouts.customer', [
+            'title'           => 'Orders | KhaiKhai',
+            'breadcrumbTitle' => 'My Orders',
+        ]);
     }
 }

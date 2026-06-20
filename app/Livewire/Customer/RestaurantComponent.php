@@ -49,7 +49,7 @@ class RestaurantComponent extends Component
             ])
             ->layout('layouts.customer', [
                 'title'           => 'Restaurants | KhaiKhai',
-                'breadcrumbTitle' => 'রেস্তোরাঁ',
+                'breadcrumbTitle' => 'Restaurants',
             ]);
     }
 }

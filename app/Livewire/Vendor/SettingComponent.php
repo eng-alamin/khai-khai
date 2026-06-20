@@ -212,12 +212,12 @@ class SettingComponent extends Component
         $this->validate();
 
         if ($this->logoUpload) {
-            $this->logo_url  = $this->logoUpload->store('restaurants/logos', 'public');
+            $this->logo_url = 'storage/' . $this->logoUpload->store('restaurants/logos', 'public');
             $this->logoUpload = null;
         }
 
         if ($this->bannerUpload) {
-            $this->banner_url  = $this->bannerUpload->store('restaurants/banners', 'public');
+            $this->banner_url = 'storage/' . $this->bannerUpload->store('restaurants/banners', 'public');
             $this->bannerUpload = null;
         }
 

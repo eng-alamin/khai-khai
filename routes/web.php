@@ -58,11 +58,13 @@ Route::middleware('auth')->group(function () {
 // Customer
 // Route::prefix('customer')->name('customer.')->middleware(['auth'])->group(function () {
 // Route::middleware(['auth', 'role:customer'])->group(function () {
-Route::middleware(['auth'])->group(function () {
+
     Route::get('/', App\Livewire\Customer\HomeComponent::class)->name('customer.home');
     Route::get('restaurants', App\Livewire\Customer\RestaurantComponent::class)->name('customer.restaurants');
     Route::get('restaurants/{slug}', App\Livewire\Customer\RestaurantComponent::class)->name('customer.restaurant');
     Route::get('items', App\Livewire\Customer\ItemComponent::class)->name('customer.items');
+    
+Route::middleware(['auth'])->group(function () {
     Route::get('orders', App\Livewire\Customer\OrderListComponent::class)->name('customer.orders');
     Route::get('track', App\Livewire\Customer\OrderTrackComponent::class)->name('customer.track');
     Route::get('profile', App\Livewire\Customer\ProfileComponent::class)->name('customer.profile');   
@@ -74,16 +76,28 @@ Route::middleware(['auth'])->group(function () {
 // Vendor
 Route::middleware(['auth', 'role:vendor'])->group(function () {
     Route::get('dashboard', App\Livewire\Vendor\DashboardComponent::class)->name('vendor.dashboard');
-    Route::get('menu/categories', App\Livewire\Vendor\MenuCategoryComponent::class)->name('menu.categories');
-    Route::get('menu/items', App\Livewire\Vendor\MenuItemComponent::class)->name('menu.items');
-    Route::get('promotions', App\Livewire\Vendor\PromotionComponent::class)->name('promotions');
-    Route::get('settings', App\Livewire\Vendor\SettingComponent::class)->name('settings');
+    Route::get('orders/live', App\Livewire\Vendor\OrderLiveComponent::class)->name('vendor.orders.live');
+    Route::get('orders/all', App\Livewire\Vendor\OrderListComponent::class)->name('vendor.orders.list');
+    Route::get('menu/categories', App\Livewire\Vendor\MenuCategoryComponent::class)->name('vendor.menu.categories');
+    Route::get('menu/items', App\Livewire\Vendor\MenuItemComponent::class)->name('vendor.menu.items');
+    Route::get('promotions', App\Livewire\Vendor\PromotionComponent::class)->name('vendor.promotions');
+    Route::get('coupons', App\Livewire\Vendor\CouponComponent::class)->name('vendor.coupons');
+    Route::get('finances', App\Livewire\Vendor\FinanceComponent::class)->name('vendor.finances');
+    Route::get('reviews', App\Livewire\Vendor\ReviewComponent::class)->name('vendor.reviews');
+    Route::get('settings', App\Livewire\Vendor\SettingComponent::class)->name('vendor.settings');
 });
 
 
 
 // Rider 
-Route::get('rider/register', App\Livewire\VendorRegistrationWizard::class)->name('rider.register');
+Route::get('/rider/register', App\Livewire\RiderRegistrationWizard::class)->name('rider.register');
+Route::middleware(['auth', 'role:rider'])->group(function () {
+    Route::get('/rider/dashboard', App\Livewire\Rider\DashboardComponent::class)->name('rider.dashboard');
+    Route::get('/rider/delivery/ongoing', App\Livewire\Rider\DeliveryOngoingComponent::class)->name('rider.delivery.ongoing');
+    Route::get('/rider/delivery/history', App\Livewire\Rider\DeliveryHistoryComponent::class)->name('rider.delivery.history');
+    Route::get('/rider/finance', App\Livewire\Rider\FinanceComponent::class)->name('rider.finance');
+    Route::get('/rider/profile', App\Livewire\Rider\ProfileComponent::class)->name('rider.profile');
+});
 
 
 

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->decimal('distance_km', 6, 2)->nullable();
             $table->enum('payout_status', ['pending', 'paid'])->default('pending');
             $table->timestamp('paid_at')->nullable();
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamps();
 
             $table->index('rider_id');
             $table->index(['rider_id', 'payout_status']);
