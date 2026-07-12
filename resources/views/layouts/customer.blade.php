@@ -291,13 +291,19 @@
     <a href="{{ route('customer.support') }}" class="nav-item">
       <i class="fa fa-headset"></i> Support
     </a>
-    <a href="{{ route('logout') }}" class="nav-item"
-      onclick="event.preventDefault(); document.getElementById('logout-form').submit()">
-        <i class="fa fa-sign-out-alt"></i> Logout
-    </a>
-    <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display:none;">
-        @csrf
-    </form>
+    @if(auth()->check())
+      <a href="{{ route('logout') }}" class="nav-item"
+        onclick="event.preventDefault(); document.getElementById('logout-form').submit()">
+          <i class="fa fa-sign-out-alt"></i> Logout
+      </a>
+      <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display:none;">
+          @csrf
+      </form>
+    @else
+      <a href="{{ route('login') }}" class="nav-item">
+          <i class="fa fa-sign-in-alt"></i> Login
+      </a>
+    @endif
   </nav>
 </aside>
 

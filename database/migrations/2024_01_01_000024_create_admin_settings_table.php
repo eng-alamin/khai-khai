@@ -14,7 +14,7 @@ return new class extends Migration
             $table->text('value')->comment('JSON-encoded or plain string value');
             $table->string('description', 255)->nullable();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->timestamps();
         });
     }
 

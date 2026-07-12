@@ -3,26 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Restaurant extends Model
 {
     protected $guarded = [];
-    
-    /**
-     * Restaurant → User (Many to 1)
-     * এই restaurant-এর মালিক কোন user।
-     * restaurants.owner_id → users.id
-     */
+
+    // ✅ Status helper — schema অনুযায়ী
+    public function getStatusAttribute(): string
+    {
+        if (!$this->is_approved) return 'pending';
+        if (!$this->is_active)   return 'blocked';
+        return 'active';
+    }
+
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    /**
-     * Restaurant → VendorSetting (1 to 1)
-     * প্রতিটি restaurant-এর একটাই setting row থাকে।
-     * vendor_settings.restaurant_id = restaurants.id
-     */
     public function settings(): HasOne
     {
         return $this->hasOne(VendorSetting::class);
@@ -31,5 +32,10 @@ class Restaurant extends Model
     public function payouts(): HasMany
     {
         return $this->hasMany(Payout::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
     }
 }

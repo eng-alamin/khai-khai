@@ -5,8 +5,10 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\User;
 use App\Models\RiderProfile;
+use App\Mail\NewRiderRegisteredMail;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Livewire\WithFileUploads;
 
@@ -20,8 +22,8 @@ class RiderRegistrationWizard extends Component
 
     // ── Step 1 : Personal / Account info ────────────────────────────
     public string $name     = '';
-    public string $phone    = '';
     public string $email    = '';
+    public string $phone    = '';
     public string $password = '';
     public string $password_confirmation = '';
 
@@ -39,11 +41,11 @@ class RiderRegistrationWizard extends Component
 
     // ── Vehicle types ────────────────────────────────────────────────
     public array $vehicleTypes = [
-        'বাইসাইকেল'   => '🚲',
-        'মোটরসাইকেল'  => '🏍️',
-        'ইলেকট্রিক বাইক' => '⚡',
-        'সিএনজি'      => '🛺',
-        'কার'         => '🚗',
+        'Bicycle'       => '🚲',
+        'Motorcycle'    => '🏍️',
+        'Electric Bike' => '⚡',
+        'CNG'           => '🛺',
+        'Car'           => '🚗',
     ];
 
     // ── Zones ────────────────────────────────────────────────────────
@@ -67,8 +69,8 @@ class RiderRegistrationWizard extends Component
         return match ($step) {
             1 => [
                 'name'                  => 'required|string|min:3|max:100',
-                'phone'                 => 'required|string|regex:/^01[3-9]\d{8}$/|unique:users,phone',
-                'email'                 => 'nullable|email|max:150|unique:users,email',
+                'email'                 => 'required|email|max:150|unique:users,email',
+                'phone'                 => 'nullable|string|regex:/^01[3-9]\d{8}$/|unique:users,phone',
                 'password'              => 'required|string|min:8|confirmed',
                 'password_confirmation' => 'required',
             ],
@@ -90,20 +92,22 @@ class RiderRegistrationWizard extends Component
     {
         return match ($step) {
             1 => [
-                'phone.regex'        => 'সঠিক বাংলাদেশি মোবাইল নম্বর দিন (01XXXXXXXXX)।',
-                'phone.unique'       => 'এই মোবাইল নম্বরটি ইতিমধ্যে নিবন্ধিত।',
-                'email.unique'       => 'এই ইমেইলটি ইতিমধ্যে ব্যবহৃত হচ্ছে।',
-                'password.min'       => 'পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।',
-                'password.confirmed' => 'পাসওয়ার্ড মিলছে না।',
+                'email.required'      => 'Email address is required.',
+                'email.email'         => 'Please enter a valid email address.',
+                'email.unique'        => 'This email is already in use.',
+                'phone.regex'         => 'Please enter a valid Bangladeshi mobile number (01XXXXXXXXX).',
+                'phone.unique'        => 'This mobile number is already registered.',
+                'password.min'        => 'Password must be at least 8 characters.',
+                'password.confirmed'  => 'Passwords do not match.',
             ],
             2 => [
-                'vehicle_type.required'     => 'যানবাহনের ধরন নির্বাচন করুন।',
-                'vehicle_plate.unique'      => 'এই নম্বর প্লেটটি ইতিমধ্যে নিবন্ধিত।',
-                'license_number.unique'     => 'এই লাইসেন্স নম্বরটি ইতিমধ্যে নিবন্ধিত।',
-                'nid_number.unique'         => 'এই NID নম্বরটি ইতিমধ্যে নিবন্ধিত।',
+                'vehicle_type.required' => 'Please select a vehicle type.',
+                'vehicle_plate.unique'  => 'This vehicle plate number is already registered.',
+                'license_number.unique' => 'This license number is already registered.',
+                'nid_number.unique'     => 'This NID number is already registered.',
             ],
             3 => [
-                'zone.required' => 'ডেলিভারি জোন নির্বাচন করুন।',
+                'zone.required' => 'Please select a delivery zone.',
             ],
             default => [],
         };
@@ -139,14 +143,17 @@ class RiderRegistrationWizard extends Component
     // ── Final submission ─────────────────────────────────────────────
     public function submit(): void
     {
-        DB::transaction(function () {
+        $riderProfile = null;
+        $user         = null;
+
+        DB::transaction(function () use (&$riderProfile, &$user) {
 
             // 1. Create user
             $user = User::create([
                 'uuid'        => Str::uuid(),
                 'name'        => $this->name,
-                'phone'       => $this->phone,
-                'email'       => $this->email ?: null,
+                'email'       => $this->email,
+                'phone'       => $this->phone ?: null,
                 'password'    => $this->password,
                 'role'        => 'rider',
                 'is_verified' => false,
@@ -155,20 +162,54 @@ class RiderRegistrationWizard extends Component
             ]);
 
             // 2. Create rider profile
-            RiderProfile::create([
-                'user_id'        => $user->id,
-                'vehicle_type'   => $this->vehicle_type,
-                'vehicle_plate'  => $this->vehicle_plate ?: null,
-                'license_number' => $this->license_number ?: null,
-                'nid_number'     => $this->nid_number ?: null,
-                'zone'           => $this->zone,
-                'is_online'      => false,
-                'is_approved'    => false,
-                'total_deliveries' => 0,
+            $riderProfile = RiderProfile::create([
+                'user_id'           => $user->id,
+                'vehicle_type'      => $this->vehicle_type,
+                'vehicle_plate'     => $this->vehicle_plate ?: null,
+                'license_number'    => $this->license_number ?: null,
+                'nid_number'        => $this->nid_number ?: null,
+                'zone'              => $this->zone,
+                'is_online'         => false,
+                'is_approved'       => false,
+                'total_deliveries'  => 0,
             ]);
+
+            if (function_exists('activity')) {
+                activity()
+                    ->causedBy($user)
+                    ->performedOn($riderProfile)
+                    ->log('rider_registered');
+            }
         });
 
-        $this->redirect(route('rider.dashboard'), navigate: true);
+        // Notify all admins by email (outside the transaction, non-blocking failures)
+        $this->notifyAdmins($riderProfile, $user);
+
+        $this->redirect(route('rider.registration.success', ['riderProfile' => $riderProfile->id]), navigate: true);
+    }
+
+    /**
+     * Send a new-rider notification email to every active admin user.
+     */
+    protected function notifyAdmins(?RiderProfile $riderProfile, ?User $user): void
+    {
+        if (! $riderProfile || ! $user) {
+            return;
+        }
+
+        try {
+            $adminEmails = User::query()
+                ->where('role', 'admin')
+                ->whereNotNull('email')
+                ->pluck('email');
+
+            if ($adminEmails->isNotEmpty()) {
+                Mail::to($adminEmails->all())->send(new NewRiderRegisteredMail($riderProfile, $user));
+            }
+        } catch (\Throwable $e) {
+            // Never block rider registration if email sending fails
+            Log::error('Failed to send new rider registration email: ' . $e->getMessage());
+        }
     }
 
     // ── Render ───────────────────────────────────────────────────────

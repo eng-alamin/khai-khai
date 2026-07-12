@@ -165,7 +165,7 @@
                     <p>No reviews match your filters.</p>
                     <button type="button"
                         wire:click="$set('filterRating','all'); $set('filterType','all'); $set('search','')"
-                        class="btn-new-offer">Clear filters</button>
+                        class="rv-btn-new-offer">Clear filters</button>
                 </div>
             @endforelse
 
@@ -465,6 +465,23 @@
         display: block;
         margin-bottom: 12px;
         color: var(--muted);
+    }
+    .rv-btn-new-offer{
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: var(--pink);
+        color: #fff;
+        border: none;
+        border-radius: 50px;
+        padding: 9px 18px;
+        font-size: .82rem;
+        font-weight: 600;
+        font-family: var(--font);
+        cursor: pointer;
+        box-shadow: 0 4px 18px rgba(255, 61, 139, .35);
+        transition: var(--transition);
+        letter-spacing: .02em;
     }
     .rv-empty p { color: var(--muted); font-size: .88rem; margin: 0 0 16px; }
 

@@ -6,25 +6,20 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
     Route::get('vendor/register', App\Livewire\VendorRegistrationWizard::class)->name('vendor.register');
-    Route::get('vendor/registration-success', function () {
-        return view('vendor/registration-success');
-    })->name('vendor.registration.success');
+    Route::get('/vendor/registration/success/{restaurant}', App\Livewire\VendorRegistrationSuccess::class)->name('vendor.registration.success');
+    Route::get('/rider/register', App\Livewire\RiderRegistrationWizard::class)->name('rider.register');
+    Route::get('/rider/registration/success/{riderProfile}', App\Livewire\RiderRegistrationSuccess::class)->name('rider.registration.success');
 
-    Route::get('login', App\Livewire\Login::class)->name('login');
+    Route::get('/login', App\Livewire\Login::class)->name('login');
+    Route::get('/forgot-password', App\Livewire\ForgotPassword::class)->name('password.request');
+    Route::get('/reset-password/{token}', App\Livewire\ResetPassword::class)->name('password.reset');
+
+    
     Route::get('logout', function () {
         Auth::logout();
         return redirect()->route('login');
     })->name('logout');
     Route::get('password/request', App\Livewire\Login::class)->name('password.request');
-
-    // Password reset routes
-    Route::get('password/request', function () {
-        return view('auth.forgot-password'); // Or use Livewire component
-    })->name('password.request');
-    
-    Route::get('password/reset/{token}', function ($token) {
-        return view('auth.reset-password', ['token' => $token]);
-    })->name('password.reset');
 });
 
 // Authentication required routes
@@ -42,16 +37,6 @@ Route::middleware('auth')->group(function () {
     //     request()->session()->regenerateToken();
     //     return redirect()->route('login');
     // })->name('logout');
-    
-    // Vendor success page (accessible after registration)
-    Route::get('vendor/registration-success', function () {
-        return view('vendor/registration-success');
-    })->name('vendor.registration.success');
-    
-    // Rider success page
-    Route::get('rider/registration-success', function () {
-        return view('rider/registration-success');
-    })->name('rider.registration.success');
 });
 
 
@@ -64,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::get('restaurants/{slug}', App\Livewire\Customer\RestaurantComponent::class)->name('customer.restaurant');
     Route::get('items', App\Livewire\Customer\ItemComponent::class)->name('customer.items');
     
+    Route::get('/register', App\Livewire\CustomerRegistrationComponent::class)->name('customer.register');
 Route::middleware(['auth'])->group(function () {
     Route::get('orders', App\Livewire\Customer\OrderListComponent::class)->name('customer.orders');
     Route::get('track', App\Livewire\Customer\OrderTrackComponent::class)->name('customer.track');
@@ -87,16 +73,25 @@ Route::middleware(['auth', 'role:vendor'])->group(function () {
     Route::get('settings', App\Livewire\Vendor\SettingComponent::class)->name('vendor.settings');
 });
 
-
-
 // Rider 
-Route::get('/rider/register', App\Livewire\RiderRegistrationWizard::class)->name('rider.register');
 Route::middleware(['auth', 'role:rider'])->group(function () {
     Route::get('/rider/dashboard', App\Livewire\Rider\DashboardComponent::class)->name('rider.dashboard');
     Route::get('/rider/delivery/ongoing', App\Livewire\Rider\DeliveryOngoingComponent::class)->name('rider.delivery.ongoing');
     Route::get('/rider/delivery/history', App\Livewire\Rider\DeliveryHistoryComponent::class)->name('rider.delivery.history');
     Route::get('/rider/finance', App\Livewire\Rider\FinanceComponent::class)->name('rider.finance');
     Route::get('/rider/profile', App\Livewire\Rider\ProfileComponent::class)->name('rider.profile');
+});
+
+// Admin
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/dashboard', App\Livewire\Admin\DashboardComponent::class)->name('admin.dashboard');
+    Route::get('/admin/orders', App\Livewire\Admin\OrderComponent::class)->name('admin.orders');
+    Route::get('/admin/vendors', App\Livewire\Admin\VendorComponent::class)->name('admin.vendors');
+    Route::get('/admin/riders', App\Livewire\Admin\RiderComponent::class)->name('admin.riders');
+    Route::get('/admin/customers', App\Livewire\Admin\CustomerComponent::class)->name('admin.customers');
+    Route::get('/admin/revenues', App\Livewire\Admin\RevenueComponent::class)->name('admin.revenues');
+    Route::get('/admin/commissions', App\Livewire\Admin\CommissionComponent::class)->name('admin.commissions');
+    Route::get('/admin/settings', App\Livewire\Admin\SettingComponent::class)->name('admin.settings');
 });
 
 

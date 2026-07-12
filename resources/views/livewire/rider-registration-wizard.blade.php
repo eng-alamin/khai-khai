@@ -15,22 +15,22 @@
         --kk-dark: #1A1A2E;
         --kk-gray: #F8F9FA;
         --kk-border: #E8E8F0;
+        --pink: #e91e8c;
         --step-done: #1D9E75;
-        --step-active: #FF6B35;
+        --step-active: #e91e8c;
         --step-pending: #CED4DA;
     }
 
     * { box-sizing: border-box; }
 
     body {
-        background: linear-gradient(135deg, #FFF8F5 0%, #F0FDF9 100%);
         min-height: 100vh;
-        font-family: 'Hind Siliguri', 'Segoe UI', sans-serif;
+        font-family: 'Segoe UI', sans-serif;
     }
 
     /* ── Page header ── */
     .wizard-header {
-        background: linear-gradient(135deg, #2C3E7A 0%, #1A2A5E 100%);
+        background: linear-gradient(135deg, #3d0a6e 0%, #7c1e8c 50%, var(--pink) 100%);
         padding: 2rem 0 4rem;
         position: relative;
         overflow: hidden;
@@ -90,17 +90,17 @@
         z-index: 2; position: relative;
     }
     .step-item.done   .step-circle { background: var(--step-done); }
-    .step-item.active .step-circle { background: var(--kk-orange); transform: scale(1.12); }
+    .step-item.active .step-circle { background: var(--pink); transform: scale(1.12); }
     .step-item.clickable .step-circle { cursor: pointer; }
     .step-item.clickable .step-circle:hover { transform: scale(1.08); }
     .step-label {
         font-size: .68rem; font-weight: 500;
         margin-top: 6px;
-        color: var(--kk-dark);
+        color: #fff;
         text-align: center;
         opacity: .6;
     }
-    .step-item.active .step-label { opacity: 1; color: var(--kk-orange); }
+    .step-item.active .step-label { opacity: 1; color: var(--pink); }
     .step-item.done   .step-label { opacity: .9; }
 
     /* ── Wizard card ── */
@@ -128,7 +128,7 @@
         font-size: .82rem; font-weight: 600;
         color: var(--kk-dark); margin-bottom: .35rem;
     }
-    .form-label .req { color: var(--kk-orange); margin-left: 2px; }
+    .form-label .req { color: var(--pink); margin-left: 2px; }
     .form-control, .form-select {
         border: 1.5px solid var(--kk-border);
         border-radius: 10px;
@@ -138,8 +138,8 @@
         background-color: #FAFAFA;
     }
     .form-control:focus, .form-select:focus {
-        border-color: var(--kk-orange);
-        box-shadow: 0 0 0 3px rgba(255,107,53,.12);
+        border-color: var(--pink);
+        box-shadow: 0 0 0 3px rgba(233,30,140,.12);
         background-color: #fff;
         outline: none;
     }
@@ -148,10 +148,10 @@
         background-color: #FFF5F5;
     }
     .input-group-text {
-        background: var(--kk-orange-light);
+        background: #FCE9F5;
         border: 1.5px solid var(--kk-border);
         border-right: none;
-        color: var(--kk-orange);
+        color: var(--pink);
         border-radius: 10px 0 0 10px;
         font-size: .95rem;
     }
@@ -174,12 +174,12 @@
         user-select: none;
     }
     .vehicle-card:hover {
-        border-color: var(--kk-orange);
-        background: var(--kk-orange-light);
+        border-color: var(--pink);
+        background: #FCE9F5;
     }
     .vehicle-card.selected {
-        border-color: var(--kk-orange);
-        background: var(--kk-orange);
+        border-color: var(--pink);
+        background: var(--pink);
         color: #fff;
     }
     .vehicle-card .v-icon { font-size: 1.8rem; display: block; margin-bottom: .35rem; }
@@ -201,10 +201,10 @@
         background: #fff;
         color: #495057;
     }
-    .zone-pill:hover { border-color: var(--kk-orange); color: var(--kk-orange); }
+    .zone-pill:hover { border-color: var(--pink); color: var(--pink); }
     .zone-pill.selected {
-        background: var(--kk-orange);
-        border-color: var(--kk-orange);
+        background: var(--pink);
+        border-color: var(--pink);
         color: #fff;
     }
 
@@ -260,15 +260,15 @@
 
     /* ── Buttons ── */
     .btn-kk-primary {
-        background: linear-gradient(135deg, var(--kk-orange) 0%, #FF8C42 100%);
+        background: linear-gradient(135deg, #7c1e8c 0%, var(--pink) 100%);
         color: #fff; border: none; border-radius: 12px;
         padding: .75rem 1.8rem; font-weight: 700; font-size: .95rem;
         transition: all .2s;
-        box-shadow: 0 4px 15px rgba(255,107,53,.3);
+        box-shadow: 0 4px 15px rgba(233,30,140,.3);
     }
     .btn-kk-primary:hover {
         transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(255,107,53,.4);
+        box-shadow: 0 6px 20px rgba(233,30,140,.4);
         color: #fff;
     }
     .btn-kk-primary:disabled { opacity: .65; transform: none; }
@@ -278,7 +278,7 @@
         border-radius: 12px; padding: .75rem 1.5rem;
         font-weight: 600; font-size: .95rem; transition: all .2s;
     }
-    .btn-kk-outline:hover { border-color: var(--kk-orange); color: var(--kk-orange); }
+    .btn-kk-outline:hover { border-color: var(--pink); color: var(--pink); }
 
     /* ── Wizard footer ── */
     .wizard-footer {
@@ -303,8 +303,8 @@
 <div class="wizard-header">
     <div class="container text-center">
         <div class="brand-emoji">🏍️</div>
-        <h1>রাইডার রেজিস্ট্রেশন</h1>
-        <p>KhaiKhai-তে রাইডার হিসেবে যোগ দিন এবং আয় শুরু করুন</p>
+        <h1>Rider Registration</h1>
+        <p>Join KhaiKhai as a rider and start earning</p>
     </div>
 </div>
 
@@ -313,7 +313,7 @@
     {{-- ── Stepper ── --}}
     <div class="stepper mb-4">
         @php
-            $stepLabels = ['অ্যাকাউন্ট', 'যানবাহন', 'জোন', 'নিশ্চিত করুন'];
+            $stepLabels = ['Account', 'Vehicle', 'Zone', 'Confirm'];
             $stepIcons  = ['👤', '🏍️', '📍', '✅'];
         @endphp
         @for ($i = 1; $i <= $totalSteps; $i++)
@@ -342,39 +342,26 @@
                  STEP 1 — Account Info
                  ════════════════════════════════ --}}
             @if($currentStep === 1)
-                <h2 class="step-title">👤 আপনার অ্যাকাউন্ট তৈরি করুন</h2>
-                <p class="step-subtitle">রাইডার হিসেবে লগইন করতে এই তথ্য লাগবে।</p>
+                <h2 class="step-title">👤 Create Your Account</h2>
+                <p class="step-subtitle">This information will be used to log in as a rider.</p>
 
                 <div class="row g-3">
                     {{-- Name --}}
                     <div class="col-12">
-                        <label class="form-label">পুরো নাম <span class="req">*</span></label>
+                        <label class="form-label">Full Name <span class="req">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text">👤</span>
                             <input type="text"
                                 class="form-control @error('name') is-invalid @enderror"
                                 wire:model.live.debounce.400ms="name"
-                                placeholder="আপনার পুরো নাম লিখুন">
+                                placeholder="Enter your full name">
                         </div>
                         @error('name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                     </div>
 
-                    {{-- Phone --}}
-                    <div class="col-sm-6">
-                        <label class="form-label">মোবাইল নম্বর <span class="req">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text">📱</span>
-                            <input type="tel"
-                                class="form-control @error('phone') is-invalid @enderror"
-                                wire:model.live.debounce.600ms="phone"
-                                placeholder="01XXXXXXXXX" maxlength="11">
-                        </div>
-                        @error('phone') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                    </div>
-
                     {{-- Email --}}
                     <div class="col-sm-6">
-                        <label class="form-label">ইমেইল <small class="text-muted">(ঐচ্ছিক)</small></label>
+                        <label class="form-label">Email Address <span class="req">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text">✉️</span>
                             <input type="email"
@@ -385,15 +372,28 @@
                         @error('email') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                     </div>
 
+                    {{-- Phone --}}
+                    <div class="col-sm-6">
+                        <label class="form-label">Mobile Number <small class="text-muted">(Optional)</small></label>
+                        <div class="input-group">
+                            <span class="input-group-text">📱</span>
+                            <input type="tel"
+                                class="form-control @error('phone') is-invalid @enderror"
+                                wire:model.live.debounce.600ms="phone"
+                                placeholder="01XXXXXXXXX" maxlength="11">
+                        </div>
+                        @error('phone') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                    </div>
+
                     {{-- Password --}}
                     <div class="col-sm-6">
-                        <label class="form-label">পাসওয়ার্ড <span class="req">*</span></label>
+                        <label class="form-label">Password <span class="req">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text">🔒</span>
                             <input type="password"
                                 class="form-control @error('password') is-invalid @enderror"
                                 wire:model.live="password"
-                                placeholder="কমপক্ষে ৮ অক্ষর">
+                                placeholder="At least 8 characters">
                         </div>
                         @error('password') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                         @if(strlen($password) > 0)
@@ -402,7 +402,7 @@
                                 $hasNum = preg_match('/[0-9]/', $password);
                                 $hasSym = preg_match('/[^a-zA-Z0-9]/', $password);
                                 $strength = ($len >= 8 ? 1 : 0) + ($hasNum ? 1 : 0) + ($hasSym ? 1 : 0);
-                                $strengthLabel = ['দুর্বল','মোটামুটি','শক্তিশালী'][$strength - 1] ?? 'খুব দুর্বল';
+                                $strengthLabel = ['Weak','Fair','Strong'][$strength - 1] ?? 'Very Weak';
                                 $strengthClass = ['','weak','fair','strong'][$strength] ?? '';
                             @endphp
                             <div class="pw-strength">
@@ -410,25 +410,25 @@
                                 <div class="pw-bar {{ $strength >= 2 ? $strengthClass : '' }}"></div>
                                 <div class="pw-bar {{ $strength >= 3 ? $strengthClass : '' }}"></div>
                             </div>
-                            <div class="pw-label">পাসওয়ার্ড শক্তি: {{ $strengthLabel }}</div>
+                            <div class="pw-label">Password strength: {{ $strengthLabel }}</div>
                         @endif
                     </div>
 
                     {{-- Confirm Password --}}
                     <div class="col-sm-6">
-                        <label class="form-label">পাসওয়ার্ড নিশ্চিত করুন <span class="req">*</span></label>
+                        <label class="form-label">Confirm Password <span class="req">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text">🔑</span>
                             <input type="password"
                                 class="form-control @error('password_confirmation') is-invalid @enderror"
                                 wire:model.live="password_confirmation"
-                                placeholder="পাসওয়ার্ড আবার লিখুন">
+                                placeholder="Re-enter your password">
                         </div>
                         @if(strlen($password_confirmation) > 0)
                             @if($password === $password_confirmation)
-                                <div class="text-success" style="font-size:.75rem; margin-top:4px;">✓ পাসওয়ার্ড মিলেছে</div>
+                                <div class="text-success" style="font-size:.75rem; margin-top:4px;">✓ Passwords match</div>
                             @else
-                                <div class="text-danger" style="font-size:.75rem; margin-top:4px;">✗ পাসওয়ার্ড মিলছে না</div>
+                                <div class="text-danger" style="font-size:.75rem; margin-top:4px;">✗ Passwords do not match</div>
                             @endif
                         @endif
                         @error('password_confirmation') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
@@ -437,7 +437,7 @@
                     <div class="col-12">
                         <div class="info-alert">
                             <span class="info-icon">ℹ️</span>
-                            <div>আবেদন জমার পর KhaiKhai টিম সর্বোচ্চ ৪৮ ঘণ্টার মধ্যে আপনার তথ্য যাচাই করবে এবং অনুমোদন দেবে।</div>
+                            <div>After submitting your application, the KhaiKhai team will review and approve your information within 48 hours.</div>
                         </div>
                     </div>
                 </div>
@@ -447,13 +447,13 @@
                  STEP 2 — Vehicle & Documents
                  ════════════════════════════════ --}}
             @if($currentStep === 2)
-                <h2 class="step-title">🏍️ যানবাহন ও ডকুমেন্ট</h2>
-                <p class="step-subtitle">আপনার যানবাহন ও পরিচয়পত্রের তথ্য দিন।</p>
+                <h2 class="step-title">🏍️ Vehicle & Documents</h2>
+                <p class="step-subtitle">Provide your vehicle and identification details.</p>
 
                 <div class="row g-3">
                     {{-- Vehicle type --}}
                     <div class="col-12">
-                        <label class="form-label">যানবাহনের ধরন <span class="req">*</span></label>
+                        <label class="form-label">Vehicle Type <span class="req">*</span></label>
                         <div class="vehicle-grid">
                             @foreach($vehicleTypes as $type => $icon)
                                 <div class="vehicle-card {{ $vehicle_type === $type ? 'selected' : '' }}"
@@ -468,39 +468,39 @@
 
                     {{-- Vehicle plate --}}
                     <div class="col-sm-6">
-                        <label class="form-label">নম্বর প্লেট <small class="text-muted">(ঐচ্ছিক)</small></label>
+                        <label class="form-label">Vehicle Plate Number <small class="text-muted">(Optional)</small></label>
                         <div class="input-group">
                             <span class="input-group-text">🔢</span>
                             <input type="text"
                                 class="form-control @error('vehicle_plate') is-invalid @enderror"
                                 wire:model.live.debounce.500ms="vehicle_plate"
-                                placeholder="যেমন: ঢাকা-মেট্রো-গ-১২৩৪">
+                                placeholder="e.g. Dhaka-Metro-Ga-1234">
                         </div>
                         @error('vehicle_plate') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                     </div>
 
                     {{-- License --}}
                     <div class="col-sm-6">
-                        <label class="form-label">ড্রাইভিং লাইসেন্স <small class="text-muted">(ঐচ্ছিক)</small></label>
+                        <label class="form-label">Driving License <small class="text-muted">(Optional)</small></label>
                         <div class="input-group">
                             <span class="input-group-text">📄</span>
                             <input type="text"
                                 class="form-control @error('license_number') is-invalid @enderror"
                                 wire:model.live.debounce.500ms="license_number"
-                                placeholder="লাইসেন্স নম্বর">
+                                placeholder="License number">
                         </div>
                         @error('license_number') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                     </div>
 
                     {{-- NID --}}
                     <div class="col-sm-6">
-                        <label class="form-label">জাতীয় পরিচয়পত্র (NID) <small class="text-muted">(ঐচ্ছিক)</small></label>
+                        <label class="form-label">National ID (NID) <small class="text-muted">(Optional)</small></label>
                         <div class="input-group">
                             <span class="input-group-text">🪪</span>
                             <input type="text"
                                 class="form-control @error('nid_number') is-invalid @enderror"
                                 wire:model.live.debounce.500ms="nid_number"
-                                placeholder="NID নম্বর" maxlength="20">
+                                placeholder="NID number" maxlength="20">
                         </div>
                         @error('nid_number') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                     </div>
@@ -508,7 +508,7 @@
                     <div class="col-12">
                         <div class="info-alert warning">
                             <span class="info-icon">💡</span>
-                            <div>ড্রাইভিং লাইসেন্স ও NID না থাকলে পরে Dashboard থেকে আপডেট করতে পারবেন। তবে অ্যাপ্রুভাল পেতে এগুলো লাগবে।</div>
+                            <div>If you don't have your driving license or NID now, you can update them later from the Dashboard. However, they are required for final approval.</div>
                         </div>
                     </div>
                 </div>
@@ -518,12 +518,12 @@
                  STEP 3 — Zone Selection
                  ════════════════════════════════ --}}
             @if($currentStep === 3)
-                <h2 class="step-title">📍 ডেলিভারি জোন</h2>
-                <p class="step-subtitle">আপনি কোন এলাকায় ডেলিভারি করতে চান?</p>
+                <h2 class="step-title">📍 Delivery Zone</h2>
+                <p class="step-subtitle">Which area would you like to deliver in?</p>
 
                 <div class="row g-3">
                     <div class="col-12">
-                        <label class="form-label">জোন নির্বাচন করুন <span class="req">*</span></label>
+                        <label class="form-label">Select Zone <span class="req">*</span></label>
                         <div class="zone-grid">
                             @foreach($zones as $z)
                                 <span class="zone-pill {{ $zone === $z ? 'selected' : '' }}"
@@ -539,7 +539,7 @@
                         <div class="col-12">
                             <div class="info-alert success">
                                 <span class="info-icon">✅</span>
-                                <div>আপনি <strong>{{ $zone }}</strong> জোন নির্বাচন করেছেন। এই জোনে সক্রিয় অর্ডারগুলো আপনার কাছে আসবে।</div>
+                                <div>You have selected the <strong>{{ $zone }}</strong> zone. Active orders in this zone will be sent to you.</div>
                             </div>
                         </div>
                     @endif
@@ -547,7 +547,7 @@
                     <div class="col-12">
                         <div class="info-alert">
                             <span class="info-icon">ℹ️</span>
-                            <div>জোন পরিবর্তন করতে চাইলে অ্যাপ্রুভালের পর Dashboard থেকে পরিবর্তন করা যাবে।</div>
+                            <div>You can change your zone from the Dashboard after approval.</div>
                         </div>
                     </div>
                 </div>
@@ -557,41 +557,41 @@
                  STEP 4 — Review & Submit
                  ════════════════════════════════ --}}
             @if($currentStep === 4)
-                <h2 class="step-title">✅ তথ্য যাচাই করুন</h2>
-                <p class="step-subtitle">সাবমিট করার আগে আপনার তথ্য একবার দেখে নিন।</p>
+                <h2 class="step-title">✅ Review Your Information</h2>
+                <p class="step-subtitle">Please review your details before submitting.</p>
 
                 <div class="summary-card">
-                    <div class="s-title">👤 অ্যাকাউন্ট</div>
+                    <div class="s-title">👤 Account</div>
                     <div class="summary-row">
-                        <span class="sr-label">নাম</span>
+                        <span class="sr-label">Name</span>
                         <span class="sr-value">{{ $name }}</span>
                     </div>
                     <div class="summary-row">
-                        <span class="sr-label">ফোন</span>
-                        <span class="sr-value">{{ $phone }}</span>
-                    </div>
-                    @if($email)
-                    <div class="summary-row">
-                        <span class="sr-label">ইমেইল</span>
+                        <span class="sr-label">Email</span>
                         <span class="sr-value">{{ $email }}</span>
+                    </div>
+                    @if($phone)
+                    <div class="summary-row">
+                        <span class="sr-label">Phone</span>
+                        <span class="sr-value">{{ $phone }}</span>
                     </div>
                     @endif
                 </div>
 
                 <div class="summary-card">
-                    <div class="s-title">🏍️ যানবাহন</div>
+                    <div class="s-title">🏍️ Vehicle</div>
                     <div class="summary-row">
-                        <span class="sr-label">ধরন</span>
+                        <span class="sr-label">Type</span>
                         <span class="sr-value">
                             {{ $vehicleTypes[$vehicle_type] ?? '' }} {{ $vehicle_type }}
                         </span>
                     </div>
                     <div class="summary-row">
-                        <span class="sr-label">নম্বর প্লেট</span>
+                        <span class="sr-label">Plate Number</span>
                         <span class="sr-value">{{ $vehicle_plate ?: '—' }}</span>
                     </div>
                     <div class="summary-row">
-                        <span class="sr-label">লাইসেন্স</span>
+                        <span class="sr-label">License</span>
                         <span class="sr-value">{{ $license_number ?: '—' }}</span>
                     </div>
                     <div class="summary-row">
@@ -601,16 +601,16 @@
                 </div>
 
                 <div class="summary-card">
-                    <div class="s-title">📍 জোন</div>
+                    <div class="s-title">📍 Zone</div>
                     <div class="summary-row">
-                        <span class="sr-label">ডেলিভারি জোন</span>
+                        <span class="sr-label">Delivery Zone</span>
                         <span class="sr-value">📍 {{ $zone }}</span>
                     </div>
                 </div>
 
                 <div class="info-alert success">
                     <span class="info-icon">✅</span>
-                    <div>সাবমিট করার পর KhaiKhai টিম আপনার তথ্য যাচাই করবে। অনুমোদন হলে আপনার ফোনে SMS পাবেন এবং ডেলিভারি শুরু করতে পারবেন।</div>
+                    <div>After submission, the KhaiKhai team will review your information. Once approved, you'll receive an SMS and can start delivering.</div>
                 </div>
             @endif
 
@@ -623,24 +623,24 @@
                     <button type="button" class="btn-kk-outline"
                         wire:click="prevStep"
                         wire:loading.attr="disabled">
-                        ← পিছনে
+                        ← Back
                     </button>
                 @else
-                    <span class="progress-text">ধাপ {{ $currentStep }} / {{ $totalSteps }}</span>
+                    <span class="progress-text">Step {{ $currentStep }} / {{ $totalSteps }}</span>
                 @endif
             </div>
 
             <div class="d-flex align-items-center gap-3">
-                <span class="progress-text">ধাপ {{ $currentStep }} / {{ $totalSteps }}</span>
+                <span class="progress-text">Step {{ $currentStep }} / {{ $totalSteps }}</span>
 
                 @if($currentStep < $totalSteps)
                     <button type="button" class="btn-kk-primary"
                         wire:click="nextStep"
                         wire:loading.attr="disabled"
                         wire:target="nextStep">
-                        <span wire:loading.remove wire:target="nextStep">পরবর্তী →</span>
+                        <span wire:loading.remove wire:target="nextStep">Next →</span>
                         <span wire:loading wire:target="nextStep">
-                            <span class="spinner-border spinner-border-sm me-1"></span> যাচাই হচ্ছে...
+                            <span class="spinner-border spinner-border-sm me-1"></span> Validating...
                         </span>
                     </button>
                 @else
@@ -648,9 +648,9 @@
                         wire:click="submit"
                         wire:loading.attr="disabled"
                         wire:target="submit">
-                        <span wire:loading.remove wire:target="submit">✅ আবেদন সম্পন্ন করুন</span>
+                        <span wire:loading.remove wire:target="submit">✅ Complete Application</span>
                         <span wire:loading wire:target="submit">
-                            <span class="spinner-border spinner-border-sm me-1"></span> সাবমিট হচ্ছে...
+                            <span class="spinner-border spinner-border-sm me-1"></span> Submitting...
                         </span>
                     </button>
                 @endif
@@ -661,9 +661,9 @@
 
     {{-- Terms note --}}
     <p class="text-center mt-3" style="font-size:.78rem; color:#ADB5BD;">
-        আবেদন করে আপনি KhaiKhai-এর
-        <a href="#" style="color:var(--kk-orange);">Terms & Conditions</a> ও
-        <a href="#" style="color:var(--kk-orange);">Privacy Policy</a>-তে সম্মত হচ্ছেন।
+        By applying, you agree to KhaiKhai's
+        <a href="#" style="color:var(--pink);">Terms & Conditions</a> and
+        <a href="#" style="color:var(--pink);">Privacy Policy</a>.
     </p>
 
 </div>{{-- container --}}

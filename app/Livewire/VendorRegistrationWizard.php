@@ -7,28 +7,29 @@ use App\Models\Restaurant;
 use App\Models\User;
 use App\Models\VendorSetting;
 use App\Models\MenuCategory;
+use App\Mail\NewVendorRegisteredMail;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Livewire\Attributes\Validate;
 use Livewire\WithFileUploads;
 
 class VendorRegistrationWizard extends Component
 {
-     use WithFileUploads;
- 
+    use WithFileUploads;
+
     // ── Wizard state ────────────────────────────────────────────────
     public int $currentStep = 1;
     public int $totalSteps  = 4;
- 
+
     // ── Step 1 : Personal / Account info ────────────────────────────
     public string $name     = '';
     public string $phone    = '';
     public string $email    = '';
     public string $password = '';
     public string $password_confirmation = '';
- 
+
     // ── Step 2 : Restaurant info ─────────────────────────────────────
     public string $restaurant_name = '';
     public string $category        = '';
@@ -37,11 +38,11 @@ class VendorRegistrationWizard extends Component
     public string $city            = '';
     public string $postal_code     = '';
     public string $description     = '';
- 
+
     // ── Step 3 : Media & branding ────────────────────────────────────
     public $logo   = null;
     public $banner = null;
- 
+
     // ── Step 4 : Delivery settings ───────────────────────────────────
     public int    $delivery_fee     = 49;       // BDT (will store as paisa)
     public int    $avg_delivery_min = 20;
@@ -49,37 +50,37 @@ class VendorRegistrationWizard extends Component
     public int    $min_order_amount = 100;      // BDT
     public int    $prep_time_min    = 15;
     public bool   $auto_accept      = false;
- 
+
     // ── Categories list ──────────────────────────────────────────────
     public array $categories = [
-        'বাংলা খাবার',
-        'ফাস্টফুড',
-        'বার্গার',
-        'পিৎজা',
-        'বিরিয়ানি',
-        'চাইনিজ',
-        'ইন্ডিয়ান',
-        'সী-ফুড',
-        'ডেজার্ট ও মিষ্টি',
-        'চা ও কফি',
-        'হেলদি ফুড',
-        'স্ট্রিট ফুড',
+        'Bangla Food',
+        'Fast Food',
+        'Burger',
+        'Pizza',
+        'Biryani',
+        'Chinese',
+        'Indian',
+        'Seafood',
+        'Dessert & Sweets',
+        'Tea & Coffee',
+        'Healthy Food',
+        'Street Food',
     ];
- 
+
     // ── Cities list ──────────────────────────────────────────────────
     public array $cities = [
         'Dhaka', 'Gazipur', 'Narayanganj', 'Chittagong',
         'Sylhet', 'Rajshahi', 'Khulna', 'Barisal', 'Mymensingh',
     ];
- 
+
     // ── Validation rules per step ────────────────────────────────────
     protected function rulesForStep(int $step): array
     {
         return match ($step) {
             1 => [
                 'name'                  => 'required|string|min:3|max:100',
-                'phone'                 => 'required|string|regex:/^01[3-9]\d{8}$/|unique:users,phone',
-                'email'                 => 'nullable|email|max:150|unique:users,email',
+                'email'                 => 'required|email|max:150|unique:users,email',
+                'phone'                 => 'nullable|string|regex:/^01[3-9]\d{8}$/|unique:users,phone',
                 'password'              => 'required|string|min:8|confirmed',
                 'password_confirmation' => 'required',
             ],
@@ -106,32 +107,34 @@ class VendorRegistrationWizard extends Component
             default => [],
         };
     }
- 
+
     protected function messagesForStep(int $step): array
     {
         return match ($step) {
             1 => [
-                'phone.regex'    => 'সঠিক বাংলাদেশি মোবাইল নম্বর দিন (01XXXXXXXXX)।',
-                'phone.unique'   => 'এই মোবাইল নম্বরটি ইতিমধ্যে নিবন্ধিত।',
-                'email.unique'   => 'এই ইমেইলটি ইতিমধ্যে ব্যবহৃত হচ্ছে।',
-                'password.min'   => 'পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।',
-                'password.confirmed' => 'পাসওয়ার্ড মিলছে না।',
+                'email.required'  => 'Email address is required.',
+                'email.email'     => 'Please enter a valid email address.',
+                'email.unique'    => 'This email is already registered.',
+                'phone.regex'     => 'Please enter a valid Bangladeshi mobile number (01XXXXXXXXX).',
+                'phone.unique'    => 'This mobile number is already registered.',
+                'password.min'    => 'Password must be at least 8 characters.',
+                'password.confirmed' => 'Passwords do not match.',
             ],
             2 => [
-                'restaurant_phone.regex' => 'সঠিক বাংলাদেশি মোবাইল নম্বর দিন।',
-                'address.min'            => 'পূর্ণ ঠিকানা লিখুন (কমপক্ষে ১০ অক্ষর)।',
+                'restaurant_phone.regex' => 'Please enter a valid Bangladeshi mobile number.',
+                'address.min'            => 'Please enter a complete address (at least 10 characters).',
             ],
             3 => [
-                'logo.max'   => 'লোগো সর্বোচ্চ ২ MB হতে পারবে।',
-                'banner.max' => 'ব্যানার সর্বোচ্চ ৪ MB হতে পারবে।',
+                'logo.max'   => 'Logo must not exceed 2 MB.',
+                'banner.max' => 'Banner must not exceed 4 MB.',
             ],
             4 => [
-                'avg_delivery_max.gte' => 'সর্বোচ্চ সময় সর্বনিম্ন সময়ের চেয়ে বেশি হতে হবে।',
+                'avg_delivery_max.gte' => 'Maximum time must be greater than minimum time.',
             ],
             default => [],
         };
     }
- 
+
     // ── Navigation ───────────────────────────────────────────────────
     public function nextStep(): void
     {
@@ -139,19 +142,19 @@ class VendorRegistrationWizard extends Component
             $this->rulesForStep($this->currentStep),
             $this->messagesForStep($this->currentStep)
         );
- 
+
         if ($this->currentStep < $this->totalSteps) {
             $this->currentStep++;
         }
     }
- 
+
     public function prevStep(): void
     {
         if ($this->currentStep > 1) {
             $this->currentStep--;
         }
     }
- 
+
     public function goToStep(int $step): void
     {
         // Only allow going back to already-visited steps
@@ -159,7 +162,7 @@ class VendorRegistrationWizard extends Component
             $this->currentStep = $step;
         }
     }
- 
+
     // ── Final submission ─────────────────────────────────────────────
     public function submit(): void
     {
@@ -168,14 +171,17 @@ class VendorRegistrationWizard extends Component
             $this->messagesForStep(4)
         );
 
-        DB::transaction(function () {
+        $restaurant = null;
+        $user       = null;
+
+        DB::transaction(function () use (&$restaurant, &$user) {
 
             // 1. Create user
             $user = User::create([
                 'uuid'        => Str::uuid(),
                 'name'        => $this->name,
-                'phone'       => $this->phone,
-                'email'       => $this->email ?: null,
+                'phone'       => $this->phone ?: null,
+                'email'       => $this->email,
                 'password'    => $this->password,
                 'role'        => 'vendor',
                 'is_verified' => false,
@@ -196,7 +202,7 @@ class VendorRegistrationWizard extends Component
             $restaurant = Restaurant::create([
                 'owner_id'         => $user->id,
                 'name'             => $this->restaurant_name,
-                'slug'             => Str::slug($this->restaurant_name) . '-' . Str::lower(Str::random(4)),
+                'slug'             => $this->generateUniqueSlug($this->restaurant_name),
                 'category'         => $this->category,
                 'phone'            => $this->restaurant_phone,
                 'address'          => $this->address,
@@ -212,7 +218,7 @@ class VendorRegistrationWizard extends Component
                 'is_active'        => true,
             ]);
 
-            // 4. DEFAULT MENU CATEGORIES CREATE (IMPORTANT)
+            // 4. Default menu categories
             $categories = [
                 ['name' => 'Burger', 'emoji' => '🍔'],
                 ['name' => 'Pizza', 'emoji' => '🍕'],
@@ -223,10 +229,10 @@ class VendorRegistrationWizard extends Component
             ];
 
             foreach ($categories as $index => $cat) {
-                \App\Models\MenuCategory::firstOrCreate(
+                MenuCategory::firstOrCreate(
                     [
                         'restaurant_id' => $restaurant->id,
-                        'name' => $cat['name'],
+                        'name'          => $cat['name'],
                     ],
                     [
                         'emoji'      => $cat['emoji'],
@@ -244,12 +250,63 @@ class VendorRegistrationWizard extends Component
                 'notification_sound' => true,
                 'min_order_amount'   => $this->min_order_amount * 100,
             ]);
+
+            if (function_exists('activity')) {
+                activity()
+                    ->causedBy($user)
+                    ->performedOn($restaurant)
+                    ->log('vendor_registered');
+            }
         });
 
+        // Notify all admins by email (outside the DB transaction, non-blocking failures)
+        $this->notifyAdmins($restaurant, $user);
+
         // Redirect
-        $this->redirect(route('vendor.registration.success'), navigate: true);
+        $this->redirect(route('vendor.registration.success', ['restaurant' => $restaurant->id]), navigate: true);
     }
- 
+
+    /**
+     * Generate a unique slug for the restaurant, resolving collisions.
+     */
+    protected function generateUniqueSlug(string $name): string
+    {
+        $base = Str::slug($name);
+        $slug = $base;
+        $i    = 1;
+
+        while (Restaurant::where('slug', $slug)->exists()) {
+            $slug = $base . '-' . $i;
+            $i++;
+        }
+
+        return $slug;
+    }
+
+    /**
+     * Send a new-vendor notification email to every active admin user.
+     */
+    protected function notifyAdmins(?Restaurant $restaurant, ?User $user): void
+    {
+        if (! $restaurant || ! $user) {
+            return;
+        }
+
+        try {
+            $adminEmails = User::query()
+                ->where('role', 'admin')
+                ->whereNotNull('email')
+                ->pluck('email');
+
+            if ($adminEmails->isNotEmpty()) {
+                Mail::to($adminEmails->all())->send(new NewVendorRegisteredMail($restaurant, $user));
+            }
+        } catch (\Throwable $e) {
+            // Never block vendor registration if email sending fails
+            Log::error('Failed to send new vendor registration email: ' . $e->getMessage());
+        }
+    }
+
     // ── Render ───────────────────────────────────────────────────────
     public function render()
     {

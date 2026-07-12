@@ -25,52 +25,29 @@
     <div class="brand-icon"><span class="material-icons-round">store</span></div>
     <div class="brand-text">
       <div class="brand-name"><span>Khai</span>Khai</div>
-      <div class="brand-sub">Vendor Panel</div>
+      <div class="brand-sub">Admin Panel</div>
     </div>
   </div>
   <div class="sidebar-scroll">
     <ul class="list-unstyled mb-0">
-      <li class="nav-section">Dashboard</li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'dashboard') == true ? 'active' : '' }}" href="{{ route('vendor.dashboard') }}"><span class="material-icons-round nav-icon">dashboard</span><span class="nav-label">Dashboard</span></a></li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'orders/live') == true ? 'active' : '' }}" href="{{ route('vendor.orders.live') }}"><span class="material-icons-round nav-icon">shopping_bag</span><span class="nav-label">Live Orders</span>@livewire('vendor.live-order-count')</a></li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'orders/all') == true ? 'active' : '' }}" href="{{ route('vendor.orders.list') }}"><span class="material-icons-round nav-icon">list_alt</span><span class="nav-label">All Orders</span></a></li>
-      <li class="nav-section">Restaurant</li>
-      
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'menu/items') == true ? 'active' : '' }}" href="{{ route('vendor.menu.items') }}"><span class="material-icons-round nav-icon">restaurant_menu</span><span class="nav-label">Items</span></a></li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'menu/categories') == true ? 'active' : '' }}" href="{{ route('vendor.menu.categories') }}"><span class="material-icons-round nav-icon">category</span><span class="nav-label">Categories</span></a></li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'promotions') == true ? 'active' : '' }}" href="{{ route('vendor.promotions') }}"><span class="material-icons-round nav-icon">local_offer</span><span class="nav-label">Promotions</span></a></li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'coupons') == true ? 'active' : '' }}" href="{{ route('vendor.coupons') }}"><span class="material-icons-round nav-icon">local_offer</span><span class="nav-label">Coupons</span></a></li>
+      <li class="nav-section">Overview</li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/dashboard') == true ? 'active' : '' }}" href="{{ route('admin.dashboard') }}"><span class="material-icons-round nav-icon">dashboard</span><span class="nav-label">Dashboard</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/orders') == true ? 'active' : '' }}" href="{{ route('admin.orders') }}"><span class="material-icons-round nav-icon">shopping_bag</span><span class="nav-label">Orders</span></a></li>
+     
+      <li class="nav-section">Management</li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/vendors') == true ? 'active' : '' }}" href="{{ route('admin.vendors') }}"><span class="material-icons-round nav-icon">storefront</span><span class="nav-label">Vendors</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/riders') == true ? 'active' : '' }}" href="{{ route('admin.riders') }}"><span class="material-icons-round nav-icon">directions_bike</span><span class="nav-label">Riders</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/customers') == true ? 'active' : '' }}" href="{{ route('admin.customers') }}"><span class="material-icons-round nav-icon">accessible</span><span class="nav-label">Customers</span></a></li>
       <li class="nav-section">Report</li>
-      <li class="nav1-item"><a class="nav1-link" {{ str_contains(request()->url(), 'finances') == true ? 'active' : '' }}" href="{{ route('vendor.finances') }}"><span class="material-icons-round nav-icon">payments</span><span class="nav-label">Finances</span></a></li>
-      <li class="nav1-item"><a class="nav1-link" {{ str_contains(request()->url(), 'reviews') == true ? 'active' : '' }}" href="{{ route('vendor.reviews') }}"><span class="material-icons-round nav-icon">star_rate</span><span class="nav-label">Reviews</span></a></li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'settings') == true ? 'active' : '' }}" href="{{ route('vendor.settings') }}"><span class="material-icons-round nav-icon">manage_accounts</span><span class="nav-label">Settings</span></a></li>
-      {{-- <li class="nav1-item">
-        <div class="nav1-link" onclick="toggleNav1(this)">
-          <span class="material-icons-round nav-icon">manage_accounts</span>
-          <span class="nav-label">সেটিংস</span>
-          <span class="material-icons-round nav-arrow">expand_more</span>
-        </div>
-        <div class="nav2-collapse">
-          <ul class="list-unstyled">
-            <li class="nav2-item"><div class="nav2-link"><span class="nav2-icon">R</span><span class="nav2-label">রেস্তোরাঁ তথ্য</span></div></li>
-            <li class="nav2-item"><div class="nav2-link"><span class="nav2-icon">H</span><span class="nav2-label">খোলার সময়</span></div></li>
-            <li class="nav2-item"><div class="nav2-link"><span class="nav2-icon">P</span><span class="nav2-label">পেমেন্ট</span></div></li>
-          </ul>
-        </div>
-      </li> --}}
+      <li class="nav1-item"><a class="nav1-link" {{ str_contains(request()->url(), 'admin/revenues') == true ? 'active' : '' }}" href="{{ route('admin.revenues') }}"><span class="material-icons-round nav-icon">attach_money</span><span class="nav-label">Revenues</span></a></li>
+      <li class="nav1-item"><a class="nav1-link" {{ str_contains(request()->url(), 'admin/commissions') == true ? 'active' : '' }}" href="{{ route('admin.commissions') }}"><span class="material-icons-round nav-icon">payments</span><span class="nav-label">Commissions</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/settings') == true ? 'active' : '' }}" href="{{ route('admin.settings') }}"><span class="material-icons-round nav-icon">manage_accounts</span><span class="nav-label">Settings</span></a></li>
     </ul>
   </div>
   <div class="sidebar-footer">
     <div class="sf-user">
-      <img 
-    src="{{ auth()->user()->restaurant?->logo_url
-        ? asset(auth()->user()->restaurant->logo_url) 
-        : asset('assets/img/default-restaurant.png') }}"
-    class="sf-avatar"
-    alt="{{ auth()->user()->restaurant?->name ?? 'Vendor' }}"
-/>
-      {{-- <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=80&q=70" class="sf-avatar" alt="{{ auth()->user()->restaurant?->name ?? 'Vendor' }}"/> --}}
-      <div><div class="sf-name">{{ auth()->user()->restaurant?->name ?? 'Unknown' }}</div><div class="sf-role">Owner</div></div>
+      <img src="https://i.pravatar.cc/80?img=12" class="sf-avatar" alt="Admin"/>
+      <div><div class="sf-name">{{ auth()->user()->name ?? 'Unknown' }}</div><div class="sf-role">{{ auth()->user()->name ?? 'Unknown' }}</div></div>
     </div>
   </div>
 </aside>
@@ -97,11 +74,11 @@
         </ul>
       </div>
       <div class="dropdown">
-        <img src="https://i.pravatar.cc/80?img=12" class="topnav-avatar" data-bs-toggle="dropdown" data-bs-auto-close="outside" alt="Vendor"/>
+        <img src="https://i.pravatar.cc/80?img=12" class="topnav-avatar" data-bs-toggle="dropdown" data-bs-auto-close="outside" alt="Admin"/>
         <div class="dropdown-menu dropdown-menu-end user-dropdown-menu">
           <div class="user-info-block">
-            <img src="https://i.pravatar.cc/80?img=12" class="user-avatar-lg" alt="Vendor"/>
-            <div><div class="user-name">{{ auth()->user()->name ?? 'Unknown' }} <span class="badge-pro">Vendor</span></div><a href="#" class="user-email">{{ auth()->user()->email ?? 'Unknown' }}</a></div>
+            <img src="https://i.pravatar.cc/80?img=12" class="user-avatar-lg" alt="Admin"/>
+            <div><div class="user-name">{{ auth()->user()->name ?? 'Unknown' }} <span class="badge-pro">Admin</span></div><a href="#" class="user-email">{{ auth()->user()->email ?? 'Unknown' }}</a></div>
           </div>
           <hr class="dropdown-sep"/>
           <div class="ud-item">
@@ -132,10 +109,9 @@
 <!-- MOBILE BOTTOM NAV -->
 <nav class="mob-bottom-nav">
   <div class="mob-nav-items">
-    <a href="{{ route('vendor.dashboard') }}" class="mob-nav-item active"><span class="material-icons-round">dashboard</span><span>Dashboard</span></a>
-    <a href="{{ route('vendor.orders.live') }}" class="mob-nav-item"><span class="material-icons-round">shopping_bag</span><span>Orders</span></a>
-    <a href="{{ route('vendor.menu.items') }}" class="mob-nav-item"><span class="material-icons-round">restaurant_menu</span><span>Food</span></a>
-    <a href="{{ route('vendor.finances') }}" class="mob-nav-item"><span class="material-icons-round">payments</span><span>Finances</span></a>
+    <a href="{{ route('admin.dashboard') }}" class="mob-nav-item active"><span class="material-icons-round">dashboard</span><span>Dashboard</span></a>
+    <a href="{{ route('admin.orders') }}" class="mob-nav-item"><span class="material-icons-round">shopping_bag</span><span>Orders</span></a>
+    <a href="{{ route('admin.revenues') }}" class="mob-nav-item"><span class="material-icons-round">attach_money</span><span>Revenues</span></a>
     <a href="#" class="mob-nav-item"><span class="material-icons-round">person</span><span>Profile</span></a>
   </div>
 </nav>

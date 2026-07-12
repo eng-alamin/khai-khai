@@ -1,4 +1,4 @@
-{{-- resources/views/livewire/login.blade.php --}}
+{{-- resources/views/livewire/reset-password.blade.php --}}
 <div>
 <style>
     :root {
@@ -13,8 +13,6 @@
         min-height: 100vh;
         font-family: 'Segoe UI', sans-serif;
     }
-
-    /* ── Card ── */
     .login-card {
         background: #fff;
         border-radius: 20px;
@@ -31,8 +29,6 @@
     .login-header h1 { color: #fff; font-weight: 700; font-size: 1.4rem; margin: .4rem 0 .25rem; }
     .login-header p  { color: rgba(255,255,255,.85); font-size: .85rem; margin: 0; }
     .login-body { padding: 2rem; }
-
-    /* ── Form controls ── */
     .form-label {
         font-size: .82rem; font-weight: 600;
         color: var(--kk-dark); margin-bottom: .35rem;
@@ -52,6 +48,7 @@
         outline: none;
     }
     .form-control.is-invalid { border-color: #DC3545; background: #FFF5F5; }
+    .form-control[readonly] { background: #F1F1F5; color: #6C757D; }
     .input-group-text {
         background: #FCE9F4;
         border: 1.5px solid var(--kk-border);
@@ -62,8 +59,6 @@
     }
     .input-group .form-control { border-radius: 0 10px 10px 0; }
     .invalid-feedback { font-size: .78rem; }
-
-    /* ── Password toggle ── */
     .pw-wrap { position: relative; }
     .pw-toggle {
         position: absolute; right: 12px; top: 50%;
@@ -73,8 +68,6 @@
         padding: 0; line-height: 1;
     }
     .pw-toggle:hover { color: var(--pink); }
-
-    /* ── Error alert ── */
     .error-alert {
         background: #FFF0F0; border: 1px solid #FFCDD2;
         border-radius: 10px; padding: .85rem 1rem;
@@ -82,8 +75,13 @@
         display: flex; gap: 8px; align-items: flex-start;
         margin-bottom: 1.2rem;
     }
-
-    /* ── Primary button ── */
+    .status-alert {
+        background: #F0FFF4; border: 1px solid #C6F6D5;
+        border-radius: 10px; padding: .85rem 1rem;
+        font-size: .85rem; color: #2E7D32;
+        display: flex; gap: 8px; align-items: flex-start;
+        margin-bottom: 1.2rem;
+    }
     .btn-kk {
         background: linear-gradient(135deg, var(--kk-purple-dark) 0%, var(--kk-purple) 50%, var(--pink) 100%);
         color: #fff; border: none; border-radius: 12px;
@@ -97,43 +95,24 @@
         color: #fff;
     }
     .btn-kk:disabled { opacity: .65; transform: none; }
-
-    /* ── Divider ── */
-    .divider {
-        display: flex; align-items: center; gap: 12px;
-        margin: 1.2rem 0; color: #ADB5BD; font-size: .8rem;
+    .back-link {
+        display: block; text-align: center; margin-top: 1.2rem;
+        font-size: .85rem; color: var(--pink); text-decoration: none; font-weight: 600;
     }
-    .divider::before, .divider::after {
-        content: ''; flex: 1; height: 1px;
-        background: var(--kk-border);
-    }
-
-    /* ── Register link box ── */
-    .register-box {
-        background: #FCE9F4;
-        border: 1px solid rgba(233,30,140,.2);
-        border-radius: 12px; padding: 1rem;
-        text-align: center; font-size: .85rem;
-        color: var(--kk-dark);
-    }
-    .register-box a { color: var(--pink); font-weight: 700; text-decoration: none; }
-    .register-box a:hover { text-decoration: underline; }
+    .back-link:hover { text-decoration: underline; }
 </style>
 
 <div class="container py-5" style="max-width: 440px;">
     <div class="login-card">
 
-        {{-- Header --}}
         <div class="login-header">
-            <div class="brand-emoji">🍽️</div>
-            <h1>Log in to KhaiKhai</h1>
-            <p>Access your account</p>
+            <div class="brand-emoji">🔐</div>
+            <h1>Reset Password</h1>
+            <p>Choose a new password for your account</p>
         </div>
 
-        {{-- Body --}}
         <div class="login-body">
 
-            {{-- Error message --}}
             @if($errorMsg)
                 <div class="error-alert">
                     <span>⚠️</span>
@@ -141,41 +120,33 @@
                 </div>
             @endif
 
-            {{-- Session error (e.g. from middleware) --}}
-            @if(session('error'))
-                <div class="error-alert">
-                    <span>⚠️</span>
-                    <span>{{ session('error') }}</span>
+            @if($statusMsg)
+                <div class="status-alert">
+                    <span>✅</span>
+                    <span>{{ $statusMsg }}</span>
                 </div>
             @endif
 
             <div class="row g-3">
 
-                {{-- Email --}}
+                {{-- Email (readonly, pre-filled from link) --}}
                 <div class="col-12">
                     <label class="form-label">Email Address</label>
                     <div class="input-group">
                         <span class="input-group-text">✉️</span>
                         <input type="email"
                             class="form-control @error('email') is-invalid @enderror"
-                            wire:model.live.debounce.400ms="email"
-                            placeholder="example@email.com"
-                            autofocus>
+                            wire:model="email"
+                            placeholder="example@email.com">
                     </div>
                     @error('email')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
                 </div>
 
-                {{-- Password --}}
+                {{-- New Password --}}
                 <div class="col-12">
-                    <div class="d-flex justify-content-between">
-                        <label class="form-label">Password</label>
-                        <a href="{{ route('password.request') }}"
-                            style="font-size:.78rem; color:var(--pink); text-decoration:none;">
-                            Forgot password?
-                        </a>
-                    </div>
+                    <label class="form-label">New Password</label>
                     <div class="pw-wrap">
                         <div class="input-group">
                             <span class="input-group-text">🔒</span>
@@ -183,9 +154,9 @@
                                 id="pwField"
                                 class="form-control @error('password') is-invalid @enderror"
                                 wire:model.live="password"
-                                placeholder="Your password">
+                                placeholder="At least 8 characters">
                         </div>
-                        <button type="button" class="pw-toggle" onclick="togglePw()" id="pwToggleBtn" aria-label="Show password">
+                        <button type="button" class="pw-toggle" onclick="togglePw('pwField', this)" aria-label="Show password">
                             👁️
                         </button>
                     </div>
@@ -194,54 +165,47 @@
                     @enderror
                 </div>
 
-                {{-- Remember me --}}
+                {{-- Confirm Password --}}
                 <div class="col-12">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox"
-                            wire:model="remember" id="rememberMe"
-                            style="accent-color: var(--pink);">
-                        <label class="form-check-label" for="rememberMe"
-                            style="font-size:.85rem; color:#6C757D; cursor:pointer;">
-                            Remember me
-                        </label>
+                    <label class="form-label">Confirm New Password</label>
+                    <div class="pw-wrap">
+                        <div class="input-group">
+                            <span class="input-group-text">🔒</span>
+                            <input type="password"
+                                id="pwConfirmField"
+                                class="form-control"
+                                wire:model.live="password_confirmation"
+                                placeholder="Re-enter new password">
+                        </div>
+                        <button type="button" class="pw-toggle" onclick="togglePw('pwConfirmField', this)" aria-label="Show password">
+                            👁️
+                        </button>
                     </div>
                 </div>
 
-                {{-- Submit --}}
                 <div class="col-12 mt-2">
                     <button type="button" class="btn-kk"
-                        wire:click="login"
+                        wire:click="resetPassword"
                         wire:loading.attr="disabled"
-                        wire:target="login">
-                        <span wire:loading.remove wire:target="login">
-                            🚀 Log In
+                        wire:target="resetPassword">
+                        <span wire:loading.remove wire:target="resetPassword">
+                            🔁 Reset Password
                         </span>
-                        <span wire:loading wire:target="login">
+                        <span wire:loading wire:target="resetPassword">
                             <span class="spinner-border spinner-border-sm me-2"></span>
-                            Verifying...
+                            Resetting...
                         </span>
                     </button>
                 </div>
 
-            </div>{{-- row --}}
-
-            <div class="divider">OR</div>
-
-            {{-- Register link --}}
-            <div class="register-box">
-                <a href="{{ route('customer.register') }}">Register here</a>
-                <br><br>
-                Restaurant Owner?
-                <a href="{{ route('vendor.register') }}">Register here</a>
-                <br>
-                <span style="font-size:.78rem; color:#ADB5BD; margin-top:4px; display:block;">
-                    Want to be a Rider?
-                    <a href="{{ route('rider.register') }}">Rider App</a>
-                </span>
             </div>
 
-        </div>{{-- login-body --}}
-    </div>{{-- login-card --}}
+            <a href="{{ route('login') }}" class="back-link" wire:navigate>
+                ← Back to Login
+            </a>
+
+        </div>
+    </div>
 
     <p class="text-center mt-3" style="font-size:.75rem; color:#f0e0f0;">
         © {{ date('Y') }} KhaiKhai · All Rights Reserved
@@ -249,15 +213,14 @@
 </div>
 
 <script>
-function togglePw() {
-    const f = document.getElementById('pwField');
-    const b = document.getElementById('pwToggleBtn');
+function togglePw(fieldId, btn) {
+    const f = document.getElementById(fieldId);
     if (f.type === 'password') {
         f.type = 'text';
-        b.textContent = '🙈';
+        btn.textContent = '🙈';
     } else {
         f.type = 'password';
-        b.textContent = '👁️';
+        btn.textContent = '👁️';
     }
 }
 </script>

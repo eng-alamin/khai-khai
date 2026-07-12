@@ -82,7 +82,7 @@ class User extends Authenticatable
     // User → CustomerProfile (1 to 1)
     public function customerProfile()
     {
-        return $this->hasOne(\App\Models\CustomerProfile::class, 'user_id');
+        return $this->hasOne(\App\Models\CustomerProfile::class, 'customer_id');
     }
     
     // User → CustomerAddresses (1 to many)  [already exists, keeping for reference]
@@ -102,5 +102,21 @@ class User extends Authenticatable
     public function riderProfile()
     {
         return $this->hasOne(\App\Models\RiderProfile::class, 'user_id');
+    }
+    public function riderEarnings()
+    {
+        return $this->hasOne(\App\Models\RiderEarning::class, 'rider_id');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(\App\Models\Order::class, 'customer_id');
+    }
+
+    protected function isOnline(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->last_seen_at?->gt(now()->subMinutes(5)) ?? false,
+        );
     }
 }
