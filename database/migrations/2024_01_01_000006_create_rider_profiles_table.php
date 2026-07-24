@@ -21,6 +21,7 @@ return new class extends Migration
             $table->boolean('is_online')->default(false);
             $table->decimal('current_lat', 10, 7)->nullable();
             $table->decimal('current_lng', 10, 7)->nullable();
+            $table->timestamp('location_updated_at')->nullable();
             $table->boolean('is_approved')->default(false);
             $table->timestamps();
 

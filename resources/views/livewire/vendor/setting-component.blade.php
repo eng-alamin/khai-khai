@@ -1,3 +1,14 @@
+@once
+  @push('styles')
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+  @endpush
+@endonce
+
 {{-- resources/views/livewire/vendor/settings.blade.php --}}
 <div>
 
@@ -41,7 +52,6 @@
         @foreach ([
             'basic'    => ['icon' => 'fa-store',      'label' => 'Basic Info'],
             'media'    => ['icon' => 'fa-image',       'label' => 'Logo & Banner'],
-            'delivery' => ['icon' => 'fa-motorcycle', 'label' => 'Delivery'],
             'ops'      => ['icon' => 'fa-sliders-h',  'label' => 'Operations'],
         ] as $tab => $meta)
             <button
@@ -229,9 +239,38 @@
 
                     </div>
 
+                    {{-- Map Picker --}}
+                    <div class="item-form-group mt-2 mb-2">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="item-form-label mb-0">Pin Location on Map</label>
+                            <button
+                                type="button"
+                                id="useCurrentLocationBtnSettings"
+                                class="btn-kk-mini"
+                            >
+                                <i class="fa fa-location-crosshairs"></i> Use my location
+                            </button>
+                        </div>
+
+                        <div
+                            id="settingsMap"
+                            wire:ignore
+                            style="height:240px; width:100%; border-radius:var(--radius-md); border:1.5px solid var(--border); overflow:hidden;"
+                        ></div>
+
+                        <div style="font-size:12px; color:var(--muted); margin-top:6px;">
+                            <i class="fa fa-map-marker-alt"></i>
+                            @if($latitude && $longitude)
+                                Selected: {{ number_format($latitude, 6) }}, {{ number_format($longitude, 6) }}
+                            @else
+                                Click on the map (or drag the marker) to select the restaurant's exact location.
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Latitude / Longitude (auto-filled by map, still editable) --}}
                     <div class="item-row g-3 mt-2">
 
-                        {{-- Latitude --}}
                         <div class="item-col">
                             <div class="item-form-group">
                                 <label class="item-form-label">Latitude</label>
@@ -248,7 +287,6 @@
                             </div>
                         </div>
 
-                        {{-- Longitude --}}
                         <div class="item-col">
                             <div class="item-form-group">
                                 <label class="item-form-label">Longitude</label>
@@ -354,138 +392,7 @@
         @endif
 
         {{-- ─────────────────────────────────
-             TAB 3 — Delivery
-        ───────────────────────────────── --}}
-        @if ($activeTab === 'delivery')
-        <div class="row g-3">
-
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-title mb-4">
-                        <i class="fa fa-motorcycle" style="color:var(--pink);"></i>
-                        Delivery Configuration
-                    </div>
-                    <div class="item-row g-3">
-
-                        {{-- Delivery fee --}}
-                        <div class="item-col">
-                            <div class="item-form-group">
-                                <label class="item-form-label">
-                                    Delivery Fee <span class="req">*</span>
-                                    <span class="item-form-hint" style="display:inline;">(in Taka)</span>
-                                </label>
-                                <div class="item-input-prefix">
-                                    <span class="item-input-prefix-text">Tk</span>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value="{{ $delivery_fee / 100 }}"
-                                        wire:change="setDeliveryFeeTaka($event.target.value)"
-                                        class="item-form-control @error('delivery_fee') is-invalid @enderror"
-                                        placeholder="49.00"
-                                    >
-                                </div>
-                                @error('delivery_fee')
-                                    <div class="item-invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <div class="item-form-hint">Stored in paisa: {{ $delivery_fee }} paisa</div>
-                            </div>
-                        </div>
-
-                        {{-- Min order --}}
-                        <div class="item-col">
-                            <div class="item-form-group">
-                                <label class="item-form-label">
-                                    Minimum Order
-                                    <span class="item-form-hint" style="display:inline;">(in Taka, optional)</span>
-                                </label>
-                                <div class="item-input-prefix">
-                                    <span class="item-input-prefix-text">Tk</span>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value="{{ $min_order_amount !== null ? $min_order_amount / 100 : '' }}"
-                                        wire:change="setMinOrderTaka($event.target.value)"
-                                        class="item-form-control @error('min_order_amount') is-invalid @enderror"
-                                        placeholder="0"
-                                    >
-                                </div>
-                                @error('min_order_amount')
-                                    <div class="item-invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        {{-- Delivery range --}}
-                        <div class="item-col">
-                            <div class="item-form-group">
-                                <label class="item-form-label">Delivery Time (minutes)</label>
-                                <div class="item-row" style="gap:8px; align-items:center;">
-                                    <input
-                                        wire:model="avg_delivery_min"
-                                        type="number"
-                                        min="1"
-                                        class="item-form-control @error('avg_delivery_min') is-invalid @enderror"
-                                        placeholder="Min"
-                                    >
-                                    <span style="color:var(--muted); flex-shrink:0;">—</span>
-                                    <input
-                                        wire:model="avg_delivery_max"
-                                        type="number"
-                                        min="1"
-                                        class="item-form-control @error('avg_delivery_max') is-invalid @enderror"
-                                        placeholder="Max"
-                                    >
-                                </div>
-                                @error('avg_delivery_min')
-                                    <div class="item-invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                @error('avg_delivery_max')
-                                    <div class="item-invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-            {{-- Delivery preview card --}}
-            <div class="col-12">
-                <div class="card" style="background:var(--pink-light); border-color:rgba(255,61,139,.2);">
-                    <div class="d-flex align-items-center gap-3">
-                        <div style="font-size:36px;">🛵</div>
-                        <div>
-                            <div style="font-weight:700; font-size:15px;">Customer View</div>
-                            <div style="font-size:13px; color:var(--soft-dark); margin-top:4px;">
-                                Delivery charge: <strong style="color:var(--pink);">Tk{{ number_format($delivery_fee / 100, 0) }}</strong>
-                                &bull;
-                                Time:
-                                <strong>
-                                    @if($avg_delivery_min && $avg_delivery_max)
-                                        {{ $avg_delivery_min }}–{{ $avg_delivery_max }} min
-                                    @elseif($avg_delivery_min)
-                                        {{ $avg_delivery_min }}+ min
-                                    @else
-                                        Not set
-                                    @endif
-                                </strong>
-                                @if($min_order_amount)
-                                &bull; Min. order: <strong>Tk{{ number_format($min_order_amount / 100, 0) }}</strong>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-        @endif
-
-        {{-- ─────────────────────────────────
-             TAB 4 — Operations
+             TAB 3 — Operations
         ───────────────────────────────── --}}
         @if ($activeTab === 'ops')
         <div class="row g-3">
@@ -716,6 +623,23 @@
         }
         .btn-new-item .plus-icon { font-size: 1.1rem; font-weight: 400; line-height: 1; }
 
+    /* ── Mini button (map "use my location") ── */
+    .btn-kk-mini {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--pink-light, #FFE3EE);
+        color: var(--pink);
+        border: 1px solid var(--pink);
+        border-radius: 50px;
+        padding: 5px 12px;
+        font-size: .74rem;
+        font-weight: 600;
+        font-family: var(--font);
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .btn-kk-mini:hover { background: var(--pink); color: #fff; }
 
     /* ── Open/Closed button variants ── */
     .btn-open   { background: #1A9453 !important; box-shadow: 0 4px 18px rgba(26,148,83,.3) !important; }
@@ -948,4 +872,120 @@
     }
 
 </style>
+@endpush
+
+@once
+  @push('scripts')
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+  @endpush
+@endonce
+
+@push('scripts')
+<script>
+    document.addEventListener('livewire:init', () => {
+
+        const DEFAULT_LAT = 23.8103; // Dhaka
+        const DEFAULT_LNG = 90.4125;
+
+        let settingsMap    = null;
+        let settingsMarker = null;
+
+        function placeMarker(lat, lng) {
+            if (!settingsMap) return;
+
+            if (settingsMarker) {
+                settingsMarker.setLatLng([lat, lng]);
+            } else {
+                settingsMarker = L.marker([lat, lng], { draggable: true }).addTo(settingsMap);
+                settingsMarker.on('dragend', (e) => {
+                    const pos = e.target.getLatLng();
+                    @this.set('latitude', pos.lat);
+                    @this.set('longitude', pos.lng);
+                });
+            }
+        }
+
+        function initSettingsMap(lat, lng) {
+            const el = document.getElementById('settingsMap');
+            if (!el) return; // Basic tab not active — nothing to init
+
+            const centerLat = lat ?? DEFAULT_LAT;
+            const centerLng = lng ?? DEFAULT_LNG;
+
+            // Leaflet keeps a private reference on the DOM node; if this
+            // container was removed/re-added by Livewire's tab switch,
+            // any old map instance tied to it is stale — reset it.
+            if (settingsMap && settingsMap._container !== el) {
+                settingsMap = null;
+                settingsMarker = null;
+            }
+
+            if (!settingsMap) {
+                settingsMap = L.map('settingsMap').setView([centerLat, centerLng], lat ? 16 : 12);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap contributors',
+                }).addTo(settingsMap);
+
+                settingsMap.on('click', (e) => {
+                    placeMarker(e.latlng.lat, e.latlng.lng);
+                    @this.set('latitude', e.latlng.lat);
+                    @this.set('longitude', e.latlng.lng);
+                });
+            } else {
+                settingsMap.setView([centerLat, centerLng], lat ? 16 : 12);
+            }
+
+            if (lat && lng) {
+                placeMarker(lat, lng);
+            }
+
+            setTimeout(() => settingsMap && settingsMap.invalidateSize(), 150);
+        }
+
+        // Re-init map whenever the vendor switches back to the Basic tab
+        Livewire.on('tab-switched', (payload) => {
+            const data = Array.isArray(payload) ? payload[0] : payload;
+            if (data?.tab !== 'basic') return;
+            setTimeout(() => initSettingsMap(data?.latitude ?? null, data?.longitude ?? null), 150);
+        });
+
+        // First paint — default active tab is "basic", so the map div
+        // already exists in the DOM on initial page load.
+        setTimeout(() => {
+            const latEl = document.querySelector('[wire\\:model="latitude"]');
+            const lngEl = document.querySelector('[wire\\:model="longitude"]');
+            const lat = latEl && latEl.value ? parseFloat(latEl.value) : null;
+            const lng = lngEl && lngEl.value ? parseFloat(lngEl.value) : null;
+            initSettingsMap(lat, lng);
+        }, 200);
+
+        // "Use my location" button
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#useCurrentLocationBtnSettings')) {
+                if (!navigator.geolocation) {
+                    alert('Geolocation is not supported by this browser.');
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        placeMarker(latitude, longitude);
+                        if (settingsMap) settingsMap.setView([latitude, longitude], 16);
+                        @this.set('latitude', latitude);
+                        @this.set('longitude', longitude);
+                    },
+                    () => alert('Unable to fetch your current location. Please allow location access.'),
+                );
+            }
+        });
+
+    });
+</script>
 @endpush

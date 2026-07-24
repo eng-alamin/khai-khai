@@ -45,7 +45,7 @@
 
     <div class="d-flex flex-column gap-3 mb-4">
         @forelse($ongoingOrders as $order)
-            <div class="card" wire:key="ongoing-{{ $order['id'] }}" style="padding:18px 20px;border-left:4px solid #3b82f6;">
+            <div class="card" wire:key="ongoing-{{ $order['id'] }}" style="padding:18px 20px;border-left:4px solid #3b82f6;" x-data="{ showMap: false }">
 
                 {{-- Top row --}}
                 <div class="d-flex align-items-start justify-content-between mb-2">
@@ -91,6 +91,28 @@
                         আইটেম
                     </span>
                     <div style="font-size:13px;color:var(--text-2);margin-top:4px;">{{ $order['items'] }}</div>
+                </div>
+
+                {{-- Route Map (collapsible) --}}
+                <div class="mb-3">
+                    <button
+                        type="button"
+                        @click="showMap = !showMap"
+                        class="btn-kk"
+                        style="background:#eff6ff;color:#1d4ed8;width:100%;justify-content:center;"
+                    >
+                        <span x-show="!showMap">🗺️ রুট দেখুন</span>
+                        <span x-show="showMap" style="display:none;">🔼 রুট বন্ধ করুন</span>
+                    </button>
+
+                    <div
+                        x-show="showMap"
+                        x-cloak
+                        x-effect="if (showMap) { $nextTick(() => window.dispatchEvent(new CustomEvent('kk-map-shown', { detail: { orderId: {{ $order['id'] }} } }))) }"
+                        style="margin-top:10px;"
+                    >
+                        @livewire('rider.order-route-map', ['orderId' => $order['id']], key('rider-map-'.$order['id']))
+                    </div>
                 </div>
 
                 {{-- Footer --}}
@@ -313,6 +335,8 @@
         animation: spin .6s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    [x-cloak] { display: none !important; }
 
     /* utils */
     .d-flex { display: flex; }

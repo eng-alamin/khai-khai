@@ -9,7 +9,7 @@
                 ?? 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80';
 
             $deliveryFee = $restaurant->delivery_fee
-                ? 'ডেলিভারি ৳' . number_format($restaurant->delivery_fee / 100)
+                ? 'ডেলিভারি ৳' . number_format($restaurant->delivery_fee)
                 : 'ফ্রি ডেলিভারি';
 
             $deliveryTime = ($restaurant->avg_delivery_min && $restaurant->avg_delivery_max)

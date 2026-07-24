@@ -4,7 +4,7 @@
 @php
     $thumb    = $item->image_url
         ?? asset('assets/images/default-menu-image-placeholder.png');
-    $price    = '৳' . number_format($item->price / 100);
+    $price    = '৳' . number_format($item->price);
     $catName  = $item->category?->name  ?? '';
     $catEmoji = $item->category?->emoji ?? '';
     $restName = $item->restaurant?->name ?? '';

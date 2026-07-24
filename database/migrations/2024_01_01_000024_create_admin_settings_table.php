@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('admin_settings', function (Blueprint $table) {
             $table->id();
-            $table->string('key', 80)->unique();
+            $table->string('key', 100)->unique();
             $table->text('value')->comment('JSON-encoded or plain string value');
             $table->string('description', 255)->nullable();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();

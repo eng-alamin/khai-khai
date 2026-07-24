@@ -48,6 +48,117 @@
             </form>
         </div>
 
+        {{-- ── Delivery Charge Settings Card ── --}}
+        <div class="set-card">
+            <div class="set-card-title">Delivery Charge Settings</div>
+
+            @if(session('success_delivery'))
+                <div class="set-alert set-alert-success">
+                    <span class="material-icons-round">check_circle</span>
+                    <span>{{ session('success_delivery') }}</span>
+                    <button onclick="this.parentElement.remove()" class="set-alert-close">&times;</button>
+                </div>
+            @endif
+
+            @if(session('error_delivery'))
+                <div class="set-alert set-alert-error">
+                    <span class="material-icons-round">error</span>
+                    <span>{{ session('error_delivery') }}</span>
+                    <button onclick="this.parentElement.remove()" class="set-alert-close">&times;</button>
+                </div>
+            @endif
+
+            <form wire:submit.prevent="saveDeliverySettings">
+
+                <div class="set-field">
+                    <label class="set-label">Minimum Delivery Charge (৳)</label>
+                    <input type="number" step="0.01" min="0"
+                           class="set-input @error('minimumDeliveryCharge') set-input-error @enderror"
+                           wire:model.defer="minimumDeliveryCharge">
+                    @error('minimumDeliveryCharge') <span class="set-error">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="set-field">
+                    <label class="set-label">Per KM Delivery Rate (৳)</label>
+                    <input type="number" step="0.01" min="0"
+                           class="set-input @error('perKmDeliveryRate') set-input-error @enderror"
+                           wire:model.defer="perKmDeliveryRate">
+                    @error('perKmDeliveryRate') <span class="set-error">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="set-field">
+                    <label class="set-label">Included Distance in Minimum Charge (KM)</label>
+                    <input type="number" step="0.1" min="0"
+                           class="set-input @error('includedKmInMinimum') set-input-error @enderror"
+                           wire:model.defer="includedKmInMinimum">
+                    @error('includedKmInMinimum') <span class="set-error">{{ $message }}</span> @enderror
+                </div>
+
+                <button type="submit" class="set-save-btn" wire:loading.attr="disabled" wire:target="saveDeliverySettings">
+                    <span class="material-icons-round" wire:loading.remove wire:target="saveDeliverySettings">save</span>
+                    <span class="material-icons-round set-spin" wire:loading wire:target="saveDeliverySettings">progress_activity</span>
+                    Save
+                </button>
+            </form>
+        </div>
+
+        {{-- ── Commission Settings Card ── --}}
+        <div class="set-card">
+            <div class="set-card-title">Commission Settings</div>
+
+            @if(session('success_commission'))
+                <div class="set-alert set-alert-success">
+                    <span class="material-icons-round">check_circle</span>
+                    <span>{{ session('success_commission') }}</span>
+                    <button onclick="this.parentElement.remove()" class="set-alert-close">&times;</button>
+                </div>
+            @endif
+
+            @if(session('error_commission'))
+                <div class="set-alert set-alert-error">
+                    <span class="material-icons-round">error</span>
+                    <span>{{ session('error_commission') }}</span>
+                    <button onclick="this.parentElement.remove()" class="set-alert-close">&times;</button>
+                </div>
+            @endif
+
+            <form wire:submit.prevent="saveCommissionSettings">
+
+                <div class="set-field">
+                    <label class="set-label">Default Commission Rate (%)</label>
+                    <input type="number" step="0.01" min="0" max="100"
+                           class="set-input @error('defaultCommissionRate') set-input-error @enderror"
+                           wire:model.defer="defaultCommissionRate">
+                    @error('defaultCommissionRate') <span class="set-error">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="set-field">
+                    <label class="set-label">Premium Vendor Rate (%)</label>
+                    <input type="number" step="0.01" min="0" max="100"
+                           class="set-input @error('premiumVendorRate') set-input-error @enderror"
+                           wire:model.defer="premiumVendorRate">
+                    @error('premiumVendorRate') <span class="set-error">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="set-field">
+                    <label class="set-label">Payment Cycle</label>
+                    <select class="set-input @error('paymentCycle') set-input-error @enderror"
+                            wire:model.defer="paymentCycle">
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                    @error('paymentCycle') <span class="set-error">{{ $message }}</span> @enderror
+                </div>
+
+                <button type="submit" class="set-save-btn" wire:loading.attr="disabled" wire:target="saveCommissionSettings">
+                    <span class="material-icons-round" wire:loading.remove wire:target="saveCommissionSettings">save</span>
+                    <span class="material-icons-round set-spin" wire:loading wire:target="saveCommissionSettings">progress_activity</span>
+                    Save
+                </button>
+            </form>
+        </div>
+
         {{-- ── Security Card ── --}}
         <div class="set-card">
             <div class="set-card-title">Security</div>
@@ -101,7 +212,7 @@
 @push('styles')
 <style>
     .set-columns {
-        display: grid; grid-template-columns: 1fr 1fr;
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: 20px; padding: 20px;
     }
     .set-card {
@@ -162,6 +273,7 @@
     }
     .set-alert span:nth-child(2) { flex: 1; }
     .set-alert-success { background: #E8FAF0; color: #1A9453; border: 1px solid #A8E6C4; }
+    .set-alert-error { background: #FDECEC; color: #B91C1C; border: 1px solid #F5B5B5; }
     .set-alert-close { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: inherit; padding: 0; }
 
     @media (max-width: 768px) {

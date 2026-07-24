@@ -24,6 +24,10 @@ class ProfileComponent extends Component
     public ?string $nidNumber      = null;
     public ?string $zone           = null;
 
+    // Current location (map picker) — maps to rider_profiles.current_lat / current_lng
+    public ?float $currentLat = null;
+    public ?float $currentLng = null;
+
     // Stats (read-only, shown on UI)
     public ?float $avgRating       = null;
     public int    $totalDeliveries = 0;
@@ -40,6 +44,8 @@ class ProfileComponent extends Component
             'licenseNumber' => ['nullable', 'string', 'max:30', Rule::unique('rider_profiles', 'license_number')->ignore($this->riderProfileId)],
             'nidNumber'     => ['nullable', 'string', 'max:20', Rule::unique('rider_profiles', 'nid_number')->ignore($this->riderProfileId)],
             'zone'          => 'nullable|string|max:80',
+            'currentLat'    => 'nullable|numeric|between:-90,90',
+            'currentLng'    => 'nullable|numeric|between:-180,180',
         ];
     }
 
@@ -53,7 +59,7 @@ class ProfileComponent extends Component
             ? $user->avatar
             : strtoupper(substr($user->name, 0, 1));
         $this->email  = $user->email ?? '';
-        $this->phone  = $user->phone;
+        $this->phone  = $user->phone ?? '';
 
         // Rider profile stats & info
         $profile = $user->riderProfile;
@@ -65,11 +71,24 @@ class ProfileComponent extends Component
             $this->licenseNumber   = $profile->license_number;
             $this->nidNumber       = $profile->nid_number;
             $this->zone            = $profile->zone;
+            $this->currentLat      = $profile->current_lat !== null ? (float) $profile->current_lat : null;
+            $this->currentLng      = $profile->current_lng !== null ? (float) $profile->current_lng : null;
             $this->avgRating       = $profile->avg_rating;
             $this->totalDeliveries = $profile->total_deliveries;
             $this->isOnline        = (bool) $profile->is_online;
             $this->isApproved      = (bool) $profile->is_approved;
         }
+    }
+
+    /* ── Clear validation errors when the map picker sets coordinates ── */
+    public function updatedCurrentLat($value): void
+    {
+        $this->resetErrorBag('currentLat');
+    }
+
+    public function updatedCurrentLng($value): void
+    {
+        $this->resetErrorBag('currentLng');
     }
 
     public function saveProfile(): void
@@ -91,6 +110,9 @@ class ProfileComponent extends Component
             'license_number' => $this->licenseNumber ?: null,
             'nid_number'     => $this->nidNumber ?: null,
             'zone'           => $this->zone ?: null,
+            'current_lat'    => $this->currentLat,
+            'current_lng'    => $this->currentLng,
+            'location_updated_at' => ($this->currentLat !== null && $this->currentLng !== null) ? now() : null,
         ];
 
         if ($this->riderProfileId) {

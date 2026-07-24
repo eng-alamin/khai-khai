@@ -32,7 +32,7 @@ class FinanceComponent extends Component
             ->whereYear('created_at', now()->year)
             ->sum('amount');
 
-        return intdiv((int) $total, 100);
+        return $total;
     }
 
     /* ── এই মাসের মোট ডেলিভারি সংখ্যা ── */
@@ -52,7 +52,7 @@ class FinanceComponent extends Component
             ->where('status', 'paid')
             ->sum('amount');
 
-        return intdiv((int) $total, 100);
+        return $total;
     }
 
     /* ── Paginated পেমেন্ট ইতিহাস ── */
@@ -84,7 +84,7 @@ class FinanceComponent extends Component
                     ? $this->formatMonthYear($payout->paid_at)
                     : $this->formatMonthYear($payout->created_at),
                 'method'     => $payout->method ?? 'bKash',   // e.g. bKash, Nagad, Bank
-                'amount'     => '৳' . $this->toBanglaNumber(intdiv((int) $payout->amount, 100)),
+                'amount'     => '৳' . $payout->amount,
                 'status'     => $payout->status,              // 'paid' | 'pending' | 'processing'
             ];
         });

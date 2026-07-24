@@ -9,20 +9,60 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('platform_transactions', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('order_id')->unique()->constrained('orders');
-            $table->unsignedInteger('vendor_amount')->comment('Amount due to vendor after commission (BDT paisa)');
-            $table->unsignedInteger('rider_amount')->comment('Rider delivery earning (BDT paisa)');
-            $table->unsignedInteger('platform_commission')->comment('KhaiKhai gross commission (BDT paisa)');
-            $table->decimal('commission_rate', 5, 2)->comment('Applied commission %');
-            $table->enum('gateway', ['bkash', 'nagad', 'card', 'cod']);
-            $table->string('gateway_txn_id', 80)->unique()->nullable()->comment('Payment gateway transaction ID');
-            $table->unsignedInteger('gateway_fee')->default(0)->comment('Gateway charge (BDT paisa)');
-            $table->enum('status', ['success', 'failed', 'refunded'])->default('success');
-            $table->timestamp('created_at')->useCurrent();
 
-            $table->index('status');
-        });
+        $table->id();
+
+        $table->foreignId('order_id')
+            ->constrained('orders')
+            ->cascadeOnDelete();
+
+        $table->decimal('vendor_amount',15,2);
+
+        $table->decimal('rider_amount',15,2);
+
+        $table->decimal('platform_commission',15,2);
+
+        $table->decimal('commission_rate',5,2);
+
+        $table->enum('gateway', [
+            'bkash',
+            'nagad',
+            'card',
+            'cod',
+        ]);
+
+        $table->string('gateway_txn_id',80)
+            ->nullable()
+            ->unique();
+
+        $table->decimal('gateway_fee',15,2)
+            ->default(0);
+
+        $table->enum('status', [
+            'pending',
+            'processing',
+            'success',
+            'failed',
+            'refunded',
+            'partial_refund',
+        ])->default('pending');
+
+        $table->enum('settlement_status', [
+            'pending',
+            'paid',
+            'failed',
+        ])->default('pending');
+
+        $table->timestamp('settled_at')
+            ->nullable();
+
+        $table->timestamps();
+
+        $table->index([
+            'order_id',
+            'status'
+        ]);
+    });
     }
 
     public function down(): void

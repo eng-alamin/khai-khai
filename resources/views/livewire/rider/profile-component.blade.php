@@ -1,3 +1,14 @@
+@once
+  @push('styles')
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+  @endpush
+@endonce
+
 <div>
   <div class="row g-3">
 
@@ -111,6 +122,38 @@
             @error('zone') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
           </div>
 
+          {{-- Current Location Map Picker --}}
+          <div class="form-group mb-2">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label class="form-label-kk mb-0">Current Location</label>
+              <button
+                type="button"
+                id="useCurrentLocationBtnRider"
+                class="btn-kk btn-ghost-kk btn-sm-kk"
+              >
+                <i class="fa fa-location-crosshairs"></i> Use my location
+              </button>
+            </div>
+
+            <div
+              id="riderLocationMap"
+              wire:ignore
+              style="height:220px; width:100%; border-radius:var(--radius); border:1px solid var(--border); overflow:hidden;"
+            ></div>
+
+            <div style="font-size:12px; color:var(--text-2); margin-top:6px;">
+              <i class="fa fa-map-marker-alt"></i>
+              @if($currentLat && $currentLng)
+                Selected: {{ number_format($currentLat, 6) }}, {{ number_format($currentLng, 6) }}
+              @else
+                Click on the map (or drag the marker) to set your current location.
+              @endif
+            </div>
+
+            @error('currentLat') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+            @error('currentLng') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+          </div>
+
           <button
             class="btn-kk btn-primary-kk"
             style="width:100%; justify-content:center;"
@@ -199,3 +242,95 @@
 
   </div>
 </div>
+
+@once
+  @push('scripts')
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+  @endpush
+@endonce
+
+@push('scripts')
+<script>
+  document.addEventListener('livewire:init', () => {
+
+    const DEFAULT_LAT = 23.8103; // Dhaka
+    const DEFAULT_LNG = 90.4125;
+
+    let riderMap    = null;
+    let riderMarker = null;
+
+    function placeRiderMarker(lat, lng) {
+      if (!riderMap) return;
+
+      if (riderMarker) {
+        riderMarker.setLatLng([lat, lng]);
+      } else {
+        riderMarker = L.marker([lat, lng], { draggable: true }).addTo(riderMap);
+        riderMarker.on('dragend', (e) => {
+          const pos = e.target.getLatLng();
+          @this.set('currentLat', pos.lat);
+          @this.set('currentLng', pos.lng);
+        });
+      }
+    }
+
+    function initRiderMap(lat, lng) {
+      const el = document.getElementById('riderLocationMap');
+      if (!el) return;
+
+      const centerLat = lat ?? DEFAULT_LAT;
+      const centerLng = lng ?? DEFAULT_LNG;
+
+      if (!riderMap) {
+        riderMap = L.map('riderLocationMap').setView([centerLat, centerLng], lat ? 16 : 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(riderMap);
+
+        riderMap.on('click', (e) => {
+          placeRiderMarker(e.latlng.lat, e.latlng.lng);
+          @this.set('currentLat', e.latlng.lat);
+          @this.set('currentLng', e.latlng.lng);
+        });
+      } else {
+        riderMap.setView([centerLat, centerLng], lat ? 16 : 12);
+      }
+
+      if (lat && lng) {
+        placeRiderMarker(lat, lng);
+      }
+
+      setTimeout(() => riderMap.invalidateSize(), 200);
+    }
+
+    // Profile page loads without a modal — init once DOM is ready
+    initRiderMap(@json($currentLat), @json($currentLng));
+
+    // "Use my location" button
+    document.getElementById('useCurrentLocationBtnRider')?.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by this browser.');
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          placeRiderMarker(latitude, longitude);
+          if (riderMap) riderMap.setView([latitude, longitude], 16);
+          @this.set('currentLat', latitude);
+          @this.set('currentLng', longitude);
+        },
+        () => alert('Unable to fetch your current location. Please allow location access.'),
+      );
+    });
+
+  });
+</script>
+@endpush

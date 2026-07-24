@@ -50,9 +50,11 @@ Route::middleware('auth')->group(function () {
     Route::get('items', App\Livewire\Customer\ItemComponent::class)->name('customer.items');
     
     Route::get('/register', App\Livewire\CustomerRegistrationComponent::class)->name('customer.register');
+
+    // Customer
 Route::middleware(['auth'])->group(function () {
     Route::get('orders', App\Livewire\Customer\OrderListComponent::class)->name('customer.orders');
-    Route::get('track', App\Livewire\Customer\OrderTrackComponent::class)->name('customer.track');
+    Route::get('track/{orderId}', App\Livewire\Customer\OrderTrackComponent::class)->name('customer.track');
     Route::get('profile', App\Livewire\Customer\ProfileComponent::class)->name('customer.profile');   
     Route::get('addresses', App\Livewire\Customer\AddressComponent::class)->name('customer.addresses');   
     Route::get('offers', App\Livewire\Customer\OfferComponent::class)->name('customer.offers');   
@@ -90,7 +92,6 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/riders', App\Livewire\Admin\RiderComponent::class)->name('admin.riders');
     Route::get('/admin/customers', App\Livewire\Admin\CustomerComponent::class)->name('admin.customers');
     Route::get('/admin/revenues', App\Livewire\Admin\RevenueComponent::class)->name('admin.revenues');
-    Route::get('/admin/commissions', App\Livewire\Admin\CommissionComponent::class)->name('admin.commissions');
     Route::get('/admin/settings', App\Livewire\Admin\SettingComponent::class)->name('admin.settings');
 });
 

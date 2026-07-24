@@ -255,7 +255,7 @@
                                         wire:model.defer="target_id">
                                         <option value="">— Select —</option>
                                         @foreach($menuItems as $item)
-                                            <option value="{{ $item->id }}">{{ $item->emoji ?? '🍽️' }} {{ $item->name }} (৳{{ number_format($item->price / 100) }})</option>
+                                            <option value="{{ $item->id }}">{{ $item->emoji ?? '🍽️' }} {{ $item->name }} (৳{{ number_format($item->price , 0) }})</option>
                                         @endforeach
                                     </select>
                                     @error('target_id') <div class="promo-invalid-feedback">{{ $message }}</div> @enderror

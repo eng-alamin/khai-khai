@@ -34,7 +34,7 @@ class DashboardComponent extends Component
             ->whereDate('created_at', today())
             ->sum('amount');
 
-        return intdiv((int) $total, 100);
+        return $total;
     }
 
     // ── আমার গড় রেটিং (reviews.delivery_rating) ──
@@ -95,7 +95,7 @@ class DashboardComponent extends Component
 
             $days[] = [
                 'label'  => self::BANGLA_DAYS[$day->dayOfWeek],
-                'amount' => intdiv((int) $total, 100),
+                'amount' => $total,
             ];
         }
 

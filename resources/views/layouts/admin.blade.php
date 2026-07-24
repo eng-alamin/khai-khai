@@ -39,8 +39,7 @@
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/riders') == true ? 'active' : '' }}" href="{{ route('admin.riders') }}"><span class="material-icons-round nav-icon">directions_bike</span><span class="nav-label">Riders</span></a></li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/customers') == true ? 'active' : '' }}" href="{{ route('admin.customers') }}"><span class="material-icons-round nav-icon">accessible</span><span class="nav-label">Customers</span></a></li>
       <li class="nav-section">Report</li>
-      <li class="nav1-item"><a class="nav1-link" {{ str_contains(request()->url(), 'admin/revenues') == true ? 'active' : '' }}" href="{{ route('admin.revenues') }}"><span class="material-icons-round nav-icon">attach_money</span><span class="nav-label">Revenues</span></a></li>
-      <li class="nav1-item"><a class="nav1-link" {{ str_contains(request()->url(), 'admin/commissions') == true ? 'active' : '' }}" href="{{ route('admin.commissions') }}"><span class="material-icons-round nav-icon">payments</span><span class="nav-label">Commissions</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/revenues') == true ? 'active' : '' }}" href="{{ route('admin.revenues') }}"><span class="material-icons-round nav-icon">attach_money</span><span class="nav-label">Revenues</span></a></li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/settings') == true ? 'active' : '' }}" href="{{ route('admin.settings') }}"><span class="material-icons-round nav-icon">manage_accounts</span><span class="nav-label">Settings</span></a></li>
     </ul>
   </div>

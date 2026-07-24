@@ -22,9 +22,6 @@ return new class extends Migration
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
             $table->string('phone', 15)->nullable();
-            $table->unsignedInteger('avg_delivery_min')->nullable()->comment('minutes');
-            $table->unsignedInteger('avg_delivery_max')->nullable()->comment('minutes');
-            $table->unsignedInteger('delivery_fee')->default(4900)->comment('BDT paisa');
             $table->decimal('avg_rating', 3, 2)->nullable();
             $table->unsignedInteger('total_reviews')->default(0);
             $table->string('tag', 40)->nullable()->comment('e.g. সেরা, জনপ্রিয়');

@@ -10,19 +10,85 @@ use Livewire\Component;
 
 class OrderLiveComponent extends Component
 {
-    public bool $isOnline = true;
-
     /** এই স্ট্যাটাসগুলোকে "লাইভ" (এখনো চলমান) ধরা হবে */
     private const LIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'picked_up'];
 
-    private const STATUS_META = [
-        'pending'   => ['label' => 'নতুন',        'bg' => '#dbeafe', 'color' => '#1e40af'],
-        'confirmed' => ['label' => 'রান্না হচ্ছে', 'bg' => '#fef3c7', 'color' => '#92400e'],
-        'preparing' => ['label' => 'প্রস্তুত',      'bg' => '#dcfce7', 'color' => '#166534'],
-        'picked_up' => ['label' => 'ডেলিভারি',     'bg' => '#fce7f3', 'color' => '#9d174d'],
-    ];
+    /** Forward-only workflow (OrderListComponent-এর সাথে সামঞ্জস্যপূর্ণ) */
+    private const STATUS_FLOW = ['pending', 'confirmed', 'preparing', 'picked_up', 'delivered'];
 
-    private const BANGLA_DIGITS = ['0'=>'০','1'=>'১','2'=>'২','3'=>'৩','4'=>'৪','5'=>'৫','6'=>'৬','7'=>'৭','8'=>'৮','9'=>'৯'];
+    public bool $isOnline = true;
+
+    // ── Details Modal ──────────────────────────────────────
+    public bool $showDetailsModal = false;
+    public ?int $detailsId        = null;
+
+    // ── Reject Modal ─────────────────────────────────────
+    public bool   $confirmReject = false;
+    public ?int   $rejectId      = null;
+    public string $reject_reason = '';
+
+    // ── Restaurant helper ─────────────────────────────────
+    private function restaurantId(): int
+    {
+        return Auth::user()->restaurant->id;
+    }
+
+    // ── Status meta (OrderListComponent প্যাটার্ন অনুসরণ) ──
+    public function statusMeta(string $status): array
+    {
+        return match ($status) {
+            'pending'   => ['label' => 'Pending',    'emoji' => '🕐', 'class' => 'pending'],
+            'confirmed' => ['label' => 'Confirmed',  'emoji' => '✅', 'class' => 'confirmed'],
+            'preparing' => ['label' => 'Preparing',  'emoji' => '👨‍🍳', 'class' => 'preparing'],
+            'picked_up' => ['label' => 'Picked Up',  'emoji' => '🛵', 'class' => 'picked-up'],
+            'delivered' => ['label' => 'Delivered',  'emoji' => '📦', 'class' => 'delivered'],
+            'cancelled' => ['label' => 'Cancelled',  'emoji' => '❌', 'class' => 'cancelled'],
+            default     => ['label' => ucfirst($status), 'emoji' => '•', 'class' => 'pending'],
+        };
+    }
+
+    public function paymentMeta(?string $status): array
+    {
+        return match ($status ?? '') {
+            'paid'     => ['label' => 'Paid',     'class' => 'paid'],
+            'refunded' => ['label' => 'Refunded', 'class' => 'refunded'],
+            'failed'   => ['label' => 'Failed',   'class' => 'failed'],
+            default    => ['label' => 'Pending',  'class' => 'pending'],
+        };
+    }
+
+    public function paymentMethodLabel(?string $method): string
+    {
+        return match ($method ?? '') {
+            'bkash'            => 'bKash',
+            'nagad'            => 'Nagad',
+            'card'             => 'Card',
+            'cash_on_delivery' => 'Cash on Delivery',
+            default            => $method ? ucfirst($method) : '—',
+        };
+    }
+
+    public function nextStatus(string $current): ?string
+    {
+        $i = array_search($current, self::STATUS_FLOW, true);
+
+        if ($i === false || $i === count(self::STATUS_FLOW) - 1) {
+            return null;
+        }
+
+        return self::STATUS_FLOW[$i + 1];
+    }
+
+    public function nextActionLabel(string $current): ?string
+    {
+        return match ($this->nextStatus($current)) {
+            'confirmed' => 'Confirm Order',
+            'preparing' => 'Start Preparing',
+            'picked_up' => 'Mark Picked Up',
+            'delivered' => 'Mark Delivered',
+            default     => null,
+        };
+    }
 
     /* ── Computed: এই রেস্তোরাঁর চলমান অর্ডারগুলো, সবচেয়ে পুরোনোটা আগে ── */
     public function getLiveOrdersProperty()
@@ -30,26 +96,13 @@ class OrderLiveComponent extends Component
         return Order::with(['items', 'customer'])
             ->where('restaurant_id', $this->restaurantId())
             ->whereIn('status', self::LIVE_STATUSES)
-            ->orderBy('created_at')
-            ->get()
-            ->map(function (Order $order) {
-                $meta = self::STATUS_META[$order->status];
+            ->latest()
+            ->get();
+    }
 
-                return [
-                    'id'           => $order->id,
-                    'order_number' => $order->order_number,
-                    'customer'     => $order->customer->name ?? 'কাস্টমার',
-                    'items'        => $order->items->map(
-                        fn ($item) => $item->item_name . ($item->quantity > 1 ? ' × ' . $this->toBanglaNumber($item->quantity) : '')
-                    )->implode(', '),
-                    'total'        => $order->total_amount_in_taka, // already '৳XXX'
-                    'status'       => $order->status,
-                    'status_label' => $meta['label'],
-                    'status_bg'    => $meta['bg'],
-                    'status_color' => $meta['color'],
-                    'time_label'   => $this->timeAgoBangla($order->created_at),
-                ];
-            });
+    public function getLiveCountProperty(): int
+    {
+        return $this->liveOrders->count();
     }
 
     public function toggleOnline(): void
@@ -58,106 +111,121 @@ class OrderLiveComponent extends Component
         // TODO: Restaurant::find($this->restaurantId())->update(['is_open' => $this->isOnline]);
     }
 
-    /* ── pending → confirmed ── */
-    public function acceptOrder(int $orderId): void
+    // ── Details modal ──────────────────────────────────────
+    public function openDetails(int $id): void
     {
-        $this->changeStatus($orderId, 'confirmed', '✅ অর্ডার গ্রহণ করা হয়েছে');
+        $this->detailsId        = $id;
+        $this->showDetailsModal = true;
     }
 
-    /* ── pending → cancelled ── */
-    public function rejectOrder(int $orderId): void
+    public function closeDetails(): void
     {
-        $order = Order::findOrFail($orderId);
-        $from  = $order->status;
+        $this->showDetailsModal = false;
+        $this->detailsId        = null;
+    }
+
+    // ── Load order for details modal ───────────────────────
+    private function getDetailsOrder(): ?Order
+    {
+        if (! $this->showDetailsModal || ! $this->detailsId) {
+            return null;
+        }
+
+        return Order::where('restaurant_id', $this->restaurantId())
+            ->with(['customer', 'rider', 'items', 'statusLogs.changedBy'])
+            ->find($this->detailsId);
+    }
+
+    /* ── Generic forward-advance (pending→confirmed, confirmed→preparing, preparing→picked_up, picked_up→delivered) ── */
+    public function advanceStatus(int $id): void
+    {
+        $order = Order::where('restaurant_id', $this->restaurantId())->findOrFail($id);
+        $next  = $this->nextStatus($order->status);
+
+        if (! $next) {
+            return;
+        }
+
+        $from = $order->status;
+
+        $order->status = $next;
+        if ($next === 'delivered') {
+            $order->delivered_at = now();
+        }
+        $order->save();
+
+        $this->logStatus($order, $from, $next);
+
+        session()->flash('success', "Order #{$order->order_number} marked as {$this->statusMeta($next)['label']}.");
+    }
+
+    /* ── Reject flow (শুধু pending অর্ডারের জন্য) ── */
+    public function confirmRejectRecord(int $id): void
+    {
+        $this->rejectId      = $id;
+        $this->reject_reason = '';
+        $this->confirmReject = true;
+    }
+
+    public function rejectOrder(): void
+    {
+        if (! $this->rejectId) {
+            $this->confirmReject = false;
+            return;
+        }
+
+        $this->validate(
+            ['reject_reason' => 'required|string|max:255'],
+            ['reject_reason.required' => 'কেন বাতিল করছেন তা কাস্টমারকে জানান।']
+        );
+
+        $order = Order::where('restaurant_id', $this->restaurantId())->findOrFail($this->rejectId);
+
+        if ($order->status !== 'pending') {
+            $this->confirmReject = false;
+            session()->flash('error', 'এই অর্ডারটি আর বাতিল করা যাবে না।');
+            return;
+        }
+
+        $from = $order->status;
 
         $order->update([
             'status'        => 'cancelled',
             'cancelled_at'  => now(),
-            'cancel_reason' => 'Rejected by vendor',
+            'cancel_reason' => $this->reject_reason,
         ]);
 
-        $this->logStatus($order, $from, 'cancelled');
-        $this->dispatch('show-toast', message: "❌ অর্ডার #{$order->order_number} বাতিল করা হয়েছে", type: 'info');
+        $this->logStatus($order, $from, 'cancelled', $this->reject_reason);
+
+        $this->confirmReject = false;
+        $this->rejectId      = null;
+        $this->reject_reason = '';
+
+        session()->flash('success', "Order #{$order->order_number} cancelled.");
     }
 
-    /* ── confirmed → preparing ── */
-    public function markReady(int $orderId): void
-    {
-        $this->changeStatus($orderId, 'preparing', '🍳 অর্ডার প্রস্তুত হয়েছে');
-    }
-
-    /* ── preparing → picked_up ── */
-    public function dispatchOrder(int $orderId): void
-    {
-        // TODO: এখানে rider_id অ্যাসাইন করার লজিকও যুক্ত করা যেতে পারে
-        $this->changeStatus($orderId, 'picked_up', '🛵 অর্ডার ডিসপ্যাচ করা হয়েছে');
-    }
-
-    /* ── picked_up → delivered ── */
-    public function completeOrder(int $orderId): void
-    {
-        $order = Order::findOrFail($orderId);
-        $from  = $order->status;
-
-        $order->update([
-            'status'       => 'delivered',
-            'delivered_at' => now(),
-        ]);
-
-        $this->logStatus($order, $from, 'delivered');
-        $this->dispatch('show-toast', message: "🎉 অর্ডার #{$order->order_number} সম্পন্ন হয়েছে", type: 'success');
-    }
-
-    private function changeStatus(int $orderId, string $to, string $message): void
-    {
-        $order = Order::findOrFail($orderId);
-        $from  = $order->status;
-
-        $order->update(['status' => $to]);
-        $this->logStatus($order, $from, $to);
-
-        $this->dispatch('show-toast', message: "{$message} (#{$order->order_number})", type: 'success');
-    }
-
-    private function logStatus(Order $order, string $from, string $to): void
+    private function logStatus(Order $order, string $from, string $to, ?string $note = null): void
     {
         OrderStatusLog::create([
             'order_id'    => $order->id,
             'from_status' => $from,
             'to_status'   => $to,
             'changed_by'  => Auth::id(),
+            'note'        => $note,
         ]);
-    }
-
-    /** লগইন করা ভেন্ডরের restaurant_id — আপনার User↔Restaurant রিলেশন অনুযায়ী এই লাইনটা ঠিক করুন */
-    private function restaurantId(): int
-    {
-        return Auth::user()->restaurant->id;
     }
 
     public function toBanglaNumber(int|string $number): string
     {
-        return strtr((string) $number, self::BANGLA_DIGITS);
-    }
-
-    /** Carbon time → বাংলা "X মিনিট/ঘণ্টা/দিন আগে" */
-    private function timeAgoBangla(Carbon $time): string
-    {
-        $minutes = $time->diffInMinutes(now());
-
-        [$value, $unit] = match (true) {
-            $minutes < 60   => [$minutes, 'মিনিট'],
-            $minutes < 1440 => [intdiv($minutes, 60), 'ঘণ্টা'],
-            default         => [intdiv($minutes, 1440), 'দিন'],
-        };
-
-        return "{$this->toBanglaNumber($value)} {$unit} আগে";
+        static $digits = ['0'=>'০','1'=>'১','2'=>'২','3'=>'৩','4'=>'৪','5'=>'৫','6'=>'৬','7'=>'৭','8'=>'৮','9'=>'৯'];
+        return strtr((string) $number, $digits);
     }
 
     public function render()
     {
         return view('livewire.vendor.order-live-component', [
-            'liveOrders' => $this->liveOrders,
+            'liveOrders'   => $this->liveOrders,
+            'detailsOrder' => $this->getDetailsOrder(),
         ])->layout('layouts.vendor', [
             'title'           => 'Live Orders | KhaiKhai',
             'breadcrumbTitle' => 'Live Orders',

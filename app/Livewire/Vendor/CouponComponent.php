@@ -127,9 +127,9 @@ class CouponComponent extends Component
         $this->type             = $coupon->type;
         $this->value            = (string) $coupon->value;
         $this->min_order_amount = $coupon->min_order_amount
-            ? (string) ($coupon->min_order_amount / 100) : '';
+            ? (string) ($coupon->min_order_amount) : '';
         $this->max_discount     = $coupon->max_discount
-            ? (string) ($coupon->max_discount / 100) : '';
+            ? (string) ($coupon->max_discount) : '';
         $this->usage_limit      = (string) ($coupon->usage_limit ?? '');
         $this->per_user_limit   = (string) ($coupon->per_user_limit ?? '');
         $this->valid_from       = $coupon->valid_from?->format('Y-m-d\TH:i') ?? '';
@@ -152,9 +152,9 @@ class CouponComponent extends Component
             'value'            => $this->value,
             // টাকা → paisa
             'min_order_amount' => $this->min_order_amount
-                ? (int) round((float) $this->min_order_amount * 100) : null,
+                ? (int) round((float) $this->min_order_amount) : null,
             'max_discount'     => ($this->type === 'percentage' && $this->max_discount !== '')
-                ? (int) round((float) $this->max_discount * 100) : null,
+                ? (int) round((float) $this->max_discount) : null,
             'usage_limit'      => $this->usage_limit ?: null,
             'per_user_limit'   => $this->per_user_limit ?: null,
             'valid_from'       => $this->valid_from ?: null,

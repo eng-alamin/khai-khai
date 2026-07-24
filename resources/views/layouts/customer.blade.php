@@ -272,11 +272,11 @@
     </a>
     <a href="{{ route('customer.orders') }}"      class="nav-item {{ request()->routeIs('customer.orders') ? 'active' : '' }}">
       <i class="fa fa-clipboard-list"></i> My Order
-      <span class="nav-badge">3</span>
+      {{-- <span class="nav-badge">3</span> --}}
     </a>
-    <a href="{{ route('customer.track') }}"       class="nav-item {{ request()->routeIs('customer.track') ? 'active' : '' }}">
+    {{-- <a href="{{ route('customer.track') }}"       class="nav-item {{ request()->routeIs('customer.track') ? 'active' : '' }}">
       <i class="fa fa-map-marker-alt"></i> Order Track
-    </a>
+    </a> --}}
     <div class="nav-section">My Account</div>
     <a href="{{ route('customer.profile') }}"     class="nav-item {{ request()->routeIs('customer.profile') ? 'active' : '' }}">
       <i class="fa fa-user"></i> Profile
@@ -362,6 +362,8 @@
 
 {{-- Cart component --}}
 <livewire:customer.cart-component />
+{{-- Address component --}}
+<livewire:customer.quick-address-component />
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>

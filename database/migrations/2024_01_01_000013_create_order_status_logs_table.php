@@ -11,13 +11,24 @@ return new class extends Migration
         Schema::create('order_status_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
-            $table->enum('from_status', ['pending', 'confirmed', 'preparing', 'picked_up', 'delivered', 'cancelled',])->nullable()->comment('null on first log');
-            $table->enum('to_status', ['pending', 'confirmed', 'preparing', 'picked_up', 'delivered', 'cancelled',]);
-            $table->foreignId('changed_by')->constrained('users');
-            $table->text('note')->nullable();
+            $table->string('from_status', 50)->nullable();
+            $table->string('to_status', 50);
+            $table->foreignId('changed_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+            $table->text('note')->nullable()->comment('Internal note');
+            $table->text('reason')->nullable()->comment('Reason for rejection/cancellation/change');
+            $table->enum('changed_type', [
+                'system',
+                'customer',
+                'restaurant',
+                'rider',
+                'admin',
+            ])->default('system');
             $table->timestamps();
 
-            $table->index('order_id');
+            $table->index(['order_id', 'created_at']);
         });
     }
 

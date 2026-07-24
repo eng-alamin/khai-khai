@@ -1,76 +1,128 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Customer;
 
+use App\Models\Order;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class OrderTrackComponent extends Component
 {
-    public string $orderId = '';
+    public Order $order;
 
-    // In a real app: fetched from DB via $orderId
-    public array $order = [
-        'id'         => 'KK2602',
-        'restaurant' => "Maa's Kitchen",
-        'status'     => 'on_the_way',
-        'statusLabel'=> 'On the Way',
-        'eta'        => '12 minutes',
-    ];
-
-    public array $rider = [
-        'name'    => 'Karim Mia',
-        'zone'    => 'Dhaka Metro',
-        'vehicle' => 'Honda CB-125',
-        'rating'  => 4.9,
-        'photo'   => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&q=80',
-    ];
-
-    // Each step: status key, icon, label, time, done/current/pending
-    public array $steps = [
-        [
-            'key'     => 'confirmed',
-            'icon'    => 'fa-check',
-            'label'   => 'Order Confirmed',
-            'time'    => '3:45 PM',
-            'state'   => 'done',
-        ],
-        [
-            'key'     => 'preparing',
-            'icon'    => 'fa-check',
-            'label'   => 'Preparing Food',
-            'time'    => '3:50 PM',
-            'state'   => 'done',
-        ],
-        [
-            'key'     => 'on_the_way',
-            'icon'    => 'fa-motorcycle',
-            'label'   => 'Rider on the Way',
-            'time'    => '4:05 PM',
-            'state'   => 'current',
-        ],
-        [
-            'key'     => 'delivered',
-            'icon'    => 'fa-home',
-            'label'   => 'Delivered',
-            'time'    => 'Est. 4:17 PM',
-            'state'   => '',
-        ],
-    ];
-
-    public function mount(string $orderId = ''): void
+    /**
+     * Route param: order_number (e.g. "KK2602"), NOT the numeric id.
+     * If your route actually binds by numeric id, change the query in mount()
+     * from where('order_number', ...) to findOrFail($orderId).
+     */
+    public function mount(string $orderId): void
     {
-        $this->orderId = $orderId;
-        // TODO: load order, rider, steps from DB using $orderId
+        $order = Order::query()
+            ->where('order_number', $orderId)
+            ->with([
+                'restaurant:id,name,latitude,longitude',
+                'rider:id,name,phone',
+                'rider.riderProfile',
+                'statusLogs' => fn ($q) => $q->orderBy('created_at'),
+            ])
+            ->firstOrFail();
+
+        abort_unless($order->customer_id === Auth::id(), 403);
+
+        $this->order = $order;
+    }
+
+    /**
+     * Step definitions for the main (non-cancelled) delivery flow.
+     */
+    private const FLOW = [
+        'confirmed'  => ['icon' => 'fa-check',      'label' => 'Order Confirmed'],
+        'preparing'  => ['icon' => 'fa-utensils',   'label' => 'Preparing Food'],
+        'picked_up'  => ['icon' => 'fa-motorcycle', 'label' => 'Rider on the Way'],
+        'delivered'  => ['icon' => 'fa-home',       'label' => 'Delivered'],
+    ];
+
+    #[Computed]
+    public function steps(): array
+    {
+        $logs = $this->order->statusLogs->keyBy('to_status');
+        $currentStatus = $this->order->status;
+
+        // Order in which statuses become "done" once the current status is reached or passed.
+        $order = array_keys(self::FLOW);
+        $currentIndex = array_search($currentStatus, $order, true);
+
+        $steps = [];
+
+        foreach (self::FLOW as $key => $meta) {
+            $log = $logs->get($key);
+            $keyIndex = array_search($key, $order, true);
+
+            if ($key === $currentStatus) {
+                $state = 'current';
+            } elseif ($currentIndex !== false && $keyIndex !== false && $keyIndex < $currentIndex) {
+                $state = 'done';
+            } elseif ($log !== null) {
+                $state = 'done';
+            } else {
+                $state = '';
+            }
+
+            $steps[] = [
+                'key'   => $key,
+                'icon'  => $meta['icon'],
+                'label' => $meta['label'],
+                'time'  => $log?->created_at?->format('g:i A')
+                    ?? ($state === 'current' ? $this->order->updated_at->format('g:i A') : null),
+                'state' => $state,
+            ];
+        }
+
+        return $steps;
+    }
+
+    #[Computed]
+    public function riderInfo(): ?array
+    {
+        if ($this->order->rider_id === null) {
+            return null;
+        }
+
+        $rider = $this->order->rider;
+        $profile = $rider?->riderProfile;
+
+        return [
+            'name'    => $rider?->name ?? 'Rider',
+            // NOTE: field names below (zone/vehicle_type/vehicle_number/rating/photo_url)
+            // are assumed — verify against your actual rider_profiles schema.
+            'zone'    => $profile->zone ?? 'N/A',
+            'vehicle' => trim(($profile->vehicle_type ?? '') . ' ' . ($profile->vehicle_number ?? '')) ?: 'N/A',
+            'rating'  => $profile->rating ?? null,
+            'photo'   => $profile->photo_url ?? null,
+        ];
     }
 
     public function callRider(): void
     {
+        if ($this->order->rider_id === null) {
+            $this->dispatch('show-toast', message: 'কোনো rider এখনো assign হয়নি।', type: 'error');
+            return;
+        }
+
         // TODO: trigger call via telephony API
         $this->dispatch('show-toast', message: '📞 Calling rider...', type: 'info');
     }
 
     public function messageRider(): void
     {
+        if ($this->order->rider_id === null) {
+            $this->dispatch('show-toast', message: 'কোনো rider এখনো assign হয়নি।', type: 'error');
+            return;
+        }
+
         // TODO: open chat channel
         $this->dispatch('show-toast', message: '💬 Opening chat...', type: 'info');
     }

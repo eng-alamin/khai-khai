@@ -134,7 +134,7 @@
 
                 {{-- Usage Progress Bar --}}
                 @if($coupon->usage_limit)
-                    @php $pct = min(100, round($coupon->used_count / $coupon->usage_limit * 100)); @endphp
+                    @php $pct = min(100, round($coupon->used_count / $coupon->usage_limit)); @endphp
                     <div class="coupon-progress-wrap">
                         <div class="coupon-progress-bar">
                             <div class="coupon-progress-fill {{ $pct >= 90 ? 'danger' : ($pct >= 60 ? 'warning' : '') }}"

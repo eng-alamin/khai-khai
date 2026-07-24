@@ -118,7 +118,7 @@ class MenuItemComponent extends Component
         $this->category_id   = $record->category_id ?? 0;
         $this->name          = $record->name;
         $this->description   = $record->description ?? '';
-        $this->price         = (int) ($record->price / 100);
+        $this->price         = (int) ($record->price);
         $this->emoji         = $record->emoji ?? '';
         $this->existingImage = $record->image_url;
         $this->sort_order    = $record->sort_order;
@@ -147,7 +147,7 @@ class MenuItemComponent extends Component
             'category_id'   => $this->category_id ?: null,
             'name'          => $this->name,
             'description'   => $this->description ?: null,
-            'price'         => $this->price * 100,
+            'price'         => $this->price,
             'emoji'         => $this->emoji ?: null,
             'image_url'     => $imagePath,
             'sort_order'    => $this->sort_order,

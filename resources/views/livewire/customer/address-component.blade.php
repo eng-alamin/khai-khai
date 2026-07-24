@@ -1,3 +1,14 @@
+@once
+  @push('styles')
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+  @endpush
+@endonce
+
 <div>
 
   {{-- HEADER --}}
@@ -40,6 +51,12 @@
               {{ $addr->full_address }}, {{ $addr->city }}
               @if($addr->postal_code) - {{ $addr->postal_code }} @endif
             </div>
+            @if($addr->latitude && $addr->longitude)
+            <div style="font-size:11px; color:var(--text-2); margin-top:2px;">
+              <i class="fa fa-map-marker-alt"></i>
+              {{ number_format($addr->latitude, 5) }}, {{ number_format($addr->longitude, 5) }}
+            </div>
+            @endif
           </div>
         </div>
 
@@ -150,7 +167,7 @@
           </div>
 
           {{-- City + Postal --}}
-          <div class="row g-2">
+          <div class="row g-2 mb-3">
             <div class="col-8">
               <label class="form-label-kk">City</label>
               <input class="form-control-kk mt-1" wire:model="city" type="text" placeholder="Dhaka">
@@ -161,6 +178,38 @@
               <input class="form-control-kk mt-1" wire:model="postalCode" type="text" placeholder="1200">
               @error('postalCode') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
             </div>
+          </div>
+
+          {{-- Map Picker --}}
+          <div class="form-group mb-2">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label class="form-label-kk mb-0">Pin Location on Map</label>
+              <button
+                type="button"
+                id="useCurrentLocationBtn"
+                class="btn-kk btn-ghost-kk btn-sm-kk"
+              >
+                <i class="fa fa-location-crosshairs"></i> Use my location
+              </button>
+            </div>
+
+            <div
+              id="addressMap"
+              wire:ignore
+              style="height:220px; width:100%; border-radius:var(--radius); border:1px solid var(--border); overflow:hidden;"
+            ></div>
+
+            <div style="font-size:12px; color:var(--text-2); margin-top:6px;">
+              <i class="fa fa-map-marker-alt"></i>
+              @if($latitude && $longitude)
+                Selected: {{ number_format($latitude, 6) }}, {{ number_format($longitude, 6) }}
+              @else
+                Click on the map (or drag the marker) to select the exact delivery point.
+              @endif
+            </div>
+
+            @error('latitude') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+            @error('longitude') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
           </div>
 
         </div>
@@ -178,7 +227,7 @@
             wire:target="save"
           >
             <span wire:loading.remove wire:target="save">
-              <i class="fa fa-save"></i> {{ $isEditing ? 'Update' : 'Save Address' }}
+              <i class="fa fa-save"></i> {{ $isEditing ? 'Update' : 'Save' }}
             </span>
             <span wire:loading wire:target="save">
               <i class="fa fa-spinner fa-spin"></i> Saving...
@@ -192,14 +241,82 @@
 
 </div>
 
+@once
+  @push('scripts')
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+  @endpush
+@endonce
+
 @push('scripts')
 <script>
   document.addEventListener('livewire:init', () => {
 
-    // Livewire event দিয়ে modal open
-    Livewire.on('open-address-modal', () => {
+    const DEFAULT_LAT = 23.8103; // Dhaka
+    const DEFAULT_LNG = 90.4125;
+
+    let addressMap   = null;
+    let addressMarker = null;
+
+    function placeMarker(lat, lng) {
+      if (!addressMap) return;
+
+      if (addressMarker) {
+        addressMarker.setLatLng([lat, lng]);
+      } else {
+        addressMarker = L.marker([lat, lng], { draggable: true }).addTo(addressMap);
+        addressMarker.on('dragend', (e) => {
+          const pos = e.target.getLatLng();
+          @this.set('latitude', pos.lat);
+          @this.set('longitude', pos.lng);
+        });
+      }
+    }
+
+    function initMap(lat, lng) {
+      const centerLat = lat ?? DEFAULT_LAT;
+      const centerLng = lng ?? DEFAULT_LNG;
+
+      if (!addressMap) {
+        addressMap = L.map('addressMap').setView([centerLat, centerLng], lat ? 16 : 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(addressMap);
+
+        addressMap.on('click', (e) => {
+          placeMarker(e.latlng.lat, e.latlng.lng);
+          @this.set('latitude', e.latlng.lat);
+          @this.set('longitude', e.latlng.lng);
+        });
+      } else {
+        addressMap.setView([centerLat, centerLng], lat ? 16 : 12);
+      }
+
+      if (lat && lng) {
+        placeMarker(lat, lng);
+      } else if (addressMarker) {
+        addressMap.removeLayer(addressMarker);
+        addressMarker = null;
+      }
+
+      // Map container was hidden (inside a modal) so Leaflet needs a nudge
+      // to recalculate its size once it becomes visible.
+      setTimeout(() => addressMap.invalidateSize(), 200);
+    }
+
+    // Livewire event দিয়ে modal open + map init
+    Livewire.on('open-address-modal', (payload) => {
+      const data = Array.isArray(payload) ? payload[0] : payload;
       const el = document.getElementById('addressModal');
       if (el) bootstrap.Modal.getOrCreateInstance(el).show();
+
+      // Wait for the modal transition so the container has real dimensions
+      setTimeout(() => initMap(data?.latitude ?? null, data?.longitude ?? null), 150);
     });
 
     // Livewire event দিয়ে modal close
@@ -211,6 +328,25 @@
     // Backdrop click / ESC চাপলে Livewire state sync
     document.getElementById('addressModal')?.addEventListener('hidden.bs.modal', () => {
       @this.set('showModal', false);
+    });
+
+    // "Use my location" button
+    document.getElementById('useCurrentLocationBtn')?.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by this browser.');
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          placeMarker(latitude, longitude);
+          if (addressMap) addressMap.setView([latitude, longitude], 16);
+          @this.set('latitude', latitude);
+          @this.set('longitude', longitude);
+        },
+        () => alert('Unable to fetch your current location. Please allow location access.'),
+      );
     });
 
   });

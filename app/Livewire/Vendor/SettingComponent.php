@@ -22,12 +22,9 @@ class SettingComponent extends Component
     public ?string $banner_url    = null;
     public string  $address       = '';
     public string  $city          = '';
-    public ?string $latitude      = null;
-    public ?string $longitude     = null;
+    public ?float  $latitude      = null;
+    public ?float  $longitude     = null;
     public ?string $phone         = null;
-    public ?int    $avg_delivery_min = null;
-    public ?int    $avg_delivery_max = null;
-    public int     $delivery_fee  = 4900;
     public ?string $tag           = null;
     public bool    $is_open       = true;
     public bool    $is_active     = true;
@@ -36,7 +33,7 @@ class SettingComponent extends Component
     public bool $auto_accept          = false;
     public int  $prep_time_min        = 20;
     public bool $notification_sound   = true;
-    public ?int $min_order_amount     = null;
+    public ?int $min_order_amount     = 0;
 
     // ── file uploads ────────────────────────────────────────────────
     public $logoUpload   = null;
@@ -84,9 +81,6 @@ class SettingComponent extends Component
             'latitude'          => ['nullable', 'numeric', 'between:-90,90'],
             'longitude'         => ['nullable', 'numeric', 'between:-180,180'],
             'phone'             => ['nullable', 'string', 'max:15'],
-            'avg_delivery_min'  => ['nullable', 'integer', 'min:1', 'max:999'],
-            'avg_delivery_max'  => ['nullable', 'integer', 'min:1', 'max:999', 'gte:avg_delivery_min'],
-            'delivery_fee'      => ['required', 'integer', 'min:0'],
             'tag'               => ['nullable', 'string', 'max:40'],
             'is_open'           => ['boolean'],
             'is_active'         => ['boolean'],
@@ -107,13 +101,13 @@ class SettingComponent extends Component
         'category.required'         => 'Please select a category.',
         'address.required'          => 'Address is required.',
         'city.required'             => 'Please select a city.',
-        'avg_delivery_max.gte'      => 'Max delivery time must be greater than min.',
-        'delivery_fee.required'     => 'Delivery fee is required.',
         'prep_time_min.required'    => 'Prep time is required.',
         'logoUpload.image'          => 'Logo must be an image file.',
         'logoUpload.max'            => 'Logo must not exceed 2 MB.',
         'bannerUpload.image'        => 'Banner must be an image file.',
         'bannerUpload.max'          => 'Banner must not exceed 4 MB.',
+        'latitude.between'          => 'Latitude must be between -90 and 90.',
+        'longitude.between'         => 'Longitude must be between -180 and 180.',
     ];
 
     // ── mount ────────────────────────────────────────────────────────
@@ -131,7 +125,7 @@ class SettingComponent extends Component
                 'auto_accept'        => false,
                 'prep_time_min'      => 20,
                 'notification_sound' => true,
-                'min_order_amount'   => null,
+                'min_order_amount'   => 0,
             ]
         );
 
@@ -144,12 +138,9 @@ class SettingComponent extends Component
             'banner_url'       => $this->restaurant->banner_url,
             'address'          => $this->restaurant->address,
             'city'             => $this->restaurant->city,
-            'latitude'         => $this->restaurant->latitude,
-            'longitude'        => $this->restaurant->longitude,
+            'latitude'         => $this->restaurant->latitude !== null ? (float) $this->restaurant->latitude : null,
+            'longitude'        => $this->restaurant->longitude !== null ? (float) $this->restaurant->longitude : null,
             'phone'            => $this->restaurant->phone,
-            'avg_delivery_min' => $this->restaurant->avg_delivery_min,
-            'avg_delivery_max' => $this->restaurant->avg_delivery_max,
-            'delivery_fee'     => $this->restaurant->delivery_fee,
             'tag'              => $this->restaurant->tag,
             'is_open'          => $this->restaurant->is_open,
             'is_active'        => $this->restaurant->is_active,
@@ -176,34 +167,44 @@ class SettingComponent extends Component
         $this->slug = Str::slug($value);
     }
 
-    // ── delivery fee: paisa ↔ taka helpers ─────────────────────────
-    public function getDeliveryFeeTakaProperty(): string
+    // ── clear validation errors as soon as map sets new coordinates ──
+    public function updatedLatitude($value): void
     {
-        return number_format($this->delivery_fee / 100, 2);
+        $this->resetErrorBag('latitude');
     }
 
-    public function setDeliveryFeeTaka(string $taka): void
+    public function updatedLongitude($value): void
     {
-        $this->delivery_fee = (int) round((float) $taka * 100);
+        $this->resetErrorBag('longitude');
     }
 
     // ── min_order_amount: paisa ↔ taka ─────────────────────────────
     public function getMinOrderTakaProperty(): string
     {
         return $this->min_order_amount !== null
-            ? number_format($this->min_order_amount / 100, 2)
+            ? number_format($this->min_order_amount, 0)
             : '';
     }
 
     public function setMinOrderTaka(string $taka): void
     {
-        $this->min_order_amount = $taka === '' ? null : (int) round((float) $taka * 100);
+        $this->min_order_amount = $taka === '' ? null : (int) round((float) $taka);
     }
 
     // ── tab switch ──────────────────────────────────────────────────
     public function switchTab(string $tab): void
     {
         $this->activeTab = $tab;
+
+        // Let the front-end know a tab switch happened so the Leaflet
+        // map (only present in the DOM while the "basic" tab is active)
+        // can be (re)initialised at the right time.
+        $this->dispatch(
+            'tab-switched',
+            tab: $tab,
+            latitude: $this->latitude,
+            longitude: $this->longitude,
+        );
     }
 
     // ── save all settings ────────────────────────────────────────────
@@ -230,12 +231,9 @@ class SettingComponent extends Component
             'banner_url'       => $this->banner_url,
             'address'          => $this->address,
             'city'             => $this->city,
-            'latitude'         => $this->latitude ?: null,
-            'longitude'        => $this->longitude ?: null,
+            'latitude'         => $this->latitude,
+            'longitude'        => $this->longitude,
             'phone'            => $this->phone ?: null,
-            'avg_delivery_min' => $this->avg_delivery_min,
-            'avg_delivery_max' => $this->avg_delivery_max,
-            'delivery_fee'     => $this->delivery_fee,
             'tag'              => $this->tag ?: null,
             'is_open'          => $this->is_open,
             'is_active'        => $this->is_active,

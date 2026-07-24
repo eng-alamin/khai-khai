@@ -23,7 +23,7 @@
                 </div>
                 <div class="fin-summary-text">
                     <div class="fin-summary-value fin-value-pink">৳{{ number_format($monthlyCommission) }}</div>
-                    <div class="fin-summary-label">KhaiKhai কমিশন ({{ rtrim(rtrim(number_format($commissionRate * 100, 1), '0'), '.') }}%)</div>
+                    <div class="fin-summary-label">KhaiKhai কমিশন ({{ rtrim(rtrim(number_format($commissionRate, 1), '0'), '.') }}%)</div>
                 </div>
                 <div class="fin-summary-blob"></div>
             </div>

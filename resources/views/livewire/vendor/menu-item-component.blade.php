@@ -107,7 +107,7 @@
                 {{-- Bottom Row --}}
                 <div class="item-card-bottom">
                     <div style="display:flex;align-items:center;gap:10px;">
-                        <span class="item-price-badge">৳{{ number_format($item->price / 100) }}</span>
+                        <span class="item-price-badge">৳{{ number_format($item->price, 0) }}</span>
                         <label class="item-toggle">
                             <input type="checkbox"
                                 @checked($item->is_available)

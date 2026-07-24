@@ -10,15 +10,46 @@ return new class extends Migration
     {
         Schema::create('menu_categories', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('restaurant_id')->constrained('restaurants')->cascadeOnDelete();
+
+
+            $table->foreignId('restaurant_id')
+                ->constrained('restaurants')
+                ->cascadeOnDelete();
+
+
+            // Category information
             $table->string('name', 80);
-            $table->string('emoji', 10)->nullable();
-            $table->unsignedInteger('sort_order')->default(0);
-            $table->boolean('is_active')->default(true);
+
+            $table->string('emoji', 10)
+                ->nullable();
+
+
+            // Ordering
+            $table->unsignedSmallInteger('sort_order')
+                ->default(0);
+
+
+            // Status
+            $table->boolean('is_active')
+                ->default(true);
+
+
             $table->timestamps();
 
-            $table->index('restaurant_id');
-            $table->index(['restaurant_id', 'is_active', 'sort_order']);
+
+            // Prevent duplicate category inside same restaurant
+            $table->unique([
+                'restaurant_id',
+                'name'
+            ]);
+
+
+            // Query optimization
+            $table->index([
+                'restaurant_id',
+                'is_active',
+                'sort_order'
+            ]);
         });
     }
 

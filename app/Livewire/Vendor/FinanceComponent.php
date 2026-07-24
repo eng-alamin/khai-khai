@@ -50,7 +50,7 @@ class FinanceComponent extends Component
         $restaurantId = $restaurant->id;
         $now          = Carbon::now();
 
-        $this->commissionRate = ((float) $restaurant->commission_rate) / 100;
+        $this->commissionRate = ((float) $restaurant->commission_rate);
 
         // ── Current month live summary (orders not yet settled) ──
         // Commission is calculated on `subtotal` (food cost only), not
@@ -65,7 +65,7 @@ class FinanceComponent extends Component
             ])
             ->sum('subtotal');
 
-        $revenue    = (int) round($currentMonthSubtotalPaisa / 100);
+        $revenue    = (int) round($currentMonthSubtotalPaisa);
         $commission = (int) round($revenue * $this->commissionRate);
 
         $this->monthlyRevenue    = $revenue;
@@ -96,9 +96,9 @@ class FinanceComponent extends Component
                     'date'       => $payout->paid_at
                         ? $payout->paid_at->translatedFormat('j F Y')
                         : $payout->period_start->translatedFormat('j F Y'),
-                    'sales'      => (int) round($payout->gross_subtotal / 100),
-                    'commission' => (int) round($payout->commission_amount / 100),
-                    'net'        => (int) round($payout->net_amount / 100),
+                    'sales'      => (int) round($payout->gross_subtotal),
+                    'commission' => (int) round($payout->commission_amount),
+                    'net'        => (int) round($payout->net_amount),
                     'status'     => $payout->status, // pending | processing | paid | failed
                 ];
             })

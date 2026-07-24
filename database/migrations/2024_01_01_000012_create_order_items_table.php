@@ -12,14 +12,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
             $table->foreignId('menu_item_id')->nullable()->constrained('menu_items')->nullOnDelete();
+            $table->string('item_image')->nullable();
             $table->string('item_name', 120)->comment('Snapshot: name at order time');
-            $table->unsignedInteger('item_price')->comment('Snapshot: unit price at order time (BDT paisa)');
-            $table->unsignedSmallInteger('quantity');
-            $table->unsignedInteger('line_total')->comment('item_price × quantity');
+            $table->decimal('item_price', 15, 2)->comment('Snapshot: unit price at order time');
+            $table->unsignedSmallInteger('quantity')->default(1);
+            $table->decimal('discount_amount',15,2)->default(0);
+            $table->decimal('line_total', 15, 2)->comment('(item_price × quantity) - discount');
             $table->string('emoji', 10)->nullable()->comment('Snapshot emoji');
+            $table->json('options')->nullable()->comment('Snapshot of variants and addons');
             $table->timestamps();
-
-            $table->index('order_id');
         });
     }
 

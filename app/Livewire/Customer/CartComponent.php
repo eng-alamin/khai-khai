@@ -1,5 +1,4 @@
 <?php
-// app/Livewire/Customer/CartComponent.php
 
 namespace App\Livewire\Customer;
 
@@ -10,6 +9,8 @@ use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusLog;
+use App\Models\Restaurant;
+use App\Services\DeliveryChargeService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,23 +18,19 @@ use Illuminate\Support\Str;
 
 class CartComponent extends Component
 {
-    // ✅ #[Session] — Livewire নিজেই session-এ save/restore করবে
-    // page refresh করলেও items থাকবে
     #[Session(key: 'kk_cart')]
     public array $items = [];
 
     public bool  $open         = false;
-    public int   $delivery     = 4900;
     public bool  $showConflict = false;
     public array $pendingItem  = [];
 
-    // ─────────────────────────────────────────
-    // ADD TO CART
-    // ─────────────────────────────────────────
+    public float $delivery = 49.00;
+
+
     #[On('add-to-cart')]
     public function addItem(int $id, string $name, int $price): void
     {
-        // ইতিমধ্যে আছে → qty বাড়াও
         if (isset($this->items[$id])) {
             $this->items[$id]['qty']++;
             return;
@@ -42,7 +39,6 @@ class CartComponent extends Component
         $menuItem = MenuItem::find($id);
         if (! $menuItem) return;
 
-        // আলাদা restaurant → conflict modal
         if (! empty($this->items)) {
             $currentRestaurantId = collect($this->items)->first()['restaurant_id'];
             if ($currentRestaurantId !== $menuItem->restaurant_id) {
@@ -62,7 +58,6 @@ class CartComponent extends Component
         $this->doAddItem($menuItem);
     }
 
-    // Conflict — "হ্যাঁ, খালি করুন"
     public function confirmClearAndAdd(): void
     {
         $this->items        = [];
@@ -78,16 +73,12 @@ class CartComponent extends Component
         }
     }
 
-    // Conflict — "না, রাখুন"
     public function cancelConflict(): void
     {
         $this->showConflict = false;
         $this->pendingItem  = [];
     }
 
-    // ─────────────────────────────────────────
-    // INTERNAL HELPER
-    // ─────────────────────────────────────────
     private function doAddItem(MenuItem $menuItem): void
     {
         $this->items[$menuItem->id] = [
@@ -100,9 +91,6 @@ class CartComponent extends Component
         ];
     }
 
-    // ─────────────────────────────────────────
-    // QTY CONTROLS
-    // ─────────────────────────────────────────
     public function increment(int $id): void
     {
         if (isset($this->items[$id])) {
@@ -139,10 +127,7 @@ class CartComponent extends Component
         $this->open = ! $this->open;
     }
 
-    // ─────────────────────────────────────────
-    // COMPUTED PROPERTIES
-    // ─────────────────────────────────────────
-    public function getSubtotalProperty(): int
+    public function getSubtotalProperty(): float
     {
         return array_sum(array_map(
             fn($i) => $i['price'] * $i['qty'],
@@ -150,9 +135,40 @@ class CartComponent extends Component
         ));
     }
 
-    public function getTotalProperty(): int
+    public function getDeliveryDataProperty(): array
     {
-        return $this->subtotal + (count($this->items) ? $this->delivery : 0);
+        if (empty($this->items) || ! Auth::check()) {
+            return ['distance_km' => null, 'fee' => $this->delivery];
+        }
+
+        $firstItem  = collect($this->items)->first();
+        $restaurant = Restaurant::select('id', 'latitude', 'longitude')
+            ->find($firstItem['restaurant_id']);
+
+        if (! $restaurant) {
+            return ['distance_km' => null, 'fee' => $this->delivery];
+        }
+
+        $address = Auth::user()->addresses()->where('is_default', true)->first()
+            ?? Auth::user()->addresses()->latest()->first();
+
+        return app(DeliveryChargeService::class)->calculateWithDistance(
+            originLat: $restaurant->latitude,
+            originLng: $restaurant->longitude,
+            destLat: $address?->latitude,
+            destLng: $address?->longitude,
+            fallbackFee: $this->delivery,
+        );
+    }
+
+    public function getDeliveryFeeProperty(): float
+    {
+        return $this->deliveryData['fee'];
+    }
+
+    public function getTotalProperty(): float
+    {
+        return $this->subtotal + (count($this->items) ? $this->deliveryFee : 0);
     }
 
     public function getCountProperty(): int
@@ -160,9 +176,12 @@ class CartComponent extends Component
         return array_sum(array_column($this->items, 'qty'));
     }
 
-    // ─────────────────────────────────────────
-    // PLACE ORDER
-    // ─────────────────────────────────────────
+    #[On('address-saved')]
+    public function resumePlaceOrderAfterAddress(): void
+    {
+        $this->placeOrder();
+    }
+
     public function placeOrder(): void
     {
         if (! Auth::check()) {
@@ -172,13 +191,20 @@ class CartComponent extends Component
 
         if (empty($this->items)) return;
 
-        $user     = Auth::user();
-        $items    = $this->items;
-        $subtotal = $this->subtotal;
-        $delivery = $this->delivery;
-        $total    = $this->total;
+        $user = Auth::user();
 
-        // ✅ Unique order number নিশ্চিত করো
+        if ($user->addresses()->doesntExist()) {
+            $this->dispatch('open-quick-address');
+            return;
+        }
+
+        $items          = $this->items;
+        $subtotal       = $this->subtotal;
+        $deliveryData   = $this->deliveryData;
+        $deliveryFee    = $deliveryData['fee'];
+        $deliveryKm     = $deliveryData['distance_km'];
+        $total          = $subtotal + $deliveryFee;
+
         do {
             $orderNumber = 'KK' . now()->format('ymd') . strtoupper(Str::random(4));
         } while (Order::where('order_number', $orderNumber)->exists());
@@ -191,7 +217,7 @@ class CartComponent extends Component
 
         try {
             $order = DB::transaction(function () use (
-                $user, $items, $subtotal, $delivery, $total,
+                $user, $items, $subtotal, $deliveryFee, $deliveryKm, $total,
                 $orderNumber, $address, $restaurantId
             ) {
                 $order = Order::create([
@@ -200,7 +226,6 @@ class CartComponent extends Component
                     'restaurant_id'             => $restaurantId,
                     'rider_id'                  => null,
                     'delivery_address_id'       => $address?->id,
-                    // ✅ address না থাকলে null — column nullable() করতে হবে
                     'delivery_address_snapshot' => $address ? [
                         'label'        => $address->label,
                         'full_address' => $address->full_address,
@@ -209,9 +234,10 @@ class CartComponent extends Component
                         'latitude'     => $address->latitude,
                         'longitude'    => $address->longitude,
                     ] : null,
+                    'delivery_distance_km'  => $deliveryKm,
                     'status'                => 'pending',
                     'subtotal'              => $subtotal,
-                    'delivery_fee'          => $delivery,
+                    'delivery_fee'          => $deliveryFee,
                     'discount_amount'       => 0,
                     'total_amount'          => $total,
                     'coupon_id'             => null,
@@ -233,6 +259,7 @@ class CartComponent extends Component
                         'emoji'        => $item['emoji'] ?? null,
                     ];
                 }
+
                 OrderItem::insert($orderItems);
 
                 OrderStatusLog::create([
@@ -244,6 +271,17 @@ class CartComponent extends Component
                 ]);
 
                 $user->customerProfile()->increment('total_orders');
+
+                activity()
+                    ->performedOn($order)
+                    ->causedBy($user)
+                    ->withProperties([
+                        'order_number'         => $order->order_number,
+                        'total_amount'         => $order->total_amount,
+                        'delivery_fee'         => $order->delivery_fee,
+                        'delivery_distance_km' => $order->delivery_distance_km,
+                    ])
+                    ->log('Order placed');
 
                 return $order;
             });
@@ -261,9 +299,6 @@ class CartComponent extends Component
         }
     }
 
-    // ─────────────────────────────────────────
-    // RENDER
-    // ─────────────────────────────────────────
     public function render()
     {
         return view('livewire.customer.cart-component', [

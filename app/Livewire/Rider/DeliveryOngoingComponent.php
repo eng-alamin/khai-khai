@@ -155,8 +155,8 @@ class DeliveryOngoingComponent extends Component
                     ($item->quantity > 1 ? ' × ' . $this->toBanglaNumber($item->quantity) : '')
             )->implode(', '),
             'item_count'      => $order->items->sum('quantity'),
-            'total'           => '৳' . $this->toBanglaNumber(intdiv($order->total_amount, 100)),
-            'delivery_fee'    => '৳' . $this->toBanglaNumber(intdiv($order->delivery_fee, 100)),
+            'total'           => '৳' . $order->total_amount,
+            'delivery_fee'    => '৳' . $order->delivery_fee,
             'address'         => $address ?: 'ঠিকানা পাওয়া যায়নি',
             'payment_method'  => $order->payment_method,
             'payment_status'  => $order->payment_status,

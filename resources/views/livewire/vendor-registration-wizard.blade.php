@@ -3,6 +3,7 @@
      VENDOR REGISTRATION WIZARD
      Bootstrap 5.3 + Livewire v3
      KhaiKhai Food Delivery Platform
+     (No vendor-level delivery-settings step)
      ═══════════════════════════════════════════════════════════ --}}
 
 <style>
@@ -62,7 +63,7 @@
         align-items: center;
         position: relative;
         flex: 1;
-        max-width: 130px;
+        max-width: 160px;
     }
     .step-item:not(:last-child)::after {
         content: '';
@@ -190,21 +191,6 @@
         border: 1.5px solid var(--kk-border);
     }
 
-    /* ── Range slider ── */
-    .range-row {
-        display: flex; align-items: center; gap: 12px;
-    }
-    .range-row .form-range { flex: 1; accent-color: var(--pink); }
-    .range-value {
-        min-width: 52px; text-align: center;
-        background: var(--pink-light);
-        color: var(--pink);
-        font-weight: 700; font-size: .85rem;
-        padding: .3rem .6rem;
-        border-radius: 8px;
-        border: 1px solid rgba(255,107,53,.2);
-    }
-
     /* ── Category pills ── */
     .category-grid {
         display: flex; flex-wrap: wrap; gap: .5rem;
@@ -227,15 +213,7 @@
         color: #fff;
     }
 
-    /* ── Toggle switch ── */
-    .form-switch .form-check-input {
-        width: 3em; height: 1.5em;
-        cursor: pointer;
-    }
-    .form-switch .form-check-input:checked { background-color: var(--pink); border-color: var(--pink); }
-    .form-switch .form-check-input:focus { box-shadow: 0 0 0 3px rgba(255,107,53,.2); }
-
-    /* ── Summary box (step 4) ── */
+    /* ── Summary box ── */
     .summary-card {
         background: var(--kk-gray);
         border: 1px solid var(--kk-border);
@@ -340,8 +318,8 @@
     {{-- ── Stepper ── --}}
     <div class="stepper mb-4">
         @php
-            $stepLabels = ['Account', 'Restaurant', 'Media', 'Delivery'];
-            $stepIcons  = ['👤', '🏠', '🖼️', '🚴'];
+            $stepLabels = ['Account', 'Restaurant', 'Media'];
+            $stepIcons  = ['👤', '🏠', '🖼️'];
         @endphp
         @for ($i = 1; $i <= $totalSteps; $i++)
             <div class="step-item
@@ -533,15 +511,6 @@
                         @error('address') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
-                    {{-- Postal --}}
-                    <div class="col-sm-4">
-                        <label class="form-label">Postal Code</label>
-                        <input type="text" class="form-control @error('postal_code') is-invalid @enderror"
-                            wire:model.live.debounce.400ms="postal_code"
-                            placeholder="e.g. 1212">
-                        @error('postal_code') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                    </div>
-
                     {{-- Description --}}
                     <div class="col-12">
                         <label class="form-label">Short Description <small class="text-muted">(optional)</small></label>
@@ -558,7 +527,7 @@
             @endif
 
             {{-- ════════════════════════════════
-                 STEP 3 — Logo & Banner
+                 STEP 3 — Logo & Banner + Summary
                  ════════════════════════════════ --}}
             @if($currentStep === 3)
                 <h2 class="step-title">🖼️ Logo & Banner</h2>
@@ -627,171 +596,58 @@
                         Uploading...
                     </div>
                 </div>
-            @endif
 
-            {{-- ════════════════════════════════
-                 STEP 4 — Delivery Settings + Summary
-                 ════════════════════════════════ --}}
-            @if($currentStep === 4)
-                <h2 class="step-title">🚴 Delivery Settings</h2>
-                <p class="step-subtitle">Customers will see this information before placing an order.</p>
-
-                <div class="row g-3">
-
-                    {{-- Delivery fee --}}
-                    <div class="col-sm-6">
-                        <label class="form-label">Delivery Fee (BDT) <span class="req">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text">৳</span>
-                            <input type="number" class="form-control @error('delivery_fee') is-invalid @enderror"
-                                wire:model.live="delivery_fee"
-                                min="0" max="1000" step="1">
-                        </div>
-                        @error('delivery_fee') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                {{-- Summary --}}
+                <div class="mt-4">
+                    <div style="font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#6C757D; margin-bottom:.8rem;">
+                        📋 Registration Summary
                     </div>
 
-                    {{-- Min order --}}
-                    <div class="col-sm-6">
-                        <label class="form-label">Minimum Order (BDT)</label>
-                        <div class="input-group">
-                            <span class="input-group-text">৳</span>
-                            <input type="number" class="form-control @error('min_order_amount') is-invalid @enderror"
-                                wire:model.live="min_order_amount"
-                                min="0" step="10">
+                    <div class="summary-card">
+                        <div class="s-title">👤 Account</div>
+                        <div class="summary-row">
+                            <span class="sr-label">Name</span>
+                            <span class="sr-value">{{ $name }}</span>
                         </div>
-                        @error('min_order_amount') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        <div class="summary-row">
+                            <span class="sr-label">Email</span>
+                            <span class="sr-value">{{ $email }}</span>
+                        </div>
+                        @if($phone)
+                        <div class="summary-row">
+                            <span class="sr-label">Phone</span>
+                            <span class="sr-value">{{ $phone }}</span>
+                        </div>
+                        @endif
                     </div>
 
-                    {{-- Delivery time range --}}
-                    <div class="col-12">
-                        <label class="form-label">Delivery Time Range <span class="req">*</span></label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label style="font-size:.75rem; color:#6C757D;">Minimum (minutes)</label>
-                                <div class="range-row">
-                                    <input type="range" class="form-range"
-                                        wire:model.live="avg_delivery_min"
-                                        min="5" max="120" step="5">
-                                    <span class="range-value">{{ $avg_delivery_min }}</span>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <label style="font-size:.75rem; color:#6C757D;">Maximum (minutes)</label>
-                                <div class="range-row">
-                                    <input type="range" class="form-range"
-                                        wire:model.live="avg_delivery_max"
-                                        min="5" max="180" step="5">
-                                    <span class="range-value">{{ $avg_delivery_max }}</span>
-                                </div>
-                            </div>
+                    <div class="summary-card">
+                        <div class="s-title">🏠 Restaurant</div>
+                        <div class="summary-row">
+                            <span class="sr-label">Name</span>
+                            <span class="sr-value">{{ $restaurant_name }}</span>
                         </div>
-                        @error('avg_delivery_max') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                        <div style="font-size:.75rem; color:#6C757D; margin-top:4px;">
-                            Customers will see: <strong>{{ $avg_delivery_min }}–{{ $avg_delivery_max }} minutes</strong>
+                        <div class="summary-row">
+                            <span class="sr-label">Category</span>
+                            <span class="sr-value">{{ $category }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="sr-label">City</span>
+                            <span class="sr-value">{{ $city }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="sr-label">Logo</span>
+                            <span class="sr-value">{{ $logo ? '✅ Uploaded' : '—' }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="sr-label">Banner</span>
+                            <span class="sr-value">{{ $banner ? '✅ Uploaded' : '—' }}</span>
                         </div>
                     </div>
 
-                    {{-- Prep time --}}
-                    <div class="col-sm-6">
-                        <label class="form-label">Preparation Time (minutes) <span class="req">*</span></label>
-                        <div class="range-row">
-                            <input type="range" class="form-range"
-                                wire:model.live="prep_time_min"
-                                min="5" max="120" step="5">
-                            <span class="range-value">{{ $prep_time_min }}</span>
-                        </div>
-                    </div>
-
-                    {{-- Auto accept --}}
-                    <div class="col-sm-6">
-                        <label class="form-label">Auto-Accept Orders</label>
-                        <div class="form-check form-switch mt-1">
-                            <input class="form-check-input" type="checkbox"
-                                wire:model.live="auto_accept" id="autoAccept">
-                            <label class="form-check-label" for="autoAccept" style="font-size:.85rem;">
-                                @if($auto_accept)
-                                    ✅ New orders will be accepted automatically
-                                @else
-                                    ⏳ Each order must be accepted manually
-                                @endif
-                            </label>
-                        </div>
-                    </div>
-
-                    {{-- Summary --}}
-                    <div class="col-12 mt-2">
-                        <div style="font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#6C757D; margin-bottom:.8rem;">
-                            📋 Registration Summary
-                        </div>
-
-                        <div class="summary-card">
-                            <div class="s-title">👤 Account</div>
-                            <div class="summary-row">
-                                <span class="sr-label">Name</span>
-                                <span class="sr-value">{{ $name }}</span>
-                            </div>
-                            <div class="summary-row">
-                                <span class="sr-label">Email</span>
-                                <span class="sr-value">{{ $email }}</span>
-                            </div>
-                            @if($phone)
-                            <div class="summary-row">
-                                <span class="sr-label">Phone</span>
-                                <span class="sr-value">{{ $phone }}</span>
-                            </div>
-                            @endif
-                        </div>
-
-                        <div class="summary-card">
-                            <div class="s-title">🏠 Restaurant</div>
-                            <div class="summary-row">
-                                <span class="sr-label">Name</span>
-                                <span class="sr-value">{{ $restaurant_name }}</span>
-                            </div>
-                            <div class="summary-row">
-                                <span class="sr-label">Category</span>
-                                <span class="sr-value">{{ $category }}</span>
-                            </div>
-                            <div class="summary-row">
-                                <span class="sr-label">City</span>
-                                <span class="sr-value">{{ $city }}</span>
-                            </div>
-                            <div class="summary-row">
-                                <span class="sr-label">Logo</span>
-                                <span class="sr-value">{{ $logo ? '✅ Uploaded' : '—' }}</span>
-                            </div>
-                            <div class="summary-row">
-                                <span class="sr-label">Banner</span>
-                                <span class="sr-value">{{ $banner ? '✅ Uploaded' : '—' }}</span>
-                            </div>
-                        </div>
-
-                        <div class="summary-card">
-                            <div class="s-title">🚴 Delivery</div>
-                            <div class="summary-row">
-                                <span class="sr-label">Fee</span>
-                                <span class="sr-value">৳{{ $delivery_fee }}</span>
-                            </div>
-                            <div class="summary-row">
-                                <span class="sr-label">Time</span>
-                                <span class="sr-value">{{ $avg_delivery_min }}–{{ $avg_delivery_max }} minutes</span>
-                            </div>
-                            <div class="summary-row">
-                                <span class="sr-label">Prep Time</span>
-                                <span class="sr-value">{{ $prep_time_min }} minutes</span>
-                            </div>
-                            <div class="summary-row">
-                                <span class="sr-label">Auto-Accept</span>
-                                <span class="sr-value">{{ $auto_accept ? 'Yes' : 'No' }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-12">
-                        <div class="info-alert success">
-                            <span class="info-icon">✅</span>
-                            <div>After submitting, the KhaiKhai team will verify your information. You'll receive an SMS once verification is complete.</div>
-                        </div>
+                    <div class="info-alert success">
+                        <span class="info-icon">✅</span>
+                        <div>After submitting, the KhaiKhai team will verify your information. You'll receive an SMS once verification is complete.</div>
                     </div>
                 </div>
             @endif

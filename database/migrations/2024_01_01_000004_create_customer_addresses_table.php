@@ -10,18 +10,67 @@ return new class extends Migration
     {
         Schema::create('customer_addresses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('customer_id')->constrained('users')->cascadeOnDelete();
-            $table->enum('label', ['home', 'office', 'other'])->default('home');
+
+
+            $table->foreignId('customer_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
+
+
+            // Address label
+            $table->enum('label', [
+                'home',
+                'office',
+                'other',
+            ])
+            ->default('home');
+
+
+            // Address details
             $table->text('full_address');
-            $table->string('city', 60)->default('Dhaka');
-            $table->string('postal_code', 10)->nullable();
-            $table->decimal('latitude', 10, 7)->nullable();
-            $table->decimal('longitude', 10, 7)->nullable();
-            $table->boolean('is_default')->default(false);
+
+
+            $table->string('city', 60)
+                ->default('Dhaka');
+
+
+            $table->string('area', 100)
+                ->nullable();
+
+
+            $table->string('postal_code', 10)
+                ->nullable();
+
+
+            // Map location
+            $table->decimal('latitude', 10, 7)
+                ->nullable();
+
+
+            $table->decimal('longitude', 10, 7)
+                ->nullable();
+
+
+            // Default address
+            $table->boolean('is_default')
+                ->default(false);
+
+
             $table->timestamps();
 
+
+            // Indexes
             $table->index('customer_id');
-            $table->index(['customer_id', 'is_default']);
+
+            $table->index([
+                'customer_id',
+                'is_default'
+            ]);
+
+            $table->index([
+                'latitude',
+                'longitude'
+            ]);
         });
     }
 

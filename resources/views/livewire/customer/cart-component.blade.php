@@ -50,7 +50,7 @@
                         </div>
                     </div>
                     <div style="text-align:right; flex-shrink:0;">
-                        <div class="ci-price">৳{{ number_format(($item['price'] * $item['qty']) / 100) }}</div>
+                        <div class="ci-price">৳{{ number_format(($item['price'] * $item['qty'])) }}</div>
                         <button
                             wire:click="removeItem({{ $id }})"
                             style="background:none; border:none; color:var(--danger); font-size:11px; cursor:pointer; margin-top:4px;"
@@ -72,15 +72,15 @@
             <div class="cart-footer">
                 <div class="cart-total-row">
                     <span>সাবটোটাল</span>
-                    <span>৳{{ number_format($this->subtotal / 100) }}</span>
+                    <span>৳{{ number_format($this->subtotal) }}</span>
                 </div>
                 <div class="cart-total-row">
                     <span>ডেলিভারি চার্জ</span>
-                    <span>৳{{ number_format($delivery / 100) }}</span>
+                    <span>৳{{ number_format($this->deliveryFee) }}</span>
                 </div>
                 <div class="cart-grand">
                     <span>মোট</span>
-                    <span>৳{{ number_format($this->total / 100) }}</span>
+                    <span>৳{{ number_format($this->total) }}</span>
                 </div>
 
                 <button
@@ -121,12 +121,6 @@
         <div class="cart-count">{{ $this->count }}</div>
     </button>
 
-    {{-- ═══════════════════════════════════════════
-         CART CONFLICT MODAL
-         ✅ Alpine নেই — পুরোটা Livewire দিয়ে control হচ্ছে
-         $showConflict = true হলে Livewire নিজেই re-render করবে
-         Page refresh-এ $showConflict = false থাকে → modal দেখাবে না
-    ═══════════════════════════════════════════ --}}
     @if($showConflict)
     <div
         style="
@@ -188,7 +182,7 @@
                         {{ $pendingItem['name'] }}
                     </div>
                     <div style="font-size:12px; color:var(--pink); font-weight:700;">
-                        ৳{{ number_format($pendingItem['price'] / 100) }}
+                        ৳{{ number_format($pendingItem['price']) }}
                     </div>
                 </div>
             </div>

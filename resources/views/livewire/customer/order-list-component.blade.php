@@ -71,7 +71,7 @@
 
       {{-- FOOTER --}}
       <div class="order-footer">
-        <div class="order-total">৳{{ number_format($order->total_amount, 0) }}</div>
+        <div class="order-total">৳{{ number_format($order->total_amount) }}</div>
         <div class="d-flex gap-2">
 
           {{-- Track — active orders only --}}

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Order extends Model
 {
@@ -55,6 +56,23 @@ class Order extends Model
     public function rider(): BelongsTo
     {
         return $this->belongsTo(User::class, 'rider_id');
+    }
+
+    /**
+     * Rider এর profile (vehicle, zone, live location) — সরাসরি order থেকে,
+     * rider_id → users.id → rider_profiles.user_id হয়ে join করে।
+     * Eager load: Order::with('riderProfile')
+     */
+    public function riderProfile(): HasOneThrough
+    {
+        return $this->hasOneThrough(
+            RiderProfile::class,
+            User::class,
+            'id',           // users.id
+            'user_id',      // rider_profiles.user_id
+            'rider_id',     // orders.rider_id
+            'id'            // users.id
+        );
     }
  
     // ডেলিভারি ঠিকানা
@@ -142,5 +160,11 @@ class Order extends Model
     public function getTotalAmountInTakaAttribute(): string
     {
         return '৳' . number_format($this->total_amount / 100);
+    }
+
+    // ডেলিভারি ফি — paisa থেকে টাকায়
+    public function getDeliveryFeeInTakaAttribute(): string
+    {
+        return '৳' . number_format($this->delivery_fee / 100);
     }
 }

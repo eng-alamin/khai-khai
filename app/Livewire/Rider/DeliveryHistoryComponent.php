@@ -51,7 +51,7 @@ class DeliveryHistoryComponent extends Component
             return null;
         }
 
-        return intdiv((int) $earning->amount, 100);
+        return $earning->amount;
     }
 
     /* ── Helper: তারিখ লেবেল — আজ / গতকাল / X দিন আগে / পূর্ণ তারিখ ── */

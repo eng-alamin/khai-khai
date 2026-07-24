@@ -38,8 +38,7 @@ class RestaurantComponent extends Component
         $filteredRestaurants = $restaurantsQuery->get([
             'id', 'name', 'slug', 'category', 'emoji',
             'logo_url', 'banner_url', 'city',
-            'avg_delivery_min', 'avg_delivery_max',
-            'delivery_fee', 'avg_rating', 'total_reviews',
+            'avg_rating', 'total_reviews',
             'tag', 'is_open',
         ]);
 

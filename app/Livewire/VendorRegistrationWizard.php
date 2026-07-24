@@ -5,7 +5,6 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\Restaurant;
 use App\Models\User;
-use App\Models\VendorSetting;
 use App\Models\MenuCategory;
 use App\Mail\NewVendorRegisteredMail;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +20,7 @@ class VendorRegistrationWizard extends Component
 
     // ── Wizard state ────────────────────────────────────────────────
     public int $currentStep = 1;
-    public int $totalSteps  = 4;
+    public int $totalSteps  = 3;
 
     // ── Step 1 : Personal / Account info ────────────────────────────
     public string $name     = '';
@@ -36,20 +35,11 @@ class VendorRegistrationWizard extends Component
     public string $restaurant_phone = '';
     public string $address         = '';
     public string $city            = '';
-    public string $postal_code     = '';
     public string $description     = '';
 
     // ── Step 3 : Media & branding ────────────────────────────────────
     public $logo   = null;
     public $banner = null;
-
-    // ── Step 4 : Delivery settings ───────────────────────────────────
-    public int    $delivery_fee     = 49;       // BDT (will store as paisa)
-    public int    $avg_delivery_min = 20;
-    public int    $avg_delivery_max = 40;
-    public int    $min_order_amount = 100;      // BDT
-    public int    $prep_time_min    = 15;
-    public bool   $auto_accept      = false;
 
     // ── Categories list ──────────────────────────────────────────────
     public array $categories = [
@@ -90,19 +80,11 @@ class VendorRegistrationWizard extends Component
                 'restaurant_phone'  => 'required|string|regex:/^01[3-9]\d{8}$/',
                 'address'           => 'required|string|min:10|max:255',
                 'city'              => 'required|string',
-                'postal_code'       => 'nullable|digits_between:4,10',
                 'description'       => 'nullable|string|max:500',
             ],
             3 => [
                 'logo'   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'banner' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
-            ],
-            4 => [
-                'delivery_fee'     => 'required|integer|min:0|max:1000',
-                'avg_delivery_min' => 'required|integer|min:5|max:120',
-                'avg_delivery_max' => 'required|integer|min:5|max:180|gte:avg_delivery_min',
-                'min_order_amount' => 'required|integer|min:0',
-                'prep_time_min'    => 'required|integer|min:5|max:120',
             ],
             default => [],
         };
@@ -127,9 +109,6 @@ class VendorRegistrationWizard extends Component
             3 => [
                 'logo.max'   => 'Logo must not exceed 2 MB.',
                 'banner.max' => 'Banner must not exceed 4 MB.',
-            ],
-            4 => [
-                'avg_delivery_max.gte' => 'Maximum time must be greater than minimum time.',
             ],
             default => [],
         };
@@ -167,8 +146,8 @@ class VendorRegistrationWizard extends Component
     public function submit(): void
     {
         $this->validate(
-            $this->rulesForStep(4),
-            $this->messagesForStep(4)
+            $this->rulesForStep(3),
+            $this->messagesForStep(3)
         );
 
         $restaurant = null;
@@ -198,24 +177,27 @@ class VendorRegistrationWizard extends Component
                 ? $this->banner->store('restaurants/banners', 'public')
                 : null;
 
-            // 3. Create restaurant
+            // 3. Create restaurant (fields matched to actual restaurants migration)
             $restaurant = Restaurant::create([
-                'owner_id'         => $user->id,
-                'name'             => $this->restaurant_name,
-                'slug'             => $this->generateUniqueSlug($this->restaurant_name),
-                'category'         => $this->category,
-                'phone'            => $this->restaurant_phone,
-                'address'          => $this->address,
-                'city'             => $this->city,
-                'logo_url'         => $logoPath ? Storage::url($logoPath) : null,
-                'banner_url'       => $bannerPath ? Storage::url($bannerPath) : null,
-                'delivery_fee'     => $this->delivery_fee * 100,
-                'avg_delivery_min' => $this->avg_delivery_min,
-                'avg_delivery_max' => $this->avg_delivery_max,
-                'commission_rate'  => 15.00,
-                'is_open'          => false,
-                'is_approved'      => false,
-                'is_active'        => true,
+                'owner_id'        => $user->id,
+                'name'            => $this->restaurant_name,
+                'slug'            => $this->generateUniqueSlug($this->restaurant_name),
+                'category'        => $this->category,
+                'emoji'           => null,
+                'logo_url'        => $logoPath ? Storage::url($logoPath) : null,
+                'banner_url'      => $bannerPath ? Storage::url($bannerPath) : null,
+                'address'         => $this->address,
+                'city'            => $this->city,
+                'latitude'        => null,
+                'longitude'       => null,
+                'phone'           => $this->restaurant_phone,
+                'avg_rating'      => null,
+                'total_reviews'   => 0,
+                'tag'             => null,
+                'commission_rate' => 15.00,
+                'is_open'         => false,
+                'is_approved'     => false,
+                'is_active'       => true,
             ]);
 
             // 4. Default menu categories
@@ -241,15 +223,6 @@ class VendorRegistrationWizard extends Component
                     ]
                 );
             }
-
-            // 5. Vendor settings
-            VendorSetting::create([
-                'restaurant_id'      => $restaurant->id,
-                'auto_accept'        => $this->auto_accept,
-                'prep_time_min'      => $this->prep_time_min,
-                'notification_sound' => true,
-                'min_order_amount'   => $this->min_order_amount * 100,
-            ]);
 
             if (function_exists('activity')) {
                 activity()

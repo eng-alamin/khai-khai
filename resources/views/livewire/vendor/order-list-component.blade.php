@@ -112,7 +112,7 @@
 
                 {{-- Bottom Row --}}
                 <div class="order-card-bottom">
-                    <span class="order-price-badge">৳{{ number_format($order->total_amount / 100) }}</span>
+                    <span class="order-price-badge">৳{{ number_format($order->total_amount , 0) }}</span>
 
                     <div class="order-card-actions">
                         <button class="order-btn-details" wire:click="openDetails({{ $order->id }})">
@@ -218,7 +218,7 @@
                                 <div class="order-line-item">
                                     <span class="order-line-emoji">{{ $line->emoji ?? '🍽️' }}</span>
                                     <span class="order-line-name">{{ $line->item_name }} × {{ $line->quantity }}</span>
-                                    <span class="order-line-total">৳{{ number_format($line->line_total / 100) }}</span>
+                                    <span class="order-line-total">৳{{ number_format($line->line_total , 0) }}</span>
                                 </div>
                             @endforeach
                         </div>
@@ -227,21 +227,21 @@
                         <div class="order-detail-section order-totals">
                             <div class="order-total-row">
                                 <span>Subtotal</span>
-                                <span>৳{{ number_format($detailsOrder->subtotal / 100) }}</span>
+                                <span>৳{{ number_format($detailsOrder->subtotal , 0) }}</span>
                             </div>
                             <div class="order-total-row">
                                 <span>Delivery Fee</span>
-                                <span>৳{{ number_format($detailsOrder->delivery_fee / 100) }}</span>
+                                <span>৳{{ number_format($detailsOrder->delivery_fee , 0) }}</span>
                             </div>
                             @if($detailsOrder->discount_amount > 0)
                                 <div class="order-total-row order-total-discount">
                                     <span>Discount</span>
-                                    <span>−৳{{ number_format($detailsOrder->discount_amount / 100) }}</span>
+                                    <span>−৳{{ number_format($detailsOrder->discount_amount , 0) }}</span>
                                 </div>
                             @endif
                             <div class="order-total-row order-total-grand">
                                 <span>Total</span>
-                                <span>৳{{ number_format($detailsOrder->total_amount / 100) }}</span>
+                                <span>৳{{ number_format($detailsOrder->total_amount , 0) }}</span>
                             </div>
                         </div>
 

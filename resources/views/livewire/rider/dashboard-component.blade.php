@@ -143,7 +143,7 @@
             <div class="d-flex flex-column gap-3">
                 @foreach($weeklyEarnings as $day)
                     @php
-                        $pct = $maxEarning > 0 ? round(($day['amount'] / $maxEarning) * 100) : 0;
+                        $pct = $maxEarning > 0 ? round(($day['amount'] / $maxEarning)) : 0;
                     @endphp
                     <div class="bar-row">
                         <span class="bar-label">{{ $day['label'] }}</span>

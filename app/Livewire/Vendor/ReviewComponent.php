@@ -39,8 +39,7 @@ class ReviewComponent extends Component
         $restaurantId = Auth::user()->restaurant->id;
 
         $base = Review::query()
-            ->where('restaurant_id', $restaurantId)
-            ->where('is_published', true);
+            ->where('restaurant_id', $restaurantId);
 
         $total        = (clone $base)->count();
         $avgFood      = (clone $base)->avg('food_rating')     ?? 0;
@@ -52,7 +51,7 @@ class ReviewComponent extends Component
             $count = (clone $base)->where('food_rating', $i)->count();
             $ratingDist[$i] = [
                 'count'   => $count,
-                'percent' => $total > 0 ? round(($count / $total) * 100) : 0,
+                'percent' => $total > 0 ? round($count / $total) : 0,
             ];
         }
 
@@ -68,8 +67,7 @@ class ReviewComponent extends Component
 
         $query = Review::query()
             ->with(['customer', 'order'])
-            ->where('restaurant_id', $restaurantId)
-            ->where('is_published', true);
+            ->where('restaurant_id', $restaurantId);
 
         // Rating filter
         if ($this->filterRating !== 'all') {
