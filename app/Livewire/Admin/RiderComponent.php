@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\User;
 use App\Models\RiderProfile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -13,6 +14,8 @@ use Illuminate\Support\Str;
 class RiderComponent extends Component
 {
     use WithPagination;
+
+    protected string $paginationTheme = 'bootstrap';
 
     // ── Filters ──────────────────────────────────────────────
     public string $search       = '';
@@ -30,7 +33,12 @@ class RiderComponent extends Component
     public string $license_number = '';
     public string $nid_number     = '';
 
-     public $showAddModal;
+    // ── Modals ────────────────────────────────────────────────
+    public bool $showAddModal = false;
+    public bool $showView     = false;
+    public bool $showApprove  = false;
+    public bool $showStatus   = false;
+
     // ── View Rider ───────────────────────────────────────────
     public ?int $viewRiderId = null;
 
@@ -63,6 +71,22 @@ class RiderComponent extends Component
         ];
     }
 
+    protected function messages(): array
+    {
+        return [
+            'name.required'         => 'Please enter the rider\'s name.',
+            'phone.required'        => 'Phone number is required.',
+            'phone.unique'          => 'This phone number is already registered.',
+            'email.unique'          => 'This email is already registered.',
+            'password.required'     => 'Please set a password.',
+            'password.min'          => 'Password must be at least 6 characters.',
+            'vehicle_type.required' => 'Please select a vehicle type.',
+            'vehicle_plate.unique'  => 'This vehicle plate is already registered.',
+            'license_number.unique' => 'This license number is already registered.',
+            'nid_number.unique'     => 'This NID number is already registered.',
+        ];
+    }
+
     // ── Reset page on filter change ──────────────────────────
     public function updatingSearch(): void       { $this->resetPage(); }
     public function updatingStatusFilter(): void { $this->resetPage(); }
@@ -74,7 +98,7 @@ class RiderComponent extends Component
     public function openAddModal(): void
     {
         $this->resetAddForm();
-        $this->dispatch('open-modal', modal: 'addRiderModal');
+        $this->showAddModal = true;
     }
 
     public function saveRider(): void
@@ -102,9 +126,14 @@ class RiderComponent extends Component
                 'is_approved'    => true,
                 'is_online'      => false,
             ]);
+
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($user)
+                ->log('Admin created new rider');
         });
 
-        $this->dispatch('close-modal', modal: 'addRiderModal');
+        $this->showAddModal = false;
         $this->resetAddForm();
         session()->flash('success', 'Rider added successfully.');
     }
@@ -120,7 +149,7 @@ class RiderComponent extends Component
         $this->vehicle_plate  = '';
         $this->license_number = '';
         $this->nid_number     = '';
-        // $this->resetValidation();
+        $this->resetValidation();
     }
 
     // ═════════════════════════════════════════════════════════
@@ -129,7 +158,7 @@ class RiderComponent extends Component
     public function viewRider(int $id): void
     {
         $this->viewRiderId = $id;
-        $this->dispatch('open-modal', modal: 'viewRiderModal');
+        $this->showView     = true;
     }
 
     public function getRiderViewProperty(): ?User
@@ -148,17 +177,25 @@ class RiderComponent extends Component
     {
         $this->statusRiderId = $id;
         $this->statusAction  = $action;
-        $this->dispatch('open-modal', modal: 'statusModal');
+        $this->showStatus    = true;
     }
 
     public function changeStatus(): void
     {
         $user = User::findOrFail($this->statusRiderId);
-        $user->update(['is_active' => $this->statusAction === 'activate']);
 
-        $this->dispatch('close-modal', modal: 'statusModal');
-        $this->statusRiderId = null;
-        $this->statusAction  = '';
+        DB::transaction(function () use ($user) {
+            $user->update(['is_active' => $this->statusAction === 'activate']);
+
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($user)
+                ->log($this->statusAction === 'activate' ? 'Admin activated rider' : 'Admin deactivated rider');
+        });
+
+        $this->showStatus     = false;
+        $this->statusRiderId  = null;
+        $this->statusAction   = '';
         session()->flash('success', 'Rider status updated successfully.');
     }
 
@@ -168,15 +205,23 @@ class RiderComponent extends Component
     public function confirmApprove(int $id): void
     {
         $this->approveRiderId = $id;
-        $this->dispatch('open-modal', modal: 'approveModal');
+        $this->showApprove     = true;
     }
 
     public function approveRider(): void
     {
-        RiderProfile::where('user_id', $this->approveRiderId)
-            ->update(['is_approved' => true]);
+        $profile = RiderProfile::where('user_id', $this->approveRiderId)->firstOrFail();
 
-        $this->dispatch('close-modal', modal: 'approveModal');
+        DB::transaction(function () use ($profile) {
+            $profile->update(['is_approved' => true]);
+
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($profile)
+                ->log('Admin approved rider');
+        });
+
+        $this->showApprove    = false;
         $this->approveRiderId = null;
         session()->flash('success', 'Rider approved successfully.');
     }
@@ -223,7 +268,7 @@ class RiderComponent extends Component
                 $q->whereHas('riderProfile', fn($p) => $p->where('zone', $this->zoneFilter))
             )
             ->latest()
-            ->paginate(15);
+            ->paginate(10);
 
         // Today's deliveries per rider (from rider_earnings)
         $todayCounts = DB::table('rider_earnings')
@@ -249,8 +294,8 @@ class RiderComponent extends Component
             'todayCounts' => $todayCounts,
             'stats'       => $stats,
         ])->layout('layouts.admin', [
-            'title' => 'Rider Management',
-            'breadcrumbTitle' => 'Rider Management',
-            ]);
+            'title'           => 'Rider Management | KhaiKhai',
+            'breadcrumbTitle' => 'Riders',
+        ]);
     }
 }

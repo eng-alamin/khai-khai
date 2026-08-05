@@ -6,6 +6,7 @@ use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\Promotion;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -43,7 +44,15 @@ class PromotionComponent extends Component
     // ── Restaurant helper ─────────────────────────────────
     private function restaurantId(): int
     {
-        return Auth::user()->restaurant->id;
+        $restaurant = Auth::user()->restaurant;
+
+        abort_if(
+            ! $restaurant,
+            403,
+            'No restaurant is linked to your account yet. Please contact support.'
+        );
+
+        return $restaurant->id;
     }
 
     // ── Dropdowns ────────────────────────────────────────
@@ -166,15 +175,31 @@ class PromotionComponent extends Component
             'is_active'      => $this->is_active,
         ];
 
-        if ($this->editId) {
-            Promotion::where('restaurant_id', $this->restaurantId())
-                ->findOrFail($this->editId)
-                ->update($data);
-            session()->flash('success', 'প্রমোশন সফলভাবে আপডেট হয়েছে!');
-        } else {
-            Promotion::create($data);
-            session()->flash('success', 'নতুন প্রমোশন তৈরি হয়েছে!');
-        }
+        DB::transaction(function () use ($data) {
+            if ($this->editId) {
+                $promotion = Promotion::where('restaurant_id', $data['restaurant_id'])
+                    ->findOrFail($this->editId);
+                $promotion->update($data);
+
+                activity()
+                    ->causedBy(Auth::user())
+                    ->performedOn($promotion)
+                    ->withProperties(['attributes' => $data])
+                    ->log('Vendor updated promotion');
+
+                session()->flash('success', 'প্রমোশন সফলভাবে আপডেট হয়েছে!');
+            } else {
+                $promotion = Promotion::create($data);
+
+                activity()
+                    ->causedBy(Auth::user())
+                    ->performedOn($promotion)
+                    ->withProperties(['attributes' => $data])
+                    ->log('Vendor created promotion');
+
+                session()->flash('success', 'নতুন প্রমোশন তৈরি হয়েছে!');
+            }
+        });
 
         $this->showModal = false;
         $this->resetForm();
@@ -186,6 +211,13 @@ class PromotionComponent extends Component
         $promo = Promotion::where('restaurant_id', $this->restaurantId())
             ->findOrFail($id);
         $promo->update(['is_active' => ! $promo->is_active]);
+
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($promo)
+            ->withProperties(['is_active' => $promo->is_active])
+            ->log($promo->is_active ? 'Vendor activated promotion' : 'Vendor deactivated promotion');
+
         session()->flash(
             'success',
             $promo->is_active ? 'প্রমোশন সক্রিয় করা হয়েছে।' : 'প্রমোশন নিষ্ক্রিয় করা হয়েছে।'
@@ -201,9 +233,17 @@ class PromotionComponent extends Component
 
     public function deleteRecord(): void
     {
-        Promotion::where('restaurant_id', $this->restaurantId())
-            ->findOrFail($this->deleteId)
-            ->delete();
+        $promo = Promotion::where('restaurant_id', $this->restaurantId())
+            ->findOrFail($this->deleteId);
+        $title = $promo->title;
+        $id    = $promo->id;
+
+        $promo->delete();
+
+        activity()
+            ->causedBy(Auth::user())
+            ->withProperties(['promotion_id' => $id, 'title' => $title])
+            ->log('Vendor deleted promotion');
 
         $this->confirmDelete = false;
         $this->deleteId      = null;

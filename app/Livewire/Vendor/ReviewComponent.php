@@ -51,7 +51,7 @@ class ReviewComponent extends Component
             $count = (clone $base)->where('food_rating', $i)->count();
             $ratingDist[$i] = [
                 'count'   => $count,
-                'percent' => $total > 0 ? round($count / $total) : 0,
+                'percent' => $total > 0 ? round(($count / $total) * 100) : 0,
             ];
         }
 

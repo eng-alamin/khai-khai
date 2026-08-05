@@ -4,6 +4,7 @@ namespace App\Livewire\Customer;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\CustomerAddress;
 
 class AddressComponent extends Component
@@ -136,14 +137,16 @@ class AddressComponent extends Component
     public function setDefault(int $id): void
     {
         $user = Auth::user();
-        $user->addresses()->update(['is_default' => false]);
-        $user->addresses()->where('id', $id)->update(['is_default' => true]);
 
-        $user->customerProfile?->update(['default_address_id' => $id]);
+        DB::transaction(function () use ($user, $id) {
+            $user->addresses()->update(['is_default' => false]);
+            $user->addresses()->where('id', $id)->update(['is_default' => true]);
+            $user->customerProfile?->update(['default_address_id' => $id]);
 
-        activity()->causedBy($user)
-            ->performedOn(CustomerAddress::find($id))
-            ->log('Customer default address changed');
+            activity()->causedBy($user)
+                ->performedOn(CustomerAddress::find($id))
+                ->log('Customer default address changed');
+        });
 
         $this->dispatch('show-toast', message: 'Default address updated ✅', type: 'success');
     }
@@ -153,18 +156,21 @@ class AddressComponent extends Component
     {
         $addr = CustomerAddress::where('customer_id', Auth::id())->findOrFail($id);
         $wasDefault = $addr->is_default;
-        $addr->delete();
+        $user = Auth::user();
 
-        activity()->causedBy(Auth::user())
-            ->log('Customer address deleted');
+        DB::transaction(function () use ($addr, $wasDefault, $user) {
+            $addr->delete();
 
-        if ($wasDefault) {
-            $next = Auth::user()->addresses()->first();
-            if ($next) {
-                $next->update(['is_default' => true]);
-                Auth::user()->customerProfile?->update(['default_address_id' => $next->id]);
+            activity()->causedBy($user)->log('Customer address deleted');
+
+            if ($wasDefault) {
+                $next = $user->addresses()->first();
+                if ($next) {
+                    $next->update(['is_default' => true]);
+                    $user->customerProfile?->update(['default_address_id' => $next->id]);
+                }
             }
-        }
+        });
 
         $this->dispatch('show-toast', message: 'Address deleted.', type: 'info');
     }

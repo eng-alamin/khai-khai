@@ -5,6 +5,7 @@ namespace App\Livewire\Vendor;
 use App\Models\Order;
 use App\Models\OrderStatusLog;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -38,7 +39,15 @@ class OrderListComponent extends Component
     // ── Restaurant helper ─────────────────────────────────
     private function restaurantId(): int
     {
-        return Auth::user()->restaurant->id;
+        $restaurant = Auth::user()->restaurant;
+
+        abort_if(
+            ! $restaurant,
+            403,
+            'No restaurant is linked to your account yet. Please contact support.'
+        );
+
+        return $restaurant->id;
     }
 
     // ── Status helpers ─────────────────────────────────────
@@ -158,18 +167,26 @@ class OrderListComponent extends Component
 
         $from = $order->status;
 
-        $order->status = $next;
-        if ($next === 'delivered') {
-            $order->delivered_at = now();
-        }
-        $order->save();
+        DB::transaction(function () use ($order, $from, $next) {
+            $order->status = $next;
+            if ($next === 'delivered') {
+                $order->delivered_at = now();
+            }
+            $order->save();
 
-        OrderStatusLog::create([
-            'order_id'    => $order->id,
-            'from_status' => $from,
-            'to_status'   => $next,
-            'changed_by'  => Auth::id(),
-        ]);
+            OrderStatusLog::create([
+                'order_id'    => $order->id,
+                'from_status' => $from,
+                'to_status'   => $next,
+                'changed_by'  => Auth::id(),
+            ]);
+
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($order)
+                ->withProperties(['from' => $from, 'to' => $next])
+                ->log('Vendor advanced order status');
+        });
 
         session()->flash('success', "Order #{$order->order_number} marked as {$this->statusMeta($next)['label']}.");
     }
@@ -204,19 +221,27 @@ class OrderListComponent extends Component
 
         $from = $order->status;
 
-        $order->update([
-            'status'        => 'cancelled',
-            'cancelled_at'  => now(),
-            'cancel_reason' => $this->cancel_reason,
-        ]);
+        DB::transaction(function () use ($order, $from) {
+            $order->update([
+                'status'        => 'cancelled',
+                'cancelled_at'  => now(),
+                'cancel_reason' => $this->cancel_reason,
+            ]);
 
-        OrderStatusLog::create([
-            'order_id'    => $order->id,
-            'from_status' => $from,
-            'to_status'   => 'cancelled',
-            'changed_by'  => Auth::id(),
-            'note'        => $this->cancel_reason,
-        ]);
+            OrderStatusLog::create([
+                'order_id'    => $order->id,
+                'from_status' => $from,
+                'to_status'   => 'cancelled',
+                'changed_by'  => Auth::id(),
+                'note'        => $this->cancel_reason,
+            ]);
+
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($order)
+                ->withProperties(['from' => $from, 'to' => 'cancelled', 'reason' => $this->cancel_reason])
+                ->log('Vendor cancelled order');
+        });
 
         $this->confirmCancel = false;
         $this->cancelId      = null;

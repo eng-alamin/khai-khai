@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Promotion extends Model
 {
@@ -40,12 +41,16 @@ class Promotion extends Model
 
     public function category()
     {
-        return $this->belongsTo(MenuCategory::class, 'category_id');
+        // promotions table only has a generic `target_id` column
+        // (no `category_id`), so both relations key off it.
+        return $this->belongsTo(MenuCategory::class, 'target_id');
     }
 
     public function menuItem()
     {
-        return $this->belongsTo(MenuItem::class, 'item_id');
+        // promotions table only has a generic `target_id` column
+        // (no `item_id`), so both relations key off it.
+        return $this->belongsTo(MenuItem::class, 'target_id');
     }
 
     // ── Scopes ────────────────────────────────────────────

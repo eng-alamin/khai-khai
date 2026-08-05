@@ -63,7 +63,7 @@
       {{-- META --}}
       <div class="order-meta">
         <span><i class="fa fa-store me-1"></i>{{ $order->restaurant->name }}</span>
-        <span><i class="fa fa-clock me-1"></i>{{ $order->restaurant->avg_delivery_min }}-{{ $order->restaurant->avg_delivery_max }} minutes</span>
+        <span><i class="fa fa-clock me-1"></i>{{ $order->created_at->format('d M, g:i A') }}</span>
       </div>
 
       {{-- ITEMS SUMMARY --}}
@@ -94,7 +94,7 @@
           </button>
           @elseif($order->status === 'delivered' && $order->review)
           <span class="btn-kk btn-sm-kk" style="background:#fff7ed; color:var(--warning); cursor:default;">
-            <i class="fa fa-star"></i> {{ $order->review->rating }}/5
+            <i class="fa fa-star"></i> {{ $order->review->food_rating }}/5
           </span>
           @endif
 

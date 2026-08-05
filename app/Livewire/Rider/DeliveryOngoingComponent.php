@@ -6,30 +6,40 @@ use App\Models\Order;
 use App\Models\OrderStatusLog;
 use App\Models\RiderProfile;
 use App\Models\RiderEarning;
+use App\Services\RiderDeliveryService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class DeliveryOngoingComponent extends Component
 {
-    public bool $isOnline = true;
-    // public bool $isOnline = false;
+    public bool $isOnline = false;
 
-    /** রাইডারের চলমান ডেলিভারি স্ট্যাটাস */
+    /** Rider's currently active delivery statuses */
     private const ONGOING_STATUSES = ['picked_up'];
 
-    /** রাইডার যে অর্ডারগুলো অ্যাসাইন পেতে পারে (vendor dispatch করেছে, rider নেয়নি) */
+    /** Orders the rider can be assigned (vendor dispatched, no rider taken it yet) */
     private const AVAILABLE_STATUSES = ['preparing'];
 
     private const STATUS_META = [
-        'preparing' => ['label' => 'পিকআপ পেন্ডিং', 'bg' => '#fef3c7', 'color' => '#92400e'],
-        'picked_up' => ['label' => 'ডেলিভারিতে',     'bg' => '#dbeafe', 'color' => '#1e40af'],
-        'delivered' => ['label' => 'সম্পন্ন',          'bg' => '#dcfce7', 'color' => '#166534'],
+        'preparing' => ['label' => 'Pickup Pending', 'bg' => '#fef3c7', 'color' => '#92400e'],
+        'picked_up' => ['label' => 'Out for Delivery', 'bg' => '#dbeafe', 'color' => '#1e40af'],
+        'delivered' => ['label' => 'Completed',        'bg' => '#dcfce7', 'color' => '#166534'],
     ];
 
-    private const BANGLA_DIGITS = ['0'=>'০','1'=>'১','2'=>'২','3'=>'৩','4'=>'৪','5'=>'৫','6'=>'৬','7'=>'৭','8'=>'৮','9'=>'৯'];
+    /**
+     * BUG FIX: $isOnline used to be hardcoded to `true` with no way to know
+     * the rider's real saved status, so a page refresh would silently
+     * override whatever was actually stored in rider_profiles.is_online
+     * (set via toggleOnline()). We now hydrate it from the DB on mount so
+     * the UI always reflects the rider's real online/offline state.
+     */
+    public function mount(): void
+    {
+        $this->isOnline = (bool) RiderProfile::where('user_id', Auth::id())->value('is_online');
+    }
 
-    /* ── Computed: রাইডারের বর্তমান চলমান ডেলিভারি (picked_up) ── */
+    /* ── Computed: rider's current ongoing deliveries (picked_up) ── */
     public function getOngoingOrdersProperty()
     {
         return Order::with(['items', 'customer', 'restaurant'])
@@ -40,7 +50,7 @@ class DeliveryOngoingComponent extends Component
             ->map(fn (Order $order) => $this->formatOrder($order));
     }
 
-    /* ── Computed: এলাকায় পিকআপ-যোগ্য অর্ডার (rider assign হয়নি, preparing) ── */
+    /* ── Computed: nearby orders available for pickup (unassigned, preparing) ── */
     public function getAvailableOrdersProperty()
     {
         if (! $this->isOnline) {
@@ -55,78 +65,72 @@ class DeliveryOngoingComponent extends Component
             ->map(fn (Order $order) => $this->formatOrder($order));
     }
 
-    /* ── অনলাইন/অফলাইন টগল ── */
+    /* ── Toggle online/offline ── */
     public function toggleOnline(): void
     {
         $this->isOnline = ! $this->isOnline;
 
         RiderProfile::where('user_id', Auth::id())->update(['is_online' => $this->isOnline]);
 
-        $status = $this->isOnline ? 'অনলাইন' : 'অফলাইন';
-        $this->dispatch('show-toast', message: "আপনি এখন {$status}", type: 'info');
+        $status = $this->isOnline ? 'online' : 'offline';
+        $this->dispatch('show-toast', message: "You are now {$status}", type: 'info');
     }
 
-    /* ── রাইডার অর্ডার অ্যাকসেপ্ট করে পিকআপে যাবে ── */
+    /* ── Rider accepts the order and heads to pickup ── */
     public function acceptDelivery(int $orderId): void
     {
-        $order = Order::whereNull('rider_id')
+        // Atomic conditional update — avoids the race condition where two
+        // riders could accept the same order at the same moment.
+        $affected = Order::where('id', $orderId)
+            ->whereNull('rider_id')
             ->where('status', 'preparing')
-            ->findOrFail($orderId);
+            ->update([
+                'rider_id' => Auth::id(),
+                'status'   => 'picked_up',
+            ]);
 
-        $from = $order->status;
+        if ($affected === 0) {
+            $this->dispatch('show-toast', message: '⚠️ Sorry, this order has already been taken by another rider.', type: 'error');
+            return;
+        }
 
-        $order->update([
-            'rider_id' => Auth::id(),
-            'status'   => 'picked_up',
-        ]);
+        $order = Order::findOrFail($orderId);
+        $this->logStatus($order, 'preparing', 'picked_up');
 
-        $this->logStatus($order, $from, 'picked_up');
-        $this->dispatch('show-toast', message: "✅ অর্ডার #{$order->order_number} আপনার কাছে অ্যাসাইন হয়েছে", type: 'success');
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($order)
+            ->log('Rider accepted delivery');
+
+        $this->dispatch('show-toast', message: "✅ Order #{$order->order_number} has been assigned to you", type: 'success');
     }
 
-    /* ── ডেলিভারি সম্পন্ন ── */
+    /* ── Complete delivery ── */
     public function completeDelivery(int $orderId): void
     {
-        $order = Order::where('rider_id', Auth::id())
-            ->where('status', 'picked_up')
-            ->findOrFail($orderId);
+        $order = app(RiderDeliveryService::class)->completeDelivery($orderId, Auth::user());
 
-        $from = $order->status;
-
-        $order->update([
-            'status'       => 'delivered',
-            'delivered_at' => now(),
-        ]);
-
-        $this->logStatus($order, $from, 'delivered');
-
-        // Rider earning রেকর্ড
-        RiderEarning::firstOrCreate(
-            ['order_id' => $order->id],
-            [
-                'rider_id'      => Auth::id(),
-                'amount'        => $order->delivery_fee,   // delivery_fee থেকে earning (BDT paisa)
-                'payout_status' => 'pending',
-            ]
-        );
-
-        $this->dispatch('show-toast', message: "🎉 অর্ডার #{$order->order_number} ডেলিভারি সম্পন্ন!", type: 'success');
+        $this->dispatch('show-toast', message: "🎉 Order #{$order->order_number} delivered!", type: 'success');
     }
 
-    /* ── আজকের আয়ের summary ── */
+    /* ── Today's earnings summary ── */
     public function getTodayEarningsProperty(): array
     {
         $earnings = RiderEarning::where('rider_id', Auth::id())
             ->whereDate('created_at', today())
-            ->selectRaw('COUNT(*) as deliveries, SUM(amount) as total_paisa')
+            ->selectRaw('COUNT(*) as deliveries, SUM(amount) as total_amount')
             ->first();
 
-        $totalPaisa   = (int) ($earnings->total_paisa ?? 0);
-        $deliveries   = (int) ($earnings->deliveries ?? 0);
+        // NOTE: rider_earnings.amount is stored directly in Taka (it's a
+        // straight copy of orders.delivery_fee, which DeliveryChargeService
+        // explicitly computes/returns as "Taka, decimal") — it is NOT paisa,
+        // so no /100 conversion belongs here.
+        $totalAmount = (int) round($earnings->total_amount ?? 0);
+        $deliveries  = (int) ($earnings->deliveries ?? 0);
 
         return [
             'deliveries' => $deliveries,
-            'total_taka' => '৳' . $this->toBanglaNumber(intdiv($totalPaisa, 100)),
+            'total_taka' => 'Tk ' . number_format($totalAmount),
         ];
     }
 
@@ -140,31 +144,31 @@ class DeliveryOngoingComponent extends Component
             : json_decode($order->delivery_address_snapshot ?? '{}', true);
 
         $address = trim(
-            ($snapshot['address_line'] ?? '') . ', ' . ($snapshot['area'] ?? '') . ', ' . ($snapshot['city'] ?? '')
+            ($snapshot['full_address'] ?? '') . ', ' . ($snapshot['city'] ?? '')
         , ', ');
 
         return [
             'id'              => $order->id,
             'order_number'    => $order->order_number,
-            'customer'        => $order->customer->name ?? 'কাস্টমার',
+            'customer'        => $order->customer->name ?? 'Customer',
             'customer_phone'  => $order->customer->phone ?? '',
-            'restaurant'      => $order->restaurant->name ?? 'রেস্টুরেন্ট',
+            'restaurant'      => $order->restaurant->name ?? 'Restaurant',
             'restaurant_phone'=> $order->restaurant->phone ?? '',
             'items'           => $order->items->map(
                 fn ($item) => ($item->emoji ? $item->emoji . ' ' : '') . $item->item_name .
-                    ($item->quantity > 1 ? ' × ' . $this->toBanglaNumber($item->quantity) : '')
+                    ($item->quantity > 1 ? ' × ' . $item->quantity : '')
             )->implode(', '),
             'item_count'      => $order->items->sum('quantity'),
-            'total'           => '৳' . $order->total_amount,
-            'delivery_fee'    => '৳' . $order->delivery_fee,
-            'address'         => $address ?: 'ঠিকানা পাওয়া যায়নি',
+            'total'           => 'Tk ' . $order->total_amount,
+            'delivery_fee'    => 'Tk ' . $order->delivery_fee,
+            'address'         => $address ?: 'Address not available',
             'payment_method'  => $order->payment_method,
             'payment_status'  => $order->payment_status,
             'status'          => $order->status,
             'status_label'    => $meta['label'],
             'status_bg'       => $meta['bg'],
             'status_color'    => $meta['color'],
-            'time_label'      => $this->timeAgoBangla($order->created_at),
+            'time_label'      => $this->timeAgo($order->created_at),
         ];
     }
 
@@ -178,22 +182,19 @@ class DeliveryOngoingComponent extends Component
         ]);
     }
 
-    public function toBanglaNumber(int|string $number): string
-    {
-        return strtr((string) $number, self::BANGLA_DIGITS);
-    }
-
-    private function timeAgoBangla(Carbon $time): string
+    private function timeAgo(Carbon $time): string
     {
         $minutes = $time->diffInMinutes(now());
 
         [$value, $unit] = match (true) {
-            $minutes < 60   => [$minutes, 'মিনিট'],
-            $minutes < 1440 => [intdiv($minutes, 60), 'ঘণ্টা'],
-            default         => [intdiv($minutes, 1440), 'দিন'],
+            $minutes < 60   => [$minutes, 'min'],
+            $minutes < 1440 => [intdiv($minutes, 60), 'hr'],
+            default         => [intdiv($minutes, 1440), 'day'],
         };
 
-        return $this->toBanglaNumber($value) . ' ' . $unit . ' আগে';
+        $unitLabel = $value === 1 ? $unit : $unit . 's';
+
+        return $value . ' ' . $unitLabel . ' ago';
     }
 
     public function render()

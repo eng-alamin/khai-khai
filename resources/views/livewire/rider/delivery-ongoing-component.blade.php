@@ -1,27 +1,27 @@
 <div>
 
     {{-- ══════════════════════════════════════════════
-         HEADER — অনলাইন স্ট্যাটাস + আজকের আয়
+         HEADER — Online status + today's earnings
          ══════════════════════════════════════════════ --}}
     <div class="card mb-4" style="padding:16px 20px;">
         <div class="d-flex align-items-center justify-content-between">
 
-            {{-- আজকের আয় --}}
+            {{-- Today's earnings --}}
             <div>
                 <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);margin-bottom:4px;">
-                    আজকের আয়
+                    Today's Earnings
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <span style="font-size:22px;font-weight:900;color:var(--success);">
                         {{ $todayEarnings['total_taka'] }}
                     </span>
                     <span class="badge-kk" style="background:#dcfce7;color:#166534;">
-                        {{ $this->toBanglaNumber($todayEarnings['deliveries']) }}টি ডেলিভারি
+                        {{ $todayEarnings['deliveries'] }} deliveries
                     </span>
                 </div>
             </div>
 
-            {{-- অনলাইন টগল --}}
+            {{-- Online toggle --}}
             <button
                 type="button"
                 wire:click="toggleOnline"
@@ -30,17 +30,17 @@
             >
                 <span style="width:9px;height:9px;border-radius:50%;background:{{ $isOnline ? 'var(--success)' : '#9ca3af' }};display:inline-block;"></span>
                 <span style="font-size:13px;color:{{ $isOnline ? 'var(--success)' : 'var(--text-3)' }};font-weight:700;">
-                    {{ $isOnline ? 'অনলাইন' : 'অফলাইন' }}
+                    {{ $isOnline ? 'Online' : 'Offline' }}
                 </span>
             </button>
         </div>
     </div>
 
     {{-- ══════════════════════════════════════════════
-         ONGOING — আমার চলমান ডেলিভারি
+         ONGOING — My active deliveries
          ══════════════════════════════════════════════ --}}
     <div class="mb-2" style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);">
-        🛵 চলমান ডেলিভারি
+        🛵 Ongoing Deliveries
     </div>
 
     <div class="d-flex flex-column gap-3 mb-4">
@@ -63,7 +63,7 @@
                     <span style="font-weight:700;">{{ $order['restaurant'] }}</span>
                     @if($order['restaurant_phone'])
                         <a href="tel:{{ $order['restaurant_phone'] }}" class="call-btn ms-auto">
-                            📞 কল
+                            📞 Call
                         </a>
                     @endif
                 </div>
@@ -74,7 +74,7 @@
                     <span>{{ $order['customer'] }}</span>
                     @if($order['customer_phone'])
                         <a href="tel:{{ $order['customer_phone'] }}" class="call-btn ms-auto">
-                            📞 কল
+                            📞 Call
                         </a>
                     @endif
                 </div>
@@ -88,7 +88,7 @@
                 {{-- Items --}}
                 <div class="items-box mb-3">
                     <span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;">
-                        আইটেম
+                        Items
                     </span>
                     <div style="font-size:13px;color:var(--text-2);margin-top:4px;">{{ $order['items'] }}</div>
                 </div>
@@ -101,8 +101,8 @@
                         class="btn-kk"
                         style="background:#eff6ff;color:#1d4ed8;width:100%;justify-content:center;"
                     >
-                        <span x-show="!showMap">🗺️ রুট দেখুন</span>
-                        <span x-show="showMap" style="display:none;">🔼 রুট বন্ধ করুন</span>
+                        <span x-show="!showMap">🗺️ View Route</span>
+                        <span x-show="showMap" style="display:none;">🔼 Hide Route</span>
                     </button>
 
                     <div
@@ -120,7 +120,7 @@
                     <div>
                         <div style="font-size:20px;font-weight:900;">{{ $order['total'] }}</div>
                         <div style="font-size:11px;color:var(--text-3);">
-                            আপনার আয়: <strong style="color:var(--success);">{{ $order['delivery_fee'] }}</strong>
+                            Your earning: <strong style="color:var(--success);">{{ $order['delivery_fee'] }}</strong>
                         </div>
                     </div>
 
@@ -128,11 +128,11 @@
                         {{-- Payment badge --}}
                         @if($order['payment_method'] === 'cash_on_delivery')
                             <span class="badge-kk" style="background:#fef3c7;color:#92400e;font-size:11px;">
-                                💵 ক্যাশ কালেক্ট করুন
+                                💵 Collect Cash
                             </span>
                         @else
                             <span class="badge-kk" style="background:#dcfce7;color:#166534;font-size:11px;">
-                                ✅ পেমেন্ট হয়েছে
+                                ✅ Paid
                             </span>
                         @endif
 
@@ -140,12 +140,12 @@
                             class="btn-kk"
                             style="background:var(--success);color:#fff;"
                             wire:click="completeDelivery({{ $order['id'] }})"
-                            wire:confirm="ডেলিভারি সম্পন্ন হয়েছে নিশ্চিত করুন?"
+                            wire:confirm="Confirm that this delivery has been completed?"
                             wire:loading.attr="disabled"
                             wire:target="completeDelivery({{ $order['id'] }})"
                         >
                             <span wire:loading.remove wire:target="completeDelivery({{ $order['id'] }})">
-                                ✅ ডেলিভারি দিয়েছি
+                                ✅ Delivered
                             </span>
                             <span wire:loading wire:target="completeDelivery({{ $order['id'] }})">
                                 <span class="spinner"></span>
@@ -158,21 +158,21 @@
         @empty
             <div class="card text-center py-4" style="color:var(--text-3);">
                 <div style="font-size:48px;" class="mb-2">🛵</div>
-                <div style="font-weight:700;color:var(--text-2);">এখন কোনো চলমান ডেলিভারি নেই</div>
+                <div style="font-weight:700;color:var(--text-2);">No ongoing deliveries right now</div>
             </div>
         @endforelse
     </div>
 
     {{-- ══════════════════════════════════════════════
-         AVAILABLE — পিকআপের জন্য অপেক্ষারত অর্ডার
+         AVAILABLE — Orders waiting for pickup
          ══════════════════════════════════════════════ --}}
     <div class="d-flex align-items-center gap-2 mb-2">
         <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);">
-            📦 নতুন অর্ডার
+            📦 New Orders
         </span>
         @if(!$isOnline)
             <span class="badge-kk" style="background:#f3f4f6;color:var(--text-3);font-size:11px;">
-                অনলাইন হলে দেখা যাবে
+                Visible when you're online
             </span>
         @endif
     </div>
@@ -191,7 +191,7 @@
                             ⏱ {{ $order['time_label'] }}
                         </span>
                         <span class="badge-kk" style="background:#fef3c7;color:#92400e;">
-                            পিকআপ পেন্ডিং
+                            Pickup Pending
                         </span>
                     </div>
                 </div>
@@ -211,7 +211,7 @@
                 {{-- Items summary --}}
                 <div class="items-box mb-3">
                     <span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;">
-                        আইটেম
+                        Items
                     </span>
                     <div style="font-size:13px;color:var(--text-2);margin-top:4px;">{{ $order['items'] }}</div>
                 </div>
@@ -221,7 +221,7 @@
                     <div>
                         <div style="font-size:20px;font-weight:900;">{{ $order['total'] }}</div>
                         <div style="font-size:11px;color:var(--text-3);">
-                            ডেলিভারি আয়: <strong style="color:var(--success);">{{ $order['delivery_fee'] }}</strong>
+                            Delivery earning: <strong style="color:var(--success);">{{ $order['delivery_fee'] }}</strong>
                         </div>
                     </div>
 
@@ -233,7 +233,7 @@
                         wire:target="acceptDelivery({{ $order['id'] }})"
                     >
                         <span wire:loading.remove wire:target="acceptDelivery({{ $order['id'] }})">
-                            🛵 অ্যাকসেপ্ট করুন
+                            🛵 Accept
                         </span>
                         <span wire:loading wire:target="acceptDelivery({{ $order['id'] }})">
                             <span class="spinner"></span>
@@ -246,14 +246,14 @@
             @if($isOnline)
                 <div class="card text-center py-4" style="color:var(--text-3);">
                     <div style="font-size:48px;" class="mb-2">🎉</div>
-                    <div style="font-weight:700;color:var(--text-2);">এখন কোনো অর্ডার অপেক্ষায় নেই</div>
-                    <div style="font-size:13px;margin-top:4px;">নতুন অর্ডার আসলে এখানে দেখা যাবে।</div>
+                    <div style="font-weight:700;color:var(--text-2);">No orders waiting right now</div>
+                    <div style="font-size:13px;margin-top:4px;">New orders will show up here as they arrive.</div>
                 </div>
             @else
                 <div class="card text-center py-4" style="color:var(--text-3);">
                     <div style="font-size:48px;" class="mb-2">😴</div>
-                    <div style="font-weight:700;color:var(--text-2);">আপনি এখন অফলাইন</div>
-                    <div style="font-size:13px;margin-top:4px;">অর্ডার পেতে উপরে অনলাইন বাটন চাপুন।</div>
+                    <div style="font-weight:700;color:var(--text-2);">You're currently offline</div>
+                    <div style="font-size:13px;margin-top:4px;">Tap the online button above to start receiving orders.</div>
                 </div>
             @endif
         @endforelse

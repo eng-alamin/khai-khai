@@ -12,6 +12,15 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="{{asset('assets/css/theme.css')}}"/>
+  <style>
+    #toast-wrap { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+    .toast-item { background:var(--dark, #1f2937); color:#fff; padding:12px 20px; border-radius:12px; font-size:14px; font-weight:600; box-shadow:0 8px 32px rgba(0,0,0,0.2); animation:toastIn 0.3s ease; display:flex; align-items:center; gap:10px; }
+    .toast-item.success { background:#065f46; }
+    .toast-item.danger, .toast-item.error { background:#991b1b; }
+    .toast-item.warning { background:#92400e; }
+    .toast-item.info    { background:#1e40af; }
+    @keyframes toastIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+  </style>
   @stack('styles')
   @livewireStyles
 </head>
@@ -37,41 +46,26 @@
       <li class="nav-section">Restaurant</li>
       
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'menu/items') == true ? 'active' : '' }}" href="{{ route('vendor.menu.items') }}"><span class="material-icons-round nav-icon">restaurant_menu</span><span class="nav-label">Items</span></a></li>
-      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'menu/categories') == true ? 'active' : '' }}" href="{{ route('vendor.menu.categories') }}"><span class="material-icons-round nav-icon">category</span><span class="nav-label">Categories</span></a></li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'promotions') == true ? 'active' : '' }}" href="{{ route('vendor.promotions') }}"><span class="material-icons-round nav-icon">local_offer</span><span class="nav-label">Promotions</span></a></li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'coupons') == true ? 'active' : '' }}" href="{{ route('vendor.coupons') }}"><span class="material-icons-round nav-icon">local_offer</span><span class="nav-label">Coupons</span></a></li>
       <li class="nav-section">Report</li>
-      <li class="nav1-item"><a class="nav1-link" {{ str_contains(request()->url(), 'finances') == true ? 'active' : '' }}" href="{{ route('vendor.finances') }}"><span class="material-icons-round nav-icon">payments</span><span class="nav-label">Finances</span></a></li>
-      <li class="nav1-item"><a class="nav1-link" {{ str_contains(request()->url(), 'reviews') == true ? 'active' : '' }}" href="{{ route('vendor.reviews') }}"><span class="material-icons-round nav-icon">star_rate</span><span class="nav-label">Reviews</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'finances') == true ? 'active' : '' }}" href="{{ route('vendor.finances') }}"><span class="material-icons-round nav-icon">payments</span><span class="nav-label">Finances</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'reviews') == true ? 'active' : '' }}" href="{{ route('vendor.reviews') }}"><span class="material-icons-round nav-icon">star_rate</span><span class="nav-label">Reviews</span></a></li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'settings') == true ? 'active' : '' }}" href="{{ route('vendor.settings') }}"><span class="material-icons-round nav-icon">manage_accounts</span><span class="nav-label">Settings</span></a></li>
-      {{-- <li class="nav1-item">
-        <div class="nav1-link" onclick="toggleNav1(this)">
-          <span class="material-icons-round nav-icon">manage_accounts</span>
-          <span class="nav-label">সেটিংস</span>
-          <span class="material-icons-round nav-arrow">expand_more</span>
-        </div>
-        <div class="nav2-collapse">
-          <ul class="list-unstyled">
-            <li class="nav2-item"><div class="nav2-link"><span class="nav2-icon">R</span><span class="nav2-label">রেস্তোরাঁ তথ্য</span></div></li>
-            <li class="nav2-item"><div class="nav2-link"><span class="nav2-icon">H</span><span class="nav2-label">খোলার সময়</span></div></li>
-            <li class="nav2-item"><div class="nav2-link"><span class="nav2-icon">P</span><span class="nav2-label">পেমেন্ট</span></div></li>
-          </ul>
-        </div>
-      </li> --}}
     </ul>
   </div>
   <div class="sidebar-footer">
-    <div class="sf-user">
-      <img 
-    src="{{ auth()->user()->restaurant?->logo_url
-        ? asset(auth()->user()->restaurant->logo_url) 
-        : asset('assets/img/default-restaurant.png') }}"
-    class="sf-avatar"
-    alt="{{ auth()->user()->restaurant?->name ?? 'Vendor' }}"
-/>
-      {{-- <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=80&q=70" class="sf-avatar" alt="{{ auth()->user()->restaurant?->name ?? 'Vendor' }}"/> --}}
-      <div><div class="sf-name">{{ auth()->user()->restaurant?->name ?? 'Unknown' }}</div><div class="sf-role">Owner</div></div>
-    </div>
+      <div class="sf-user">
+          <img
+              src="{{ auth()->user()->restaurant?->logo_url ?? auth()->user()->avatar ?? asset('assets/img/default-restaurant.png') }}"
+              class="sf-avatar"
+              alt="{{ auth()->user()->restaurant?->name ?? auth()->user()->name ?? 'Vendor' }}"
+          />
+          <div>
+              <div class="sf-name">{{ auth()->user()->restaurant?->name ?? auth()->user()->name ?? 'Unknown' }}</div>
+              <div class="sf-role">{{ auth()->user()->restaurant ? 'Owner' : 'Vendor' }}</div>
+          </div>
+      </div>
   </div>
 </aside>
 
@@ -97,13 +91,26 @@
         </ul>
       </div>
       <div class="dropdown">
-        <img src="https://i.pravatar.cc/80?img=12" class="topnav-avatar" data-bs-toggle="dropdown" data-bs-auto-close="outside" alt="Vendor"/>
+        <img src="{{ auth()->user()->avatar ?? 'https://i.pravatar.cc/80?img=12' }}" class="topnav-avatar" data-bs-toggle="dropdown" data-bs-auto-close="outside" alt="{{ auth()->user()->name ?? 'Vendor' }}"/>
         <div class="dropdown-menu dropdown-menu-end user-dropdown-menu">
           <div class="user-info-block">
-            <img src="https://i.pravatar.cc/80?img=12" class="user-avatar-lg" alt="Vendor"/>
-            <div><div class="user-name">{{ auth()->user()->name ?? 'Unknown' }} <span class="badge-pro">Vendor</span></div><a href="#" class="user-email">{{ auth()->user()->email ?? 'Unknown' }}</a></div>
+            <img src="{{ auth()->user()->avatar ?? 'https://i.pravatar.cc/80?img=12' }}" class="user-avatar-lg" alt="{{ auth()->user()->name ?? 'Vendor' }}"/>
+            <div>
+              <div class="user-name">{{ auth()->user()->name ?? 'Unknown' }} <span class="badge-pro">Vendor</span></div>
+              <a href="#" class="user-email">{{ auth()->user()->email ?? 'Unknown' }}</a>
+            </div>
           </div>
           <hr class="dropdown-sep"/>
+
+          <div class="ud-item">
+            <a href="{{ route('vendor.profile') }}" class="ud-link">
+              <span class="d-flex align-items-center">
+                <span class="material-icons-round ud-icon">person</span>
+                Profile
+              </span>
+            </a>
+          </div>
+
           <div class="ud-item">
             <a href="{{route('logout') }}" class="ud-link signout" onclick="event.preventDefault(); document.getElementById('logout-form').submit()">
               <span class="d-flex align-items-center">
@@ -128,6 +135,9 @@
   <!-- /page-body -->
 </div>
 <!-- /main-wrap -->
+
+{{-- TOAST --}}
+<div id="toast-wrap"></div>
 
 <!-- MOBILE BOTTOM NAV -->
 <nav class="mob-bottom-nav">
@@ -200,6 +210,36 @@
         el.classList.toggle('open');
         el.nextElementSibling.classList.toggle('open');
       }
+
+      function showToast(msg, type = '') {
+        const w = document.getElementById('toast-wrap');
+        if (!w || !msg) return;
+        const t = document.createElement('div');
+        t.className = 'toast-item ' + (type || '');
+        t.textContent = msg;
+        w.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+      }
+
+      // Show any session()->flash('success'/'error', ...) message set by
+      // vendor Livewire components (most components use this pattern).
+      document.addEventListener('DOMContentLoaded', () => {
+        @if (session('success'))
+          showToast(@json(session('success')), 'success');
+        @endif
+        @if (session('error'))
+          showToast(@json(session('error')), 'danger');
+        @endif
+      });
+
+      // Show any $this->dispatch('show-toast', message: ..., type: ...)
+      // events fired directly from a Livewire component (e.g. CouponComponent).
+      document.addEventListener('livewire:initialized', () => {
+        Livewire.on('show-toast', (payload) => {
+          const data = Array.isArray(payload) ? payload[0] : payload;
+          showToast(data?.message, data?.type);
+        });
+      });
   </script>
 
 @stack('scripts')

@@ -220,14 +220,19 @@
       if (el) bootstrap.Modal.getOrCreateInstance(el).hide();
     });
 
-    // Sync Livewire state if user dismisses via ESC (backdrop is static, so
-    // only ESC / the Cancel button close it — both route through cancel()).
-    document.getElementById('quickAddressModal')?.addEventListener('hidden.bs.modal', () => {
-      @this.set('showModal', false);
+    // FIX: event delegation on `document` instead of a one-time getElementById()
+    // capture inside livewire:init — see address-component.blade.php for the
+    // full explanation of the mount-timing root cause.
+    document.addEventListener('hidden.bs.modal', (event) => {
+      if (event.target.id === 'quickAddressModal') {
+        @this.set('showModal', false);
+      }
     });
 
-    // "Use my location" button
-    document.getElementById('quickUseCurrentLocationBtn')?.addEventListener('click', () => {
+    document.addEventListener('click', (event) => {
+      const btn = event.target.closest('#quickUseCurrentLocationBtn');
+      if (!btn) return;
+
       if (!navigator.geolocation) {
         alert('Geolocation is not supported by this browser.');
         return;

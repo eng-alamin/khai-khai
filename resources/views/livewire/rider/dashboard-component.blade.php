@@ -1,57 +1,57 @@
 <div>
 
     {{-- ══════════════════════════════════════════════
-         STAT CARDS — ৪টি
+         STAT CARDS — 4 cards
          ══════════════════════════════════════════════ --}}
     <div class="stats-grid mb-4">
 
-        {{-- আজকের ডেলিভারি --}}
+        {{-- Today's Deliveries --}}
         <div class="stat-card">
             <div class="stat-icon-wrap" style="background:#dcfce7;">
                 <span>✅</span>
             </div>
             <div class="stat-body">
                 <div class="stat-value" style="color:var(--success);">{{ $todayDeliveries }}</div>
-                <div class="stat-label">আজকের ডেলিভারি</div>
+                <div class="stat-label">Today's Deliveries</div>
                 @if($isBestPerformer)
-                    <div class="best-badge">🏆 সেরা পারফরমার!</div>
+                    <div class="best-badge">🏆 Top Performer!</div>
                 @endif
             </div>
             <div class="stat-bg-circle"></div>
         </div>
 
-        {{-- আজকের আয় --}}
+        {{-- Today's Earnings --}}
         <div class="stat-card">
             <div class="stat-icon-wrap" style="background:#fce7f3;">
                 <span>💳</span>
             </div>
             <div class="stat-body">
                 <div class="stat-value" style="color:#db2777;">{{ $todayEarnings }}</div>
-                <div class="stat-label">আজকের আয়</div>
+                <div class="stat-label">Today's Earnings</div>
             </div>
             <div class="stat-bg-circle"></div>
         </div>
 
-        {{-- আমার রেটিং --}}
+        {{-- My Rating --}}
         <div class="stat-card">
             <div class="stat-icon-wrap" style="background:#dbeafe;">
                 <span>⭐</span>
             </div>
             <div class="stat-body">
                 <div class="stat-value" style="color:#1d4ed8;">{{ $avgRating }}★</div>
-                <div class="stat-label">আমার রেটিং</div>
+                <div class="stat-label">My Rating</div>
             </div>
             <div class="stat-bg-circle"></div>
         </div>
 
-        {{-- আজকের দূরত্ব --}}
+        {{-- Today's Distance --}}
         <div class="stat-card">
             <div class="stat-icon-wrap" style="background:#fef9c3;">
                 <span>🛣️</span>
             </div>
             <div class="stat-body">
-                <div class="stat-value" style="color:#ca8a04;">{{ $todayDistance }} কিমি</div>
-                <div class="stat-label">আজকের দূরত্ব</div>
+                <div class="stat-value" style="color:#ca8a04;">{{ $todayDistance }} km</div>
+                <div class="stat-label">Today's Distance</div>
             </div>
             <div class="stat-bg-circle"></div>
         </div>
@@ -59,16 +59,16 @@
     </div>
 
     {{-- ══════════════════════════════════════════════
-         MAIN GRID — চলমান ডেলিভারি + সাপ্তাহিক আয়
+         MAIN GRID — Ongoing Deliveries + Weekly Earnings
          ══════════════════════════════════════════════ --}}
     <div class="main-grid">
 
-        {{-- ── LEFT: চলমান ডেলিভারি ── --}}
+        {{-- ── LEFT: Ongoing Deliveries ── --}}
         <div class="card" style="padding:20px 22px;">
 
             <div class="d-flex align-items-center justify-content-between mb-3">
-                <span style="font-size:16px;font-weight:900;color:var(--text-1);">চলমান ডেলিভারি</span>
-                <span class="count-badge">{{ count($ongoingOrders) }}টি</span>
+                <span style="font-size:16px;font-weight:900;color:var(--text-1);">Ongoing Deliveries</span>
+                <span class="count-badge">{{ count($ongoingOrders) }}</span>
             </div>
 
             <div class="d-flex flex-column gap-3">
@@ -78,7 +78,7 @@
                         {{-- Top row --}}
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <span class="order-num">#{{ $order['order_number'] }}</span>
-                            <span class="badge-kk" style="background:#fef3c7;color:#92400e;">চলমান</span>
+                            <span class="badge-kk" style="background:#fef3c7;color:#92400e;">{{ $order['status_label'] }}</span>
                         </div>
 
                         {{-- Restaurant --}}
@@ -99,12 +99,12 @@
                                 class="btn-kk"
                                 style="background:var(--success);color:#fff;flex:1;"
                                 wire:click="completeDelivery({{ $order['id'] }})"
-                                wire:confirm="ডেলিভারি সম্পন্ন হয়েছে নিশ্চিত করুন?"
+                                wire:confirm="Confirm that this delivery has been completed?"
                                 wire:loading.attr="disabled"
                                 wire:target="completeDelivery({{ $order['id'] }})"
                             >
                                 <span wire:loading.remove wire:target="completeDelivery({{ $order['id'] }})">
-                                    ✔ সম্পন্ন
+                                    ✔ Complete
                                 </span>
                                 <span wire:loading wire:target="completeDelivery({{ $order['id'] }})">
                                     <span class="spinner"></span>
@@ -117,7 +117,7 @@
                                     class="btn-kk"
                                     style="background:#f3f4f6;color:var(--text-1);"
                                 >
-                                    📞 কল
+                                    📞 Call
                                 </a>
                             @endif
                         </div>
@@ -126,18 +126,18 @@
                 @empty
                     <div class="text-center py-4" style="color:var(--text-3);">
                         <div style="font-size:40px;" class="mb-2">🛵</div>
-                        <div style="font-weight:700;color:var(--text-2);">কোনো চলমান ডেলিভারি নেই</div>
+                        <div style="font-weight:700;color:var(--text-2);">No ongoing deliveries</div>
                     </div>
                 @endforelse
             </div>
 
         </div>
 
-        {{-- ── RIGHT: এই সপ্তাহের আয় ── --}}
+        {{-- ── RIGHT: This Week's Earnings ── --}}
         <div class="card" style="padding:20px 22px;">
 
             <div class="mb-3">
-                <span style="font-size:16px;font-weight:900;color:var(--text-1);">এই সপ্তাহের আয়</span>
+                <span style="font-size:16px;font-weight:900;color:var(--text-1);">This Week's Earnings</span>
             </div>
 
             <div class="d-flex flex-column gap-3">
@@ -153,7 +153,7 @@
                                 style="width:{{ $pct }}%;"
                             ></div>
                         </div>
-                        <span class="bar-amount">৳{{ $day['amount'] }}</span>
+                        <span class="bar-amount">Tk {{ $day['amount'] }}</span>
                     </div>
                 @endforeach
             </div>

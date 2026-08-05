@@ -104,6 +104,12 @@
                         <span class="material-icons-round">person</span>
                         {{ $vendor->owner->name ?? '—' }}
                     </span>
+                    @if($vendor->tag)
+                        <span class="vendor-meta-item">
+                            <span class="material-icons-round">sell</span>
+                            {{ $vendor->tag }}
+                        </span>
+                    @endif
                 </div>
 
                 {{-- Bottom Actions --}}
@@ -278,19 +284,6 @@
                     <div class="vendor-row">
                         <div class="vendor-col">
                             <div class="vendor-form-group">
-                                <label class="vendor-form-label">Delivery Fee (BDT) <span class="req">*</span></label>
-                                <div class="vendor-input-prefix">
-                                    <span class="vendor-input-prefix-text">৳</span>
-                                    <input type="number"
-                                        class="vendor-form-control @error('delivery_fee') is-invalid @enderror"
-                                        wire:model.defer="delivery_fee"
-                                        min="0">
-                                </div>
-                                @error('delivery_fee') <div class="vendor-invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                        </div>
-                        <div class="vendor-col">
-                            <div class="vendor-form-group">
                                 <label class="vendor-form-label">Commission (%) <span class="req">*</span></label>
                                 <input type="number"
                                     class="vendor-form-control @error('commission_rate') is-invalid @enderror"
@@ -299,35 +292,25 @@
                                 @error('commission_rate') <div class="vendor-invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                         </div>
+                        <div class="vendor-col">
+                            <div class="vendor-form-group">
+                                <label class="vendor-form-label">Tag</label>
+                                <input type="text"
+                                    class="vendor-form-control @error('tag') is-invalid @enderror"
+                                    wire:model.defer="tag"
+                                    placeholder="e.g. সেরা, জনপ্রিয়" maxlength="40">
+                                @error('tag') <div class="vendor-invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="vendor-row">
-                        <div class="vendor-col">
-                            <div class="vendor-form-group">
-                                <label class="vendor-form-label">Min Delivery Time (min)</label>
-                                <input type="number"
-                                    class="vendor-form-control"
-                                    wire:model.defer="avg_delivery_min" min="1">
-                            </div>
-                        </div>
-                        <div class="vendor-col">
-                            <div class="vendor-form-group">
-                                <label class="vendor-form-label">Max Delivery Time (min)</label>
-                                <input type="number"
-                                    class="vendor-form-control"
-                                    wire:model.defer="avg_delivery_max" min="1">
-                            </div>
-                        </div>
-                        <div class="vendor-col">
-                            <div class="vendor-form-group">
-                                <label class="vendor-form-label">Emoji</label>
-                                <input type="text"
-                                    class="vendor-form-control"
-                                    wire:model.defer="emoji"
-                                    placeholder="🍔"
-                                    maxlength="10">
-                            </div>
-                        </div>
+                    <div class="vendor-form-group">
+                        <label class="vendor-form-label">Emoji</label>
+                        <input type="text"
+                            class="vendor-form-control"
+                            wire:model.defer="emoji"
+                            placeholder="🍔"
+                            maxlength="10">
                     </div>
 
                     {{-- Logo Upload --}}
@@ -371,6 +354,49 @@
                         </div>
 
                         @error('logo') <div class="vendor-invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    {{-- Banner Upload --}}
+                    <div class="vendor-form-group">
+                        <label class="vendor-form-label">Banner</label>
+
+                        @if($existingBanner && !$banner)
+                            <div class="vendor-img-preview">
+                                <img src="{{ $existingBanner }}" alt="Current Banner">
+                                <div class="vendor-img-preview-info">
+                                    <span>Current banner</span>
+                                    <button type="button" class="vendor-img-remove"
+                                        wire:click="$set('existingBanner', null)">
+                                        <span class="material-icons-round">delete</span> Remove
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if($banner)
+                            <div class="vendor-img-preview">
+                                <img src="{{ $banner->temporaryUrl() }}" alt="Preview">
+                                <div class="vendor-img-preview-info">
+                                    <span>{{ $banner->getClientOriginalName() }}</span>
+                                    <button type="button" class="vendor-img-remove"
+                                        wire:click="$set('banner', null)">
+                                        <span class="material-icons-round">close</span> Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+
+                        <input type="file"
+                            class="vendor-form-control @error('banner') is-invalid @enderror"
+                            wire:model="banner" accept="image/*">
+                        <div class="vendor-form-hint">JPG, PNG, WEBP — max 4 MB</div>
+
+                        <div wire:loading wire:target="banner" class="vendor-upload-progress">
+                            <div class="vendor-upload-bar"></div>
+                            <small>Uploading...</small>
+                        </div>
+
+                        @error('banner') <div class="vendor-invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
                     {{-- Toggles --}}
@@ -460,6 +486,12 @@
                         </div>
                     </div>
 
+                    @if($viewVendor->banner_url)
+                        <div style="margin-bottom:16px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border);">
+                            <img src="{{ $viewVendor->banner_url }}" alt="Banner" style="width:100%;height:120px;object-fit:cover;display:block;">
+                        </div>
+                    @endif
+
                     {{-- Details Grid --}}
                     <div class="vendor-detail-grid">
                         <div class="vendor-detail-item">
@@ -483,20 +515,20 @@
                             <span class="vendor-detail-value">{{ $viewVendor->avg_rating ? number_format($viewVendor->avg_rating, 1) . ' ★' : 'N/A' }}</span>
                         </div>
                         <div class="vendor-detail-item">
-                            <span class="vendor-detail-label">Total Orders</span>
-                            <span class="vendor-detail-value">{{ $viewVendor->orders_count }}</span>
+                            <span class="vendor-detail-label">Total Reviews</span>
+                            <span class="vendor-detail-value">{{ $viewVendor->total_reviews }}</span>
                         </div>
                         <div class="vendor-detail-item">
-                            <span class="vendor-detail-label">Delivery Fee</span>
-                            <span class="vendor-detail-value">৳{{ number_format($viewVendor->delivery_fee / 100) }}</span>
+                            <span class="vendor-detail-label">Total Orders</span>
+                            <span class="vendor-detail-value">{{ $viewVendor->orders_count }}</span>
                         </div>
                         <div class="vendor-detail-item">
                             <span class="vendor-detail-label">Commission</span>
                             <span class="vendor-detail-value">{{ $viewVendor->commission_rate }}%</span>
                         </div>
                         <div class="vendor-detail-item">
-                            <span class="vendor-detail-label">Delivery Time</span>
-                            <span class="vendor-detail-value">{{ $viewVendor->avg_delivery_min }}–{{ $viewVendor->avg_delivery_max }} min</span>
+                            <span class="vendor-detail-label">Tag</span>
+                            <span class="vendor-detail-value">{{ $viewVendor->tag ?? '—' }}</span>
                         </div>
                         <div class="vendor-detail-item">
                             <span class="vendor-detail-label">Joined</span>
@@ -525,7 +557,7 @@
             <div class="vendor-delete-modal">
                 <div class="vendor-delete-icon">⚠️</div>
                 <h6>Delete Vendor?</h6>
-                <p>The logo and all restaurant data will be permanently removed.<br>This action cannot be undone.</p>
+                <p>The logo, banner and all restaurant data will be permanently removed.<br>This action cannot be undone.</p>
                 <div class="vendor-delete-actions">
                     <button class="btn-cancel"
                         wire:click="$set('confirmDelete', false)">Cancel</button>

@@ -47,8 +47,8 @@ class CustomerRegistrationComponent extends Component
     {
         $this->validate($this->rules(), $this->messages());
 
-        DB::transaction(function () {
-            User::create([
+        $user = DB::transaction(function () {
+            $user = User::create([
                 'uuid'        => Str::uuid(),
                 'name'        => $this->name,
                 'phone'       => $this->phone ?: null,
@@ -59,9 +59,19 @@ class CustomerRegistrationComponent extends Component
                 'is_active'   => true,
                 'points'      => 0,
             ]);
+
+            activity()
+                ->causedBy($user)
+                ->performedOn($user)
+                ->log('Customer account registered');
+
+            return $user;
         });
 
-        $this->redirect(route('customer.registration.success'), navigate: true);
+        // FIX: route('customer.registration.success') requires a {user} parameter
+        // now that the route actually exists — previously this route didn't exist
+        // at all, so every signup ended in a RouteNotFoundException.
+        $this->redirect(route('customer.registration.success', ['user' => $user->id]), navigate: true);
     }
 
     public function render()

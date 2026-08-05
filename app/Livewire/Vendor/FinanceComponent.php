@@ -50,6 +50,8 @@ class FinanceComponent extends Component
         $restaurantId = $restaurant->id;
         $now          = Carbon::now();
 
+        // restaurants.commission_rate is a PERCENTAGE (e.g. 15.00 = 15%).
+        // Kept as-is here since the view displays it directly as "15.0%".
         $this->commissionRate = ((float) $restaurant->commission_rate);
 
         // ── Current month live summary (orders not yet settled) ──
@@ -65,8 +67,12 @@ class FinanceComponent extends Component
             ])
             ->sum('subtotal');
 
-        $revenue    = (int) round($currentMonthSubtotalPaisa);
-        $commission = (int) round($revenue * $this->commissionRate);
+        $revenue = (int) round($currentMonthSubtotalPaisa);
+
+        // BUG FIX: commissionRate is a percentage (e.g. 15.0), so it must be
+        // divided by 100 before being applied as a multiplier — otherwise
+        // commission was being calculated as 15x revenue instead of 15% of it.
+        $commission = (int) round($revenue * ($this->commissionRate / 100));
 
         $this->monthlyRevenue    = $revenue;
         $this->monthlyCommission = $commission;

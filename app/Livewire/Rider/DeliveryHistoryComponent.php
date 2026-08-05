@@ -13,18 +13,16 @@ class DeliveryHistoryComponent extends Component
 {
     use WithPagination;
 
-    /** প্রতি পেজে কতটা রো দেখাবে */
+    /** Number of rows to show per page */
     public int $perPage = 10;
 
-    private const BANGLA_DIGITS = ['0'=>'০','1'=>'১','2'=>'২','3'=>'৩','4'=>'৪','5'=>'৫','6'=>'৬','7'=>'৭','8'=>'৮','9'=>'৯'];
-
-    private const BANGLA_MONTHS = [
-        1 => 'জানুয়ারি', 2 => 'ফেব্রুয়ারি', 3 => 'মার্চ',     4 => 'এপ্রিল',
-        5 => 'মে',        6 => 'জুন',        7 => 'জুলাই',     8 => 'আগস্ট',
-        9 => 'সেপ্টেম্বর', 10 => 'অক্টোবর',   11 => 'নভেম্বর',  12 => 'ডিসেম্বর',
+    private const MONTH_LABELS = [
+        1 => 'Jan', 2 => 'Feb', 3 => 'Mar',  4 => 'Apr',
+        5 => 'May', 6 => 'Jun', 7 => 'Jul',  8 => 'Aug',
+        9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec',
     ];
 
-    /* ── Computed: এই রাইডারের মোট সম্পন্ন ডেলিভারি সংখ্যা (top badge) ── */
+    /* ── Computed: total completed deliveries for this rider (top badge) ── */
     public function getTotalDeliveredProperty(): int
     {
         return Order::where('rider_id', Auth::id())
@@ -42,19 +40,20 @@ class DeliveryHistoryComponent extends Component
             ->paginate($this->perPage);
     }
 
-    /* ── Helper: এই অর্ডারের জন্য rider earning (টাকায়) ── */
-    private function earningFor(Order $order): ?int
+    /* ── Helper: batch-fetch earnings & ratings for all orders on this page (avoids N+1) ── */
+    private function earningsAndRatingsFor(array $orderIds): array
     {
-        $earning = RiderEarning::where('order_id', $order->id)->first();
+        $earnings = RiderEarning::whereIn('order_id', $orderIds)
+            ->pluck('amount', 'order_id');
 
-        if (! $earning) {
-            return null;
-        }
+        $ratings = \App\Models\Review::whereIn('order_id', $orderIds)
+            ->whereNotNull('delivery_rating')
+            ->pluck('delivery_rating', 'order_id');
 
-        return $earning->amount;
+        return [$earnings, $ratings];
     }
 
-    /* ── Helper: তারিখ লেবেল — আজ / গতকাল / X দিন আগে / পূর্ণ তারিখ ── */
+    /* ── Helper: date label — Today / Yesterday / X days ago / full date ── */
     private function dateLabel(?Carbon $time): string
     {
         if (! $time) {
@@ -62,42 +61,39 @@ class DeliveryHistoryComponent extends Component
         }
 
         if ($time->isToday()) {
-            return 'আজ ' . $this->toBanglaNumber($time->format('g:i'));
+            return 'Today ' . $time->format('g:i A');
         }
 
         if ($time->isYesterday()) {
-            return 'গতকাল';
+            return 'Yesterday';
         }
 
         $days = (int) $time->diffInDays(now());
 
         if ($days < 7) {
-            return $this->toBanglaNumber($days) . ' দিন আগে';
+            return $days . ' days ago';
         }
 
-        return $this->toBanglaNumber($time->day) . ' ' . self::BANGLA_MONTHS[$time->month] . ', ' . $this->toBanglaNumber($time->year);
-    }
-
-    public function toBanglaNumber(int|string $number): string
-    {
-        return strtr((string) $number, self::BANGLA_DIGITS);
+        return $time->day . ' ' . self::MONTH_LABELS[$time->month] . ', ' . $time->year;
     }
 
     public function render()
     {
-        // প্রতিটি অর্ডারকে UI-friendly array তে রূপান্তর (pagination meta ঠিক রেখে)
-        $rows = $this->historyOrders->through(function (Order $order) {
-            $earning = $this->earningFor($order);
+        // Convert each order into a UI-friendly array (keeping pagination meta intact)
+        $orderIds = $this->historyOrders->pluck('id')->all();
+        [$earnings, $ratings] = $this->earningsAndRatingsFor($orderIds);
+
+        $rows = $this->historyOrders->through(function (Order $order) use ($earnings, $ratings) {
+            $earning = $earnings->get($order->id);
 
             return [
                 'id'           => $order->id,
                 'order_number' => $order->order_number,
-                'customer'     => $order->customer->name ?? 'কাস্টমার',
-                'restaurant'   => $order->restaurant->name ?? 'রেস্টুরেন্ট',
+                'customer'     => $order->customer->name ?? 'Customer',
+                'restaurant'   => $order->restaurant->name ?? 'Restaurant',
                 'date_label'   => $this->dateLabel($order->delivered_at ?? $order->updated_at),
-                'earning'      => $earning !== null ? '৳' . $earning : '-',
-                // 🔶 ASSUMPTION: orders.rider_rating (nullable tinyint 1-5) — confirm করো
-                'rating'       => $order->rider_rating,
+                'earning'      => $earning !== null ? 'Tk ' . $earning : '-',
+                'rating'       => $ratings->get($order->id),
             ];
         });
 

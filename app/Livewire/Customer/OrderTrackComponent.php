@@ -96,12 +96,10 @@ class OrderTrackComponent extends Component
 
         return [
             'name'    => $rider?->name ?? 'Rider',
-            // NOTE: field names below (zone/vehicle_type/vehicle_number/rating/photo_url)
-            // are assumed — verify against your actual rider_profiles schema.
             'zone'    => $profile->zone ?? 'N/A',
-            'vehicle' => trim(($profile->vehicle_type ?? '') . ' ' . ($profile->vehicle_number ?? '')) ?: 'N/A',
-            'rating'  => $profile->rating ?? null,
-            'photo'   => $profile->photo_url ?? null,
+            'vehicle' => trim(($profile->vehicle_type ?? '') . ' ' . ($profile->vehicle_plate ?? '')) ?: 'N/A',
+            'rating'  => $profile->avg_rating ?? null,
+            'photo'   => null,
         ];
     }
 

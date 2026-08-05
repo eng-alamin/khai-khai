@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\Restaurant;
 use App\Models\VendorSetting;
 
@@ -222,7 +223,7 @@ class SettingComponent extends Component
             $this->bannerUpload = null;
         }
 
-        $this->restaurant->update([
+        $restaurantData = [
             'name'             => $this->name,
             'slug'             => $this->slug,
             'category'         => $this->category,
@@ -237,14 +238,28 @@ class SettingComponent extends Component
             'tag'              => $this->tag ?: null,
             'is_open'          => $this->is_open,
             'is_active'        => $this->is_active,
-        ]);
+        ];
 
-        $this->vendorSetting->update([
+        $settingData = [
             'auto_accept'        => $this->auto_accept,
             'prep_time_min'      => $this->prep_time_min,
             'notification_sound' => $this->notification_sound,
             'min_order_amount'   => $this->min_order_amount,
-        ]);
+        ];
+
+        DB::transaction(function () use ($restaurantData, $settingData) {
+            $this->restaurant->update($restaurantData);
+            $this->vendorSetting->update($settingData);
+
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($this->restaurant)
+                ->withProperties([
+                    'restaurant' => $restaurantData,
+                    'settings'   => $settingData,
+                ])
+                ->log('Vendor updated restaurant settings');
+        });
 
         $this->dispatch('settings-saved');
         session()->flash('success', 'Settings saved successfully ✅');
@@ -255,10 +270,18 @@ class SettingComponent extends Component
     {
         $this->is_open = ! $this->is_open;
         $this->restaurant->update(['is_open' => $this->is_open]);
-        $this->dispatch('toast', [
-            'message' => $this->is_open ? 'Restaurant is now Open 🟢' : 'Restaurant is now Closed 🔴',
-            'type'    => $this->is_open ? 'success' : 'warning',
-        ]);
+
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($this->restaurant)
+            ->withProperties(['is_open' => $this->is_open])
+            ->log($this->is_open ? 'Vendor opened restaurant' : 'Vendor closed restaurant');
+
+        $this->dispatch(
+            'show-toast',
+            message: $this->is_open ? 'Restaurant is now Open 🟢' : 'Restaurant is now Closed 🔴',
+            type: $this->is_open ? 'success' : 'warning'
+        );
     }
 
     public function render()

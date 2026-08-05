@@ -4,6 +4,8 @@ namespace App\Livewire\Admin;
 
 use App\Models\Restaurant;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -33,21 +35,21 @@ class VendorComponent extends Component
     public string  $name            = '';
     public string  $category        = '';
     public string  $emoji           = '';
+    public string  $tag             = '';
     public string  $address         = '';
     public string  $city            = '';
     public string  $phone           = '';
     public string  $owner_name      = '';
     public string  $owner_email     = '';
     public string  $owner_password  = '';
-    public int     $delivery_fee    = 49;
-    public int     $avg_delivery_min = 20;
-    public int     $avg_delivery_max = 40;
     public string  $commission_rate = '15.00';
     public bool    $is_open         = true;
     public bool    $is_approved     = false;
     public bool    $is_active       = true;
     public         $logo            = null;
     public ?string $existingLogo    = null;
+    public         $banner          = null;
+    public ?string $existingBanner  = null;
 
     // ── Validation ────────────────────────────────────────
     protected function rules(): array
@@ -58,25 +60,24 @@ class VendorComponent extends Component
             'name'             => 'required|string|max:120',
             'category'         => 'required|string|max:60',
             'emoji'            => 'nullable|string|max:10',
+            'tag'              => 'nullable|string|max:40',
             'address'          => 'required|string',
             'city'             => 'required|string|max:60',
             'phone'            => 'nullable|string|max:15',
-            'delivery_fee'     => 'required|integer|min:0',
-            'avg_delivery_min' => 'required|integer|min:1',
-            'avg_delivery_max' => 'required|integer|min:1',
             'commission_rate'  => 'required|numeric|min:0|max:100',
             'owner_name'       => 'required|string|max:100',
             'owner_email'      => 'required|email|max:150' . ($this->editId ? '|unique:users,email,' . $this->getOwnerId() : '|unique:users,email'),
             'owner_password'   => $passwordRule,
             'logo'             => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'banner'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ];
     }
 
     protected function messages(): array
     {
         return [
-            'name.required'          => 'Restaurant name is required.',
-            'category.required'      => 'Category is required.',
+            'name.required'           => 'Restaurant name is required.',
+            'category.required'       => 'Category is required.',
             'address.required'       => 'Address is required.',
             'city.required'          => 'City is required.',
             'owner_name.required'    => 'Owner name is required.',
@@ -85,6 +86,7 @@ class VendorComponent extends Component
             'owner_password.required'=> 'Password is required.',
             'owner_password.min'     => 'Password must be at least 6 characters.',
             'logo.max'               => 'Logo must not exceed 2 MB.',
+            'banner.max'             => 'Banner must not exceed 4 MB.',
         ];
     }
 
@@ -95,7 +97,7 @@ class VendorComponent extends Component
         return Restaurant::find($this->editId)?->owner_id ?? 0;
     }
 
-    private function statusOf(Restaurant $r): string
+    public function statusOf(Restaurant $r): string
     {
         if (!$r->is_approved) return 'pending';
         if (!$r->is_active)   return 'blocked';
@@ -121,17 +123,16 @@ class VendorComponent extends Component
         $this->name             = $r->name;
         $this->category         = $r->category;
         $this->emoji            = $r->emoji ?? '';
+        $this->tag              = $r->tag ?? '';
         $this->address          = $r->address;
         $this->city             = $r->city;
         $this->phone            = $r->phone ?? '';
-        $this->delivery_fee     = (int) ($r->delivery_fee / 100);
-        $this->avg_delivery_min = $r->avg_delivery_min ?? 20;
-        $this->avg_delivery_max = $r->avg_delivery_max ?? 40;
-        $this->commission_rate  = $r->commission_rate;
+        $this->commission_rate  = (string) $r->commission_rate;
         $this->is_open          = (bool) $r->is_open;
         $this->is_approved      = (bool) $r->is_approved;
         $this->is_active        = (bool) $r->is_active;
         $this->existingLogo     = $r->logo_url;
+        $this->existingBanner   = $r->banner_url;
         $this->owner_name       = $r->owner->name ?? '';
         $this->owner_email      = $r->owner->email ?? '';
         $this->owner_password   = '';
@@ -160,68 +161,82 @@ class VendorComponent extends Component
             $logoPath = Storage::url($stored);
         }
 
-        if ($this->editId) {
-            // Update restaurant
-            $r = Restaurant::findOrFail($this->editId);
-            $r->update([
-                'name'             => $this->name,
-                'slug'             => str($this->name)->slug(),
-                'category'         => $this->category,
-                'emoji'            => $this->emoji ?: null,
-                'address'          => $this->address,
-                'city'             => $this->city,
-                'phone'            => $this->phone ?: null,
-                'delivery_fee'     => $this->delivery_fee * 100,
-                'avg_delivery_min' => $this->avg_delivery_min,
-                'avg_delivery_max' => $this->avg_delivery_max,
-                'commission_rate'  => $this->commission_rate,
-                'is_open'          => $this->is_open,
-                'is_approved'      => $this->is_approved,
-                'is_active'        => $this->is_active,
-                'logo_url'         => $logoPath,
-            ]);
-
-            // Update owner
-            $ownerData = ['name' => $this->owner_name, 'email' => $this->owner_email];
-            if ($this->owner_password) {
-                $ownerData['password'] = Hash::make($this->owner_password);
+        // Handle banner upload
+        $bannerPath = $this->existingBanner;
+        if ($this->banner) {
+            if ($this->existingBanner && str_starts_with($this->existingBanner, '/storage/')) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $this->existingBanner));
             }
-            $r->owner->update($ownerData);
-
-            session()->flash('success', 'Vendor updated successfully!');
-        } else {
-            // Create owner user
-            $owner = User::create([
-                'name'     => $this->owner_name,
-                'email'    => $this->owner_email,
-                'password' => Hash::make($this->owner_password),
-            ]);
-
-            // Assign vendor role (Spatie)
-            $owner->assignRole('vendor');
-
-            // Create restaurant
-            Restaurant::create([
-                'owner_id'         => $owner->id,
-                'name'             => $this->name,
-                'slug'             => str($this->name)->slug(),
-                'category'         => $this->category,
-                'emoji'            => $this->emoji ?: null,
-                'address'          => $this->address,
-                'city'             => $this->city,
-                'phone'            => $this->phone ?: null,
-                'delivery_fee'     => $this->delivery_fee * 100,
-                'avg_delivery_min' => $this->avg_delivery_min,
-                'avg_delivery_max' => $this->avg_delivery_max,
-                'commission_rate'  => $this->commission_rate,
-                'is_open'          => $this->is_open,
-                'is_approved'      => $this->is_approved,
-                'is_active'        => $this->is_active,
-                'logo_url'         => $logoPath,
-            ]);
-
-            session()->flash('success', 'Vendor created successfully!');
+            $stored     = $this->banner->store('vendor-banners', 'public');
+            $bannerPath = Storage::url($stored);
         }
+
+        DB::transaction(function () use ($logoPath, $bannerPath) {
+            if ($this->editId) {
+                // Update restaurant
+                $r = Restaurant::findOrFail($this->editId);
+                $r->update([
+                    'name'             => $this->name,
+                    'slug'             => str($this->name)->slug(),
+                    'category'         => $this->category,
+                    'emoji'            => $this->emoji ?: null,
+                    'tag'              => $this->tag ?: null,
+                    'address'          => $this->address,
+                    'city'             => $this->city,
+                    'phone'            => $this->phone ?: null,
+                    'commission_rate'  => $this->commission_rate,
+                    'is_open'          => $this->is_open,
+                    'is_approved'      => $this->is_approved,
+                    'is_active'        => $this->is_active,
+                    'logo_url'         => $logoPath,
+                    'banner_url'       => $bannerPath,
+                ]);
+
+                // Update owner
+                $ownerData = ['name' => $this->owner_name, 'email' => $this->owner_email];
+                if ($this->owner_password) {
+                    $ownerData['password'] = Hash::make($this->owner_password);
+                }
+                $r->owner->update($ownerData);
+
+                activity()->causedBy(Auth::user())->performedOn($r)->log('Admin updated vendor');
+
+                session()->flash('success', 'Vendor updated successfully!');
+            } else {
+                // Create owner user
+                $owner = User::create([
+                    'name'     => $this->owner_name,
+                    'email'    => $this->owner_email,
+                    'password' => Hash::make($this->owner_password),
+                ]);
+
+                // Assign vendor role (Spatie)
+                $owner->assignRole('vendor');
+
+                // Create restaurant
+                $r = Restaurant::create([
+                    'owner_id'         => $owner->id,
+                    'name'             => $this->name,
+                    'slug'             => str($this->name)->slug(),
+                    'category'         => $this->category,
+                    'emoji'            => $this->emoji ?: null,
+                    'tag'              => $this->tag ?: null,
+                    'address'          => $this->address,
+                    'city'             => $this->city,
+                    'phone'            => $this->phone ?: null,
+                    'commission_rate'  => $this->commission_rate,
+                    'is_open'          => $this->is_open,
+                    'is_approved'      => $this->is_approved,
+                    'is_active'        => $this->is_active,
+                    'logo_url'         => $logoPath,
+                    'banner_url'       => $bannerPath,
+                ]);
+
+                activity()->causedBy(Auth::user())->performedOn($r)->log('Admin created vendor');
+
+                session()->flash('success', 'Vendor created successfully!');
+            }
+        });
 
         $this->showModal = false;
         $this->resetForm();
@@ -230,20 +245,38 @@ class VendorComponent extends Component
     // ── Quick Approve / Block ─────────────────────────────
     public function approveVendor(int $id): void
     {
-        Restaurant::findOrFail($id)->update(['is_approved' => true, 'is_active' => true]);
+        $r = Restaurant::findOrFail($id);
+
+        DB::transaction(function () use ($r) {
+            $r->update(['is_approved' => true, 'is_active' => true]);
+            activity()->causedBy(Auth::user())->performedOn($r)->log('Admin approved vendor');
+        });
+
         session()->flash('success', 'Vendor approved.');
     }
 
     public function rejectVendor(int $id): void
     {
-        Restaurant::findOrFail($id)->update(['is_approved' => false, 'is_active' => false]);
+        $r = Restaurant::findOrFail($id);
+
+        DB::transaction(function () use ($r) {
+            $r->update(['is_approved' => false, 'is_active' => false]);
+            activity()->causedBy(Auth::user())->performedOn($r)->log('Admin rejected vendor');
+        });
+
         session()->flash('success', 'Vendor rejected.');
     }
 
     public function toggleBlock(int $id): void
     {
         $r = Restaurant::findOrFail($id);
-        $r->update(['is_active' => !$r->is_active]);
+
+        DB::transaction(function () use ($r) {
+            $r->update(['is_active' => !$r->is_active]);
+            activity()->causedBy(Auth::user())->performedOn($r)
+                ->log($r->is_active ? 'Admin unblocked vendor' : 'Admin blocked vendor');
+        });
+
         session()->flash('success', $r->is_active ? 'Vendor unblocked.' : 'Vendor blocked.');
     }
 
@@ -258,11 +291,18 @@ class VendorComponent extends Component
     {
         $r = Restaurant::findOrFail($this->deleteId);
 
-        if ($r->logo_url && str_starts_with($r->logo_url, '/storage/')) {
-            Storage::disk('public')->delete(str_replace('/storage/', '', $r->logo_url));
-        }
+        DB::transaction(function () use ($r) {
+            if ($r->logo_url && str_starts_with($r->logo_url, '/storage/')) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $r->logo_url));
+            }
+            if ($r->banner_url && str_starts_with($r->banner_url, '/storage/')) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $r->banner_url));
+            }
 
-        $r->delete();
+            activity()->causedBy(Auth::user())->performedOn($r)->log('Admin deleted vendor');
+            $r->delete();
+        });
+
         $this->confirmDelete = false;
         $this->deleteId      = null;
         session()->flash('success', 'Vendor deleted.');
@@ -272,12 +312,10 @@ class VendorComponent extends Component
     private function resetForm(): void
     {
         $this->reset([
-            'editId', 'name', 'category', 'emoji', 'address', 'city', 'phone',
+            'editId', 'name', 'category', 'emoji', 'tag', 'address', 'city', 'phone',
             'owner_name', 'owner_email', 'owner_password', 'logo', 'existingLogo',
+            'banner', 'existingBanner',
         ]);
-        $this->delivery_fee     = 49;
-        $this->avg_delivery_min = 20;
-        $this->avg_delivery_max = 40;
         $this->commission_rate  = '15.00';
         $this->is_open          = true;
         $this->is_approved      = false;
@@ -302,13 +340,12 @@ class VendorComponent extends Component
             ->latest()
             ->paginate($this->perPage);
 
-        // View modal data
         $viewVendor = $this->viewId ? Restaurant::with('owner')->withCount('orders')->find($this->viewId) : null;
 
         return view('livewire.admin.vendor-component', compact('vendors', 'viewVendor'))
             ->layout('layouts.admin', [
                 'title'           => 'Vendor Management | KhaiKhai',
-                'breadcrumbTitle' => 'Vendor Management',
+                'breadcrumbTitle' => 'Vendors',
             ]);
     }
 }

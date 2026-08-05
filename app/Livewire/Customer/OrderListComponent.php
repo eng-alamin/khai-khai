@@ -114,7 +114,7 @@ class OrderListComponent extends Component
         }
 
         $this->reviewOrderId = $order->id;
-        $this->reviewRating  = $order->review?->rating ?? 0;
+        $this->reviewRating  = $order->review?->food_rating ?? 0;
         $this->reviewComment = $order->review?->comment ?? '';
     }
 

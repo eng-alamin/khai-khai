@@ -22,10 +22,10 @@ class DashboardComponent extends Component
             : 0;
 
         $revenueToday = Order::whereDate('created_at', $today)
-            ->where('status', 'completed')
+            ->where('status', 'delivered')
             ->sum('total_amount');
         $revenueYesterday = Order::whereDate('created_at', $today->copy()->subDay())
-            ->where('status', 'completed')
+            ->where('status', 'delivered')
             ->sum('total_amount');
         $revenueGrowth = $revenueYesterday > 0
             ? round((($revenueToday - $revenueYesterday) / $revenueYesterday) * 100)
@@ -41,10 +41,9 @@ class DashboardComponent extends Component
             ->where('created_at', '>=', now()->startOfMonth())
             ->count();
 
-        $commissionToday = 50;
-        // $commissionToday = Order::whereDate('created_at', $today)->sum('commission_amount');
-        $commissionYesterday = 80;
-        // $commissionYesterday = Order::whereDate('created_at', $today->copy()->subDay())->sum('commission_amount');
+        $commissionRate = (float) \App\Models\AdminSetting::get('default_commission_rate', 0);
+        $commissionToday     = ((float) $revenueToday) * ($commissionRate / 100);
+        $commissionYesterday = ((float) $revenueYesterday) * ($commissionRate / 100);
         $commissionGrowth = $commissionYesterday > 0
             ? round((($commissionToday - $commissionYesterday) / $commissionYesterday) * 100)
             : 0;
@@ -111,7 +110,7 @@ class DashboardComponent extends Component
         $activities = collect();
 
         // New vendor registrations pending approval
-        Restaurant::where('is_active', false)
+        Restaurant::where('is_approved', false)
             ->latest()
             ->limit(3)
             ->get()
@@ -140,7 +139,7 @@ class DashboardComponent extends Component
             });
 
         // Orders stuck too long in a non-final status
-        Order::whereNotIn('status', ['completed', 'cancelled'])
+        Order::whereNotIn('status', ['delivered', 'cancelled', 'rejected'])
             ->where('created_at', '<=', now()->subMinutes(30))
             ->latest()
             ->limit(3)
@@ -155,16 +154,22 @@ class DashboardComponent extends Component
             });
 
         // Recent vendor payouts
-        // NOTE: assumes a Payout model — adjust to match your actual schema
         if (class_exists(\App\Models\Payout::class)) {
-            \App\Models\Payout::latest()->limit(3)->get()->each(function ($payout) use ($activities) {
-                $activities->push([
-                    'icon'  => 'payments',
-                    'color' => 'pink',
-                    'text'  => "Payout sent to {$payout->vendor_count} vendors — ৳" . intdiv((int) $payout->total_amount, 100),
-                    'time'  => $payout->created_at,
-                ]);
-            });
+            \App\Models\Payout::query()
+                ->with('restaurant:id,name')
+                ->where('status', 'paid')
+                ->latest('paid_at')
+                ->limit(3)
+                ->get()
+                ->each(function ($payout) use ($activities) {
+                    $activities->push([
+                        'icon'  => 'payments',
+                        'color' => 'pink',
+                        'text'  => 'Payout of ৳' . number_format(intdiv((int) $payout->net_amount, 100))
+                            . ' sent to ' . ($payout->restaurant->name ?? 'a vendor'),
+                        'time'  => $payout->paid_at ?? $payout->created_at,
+                    ]);
+                });
         }
 
         return $activities

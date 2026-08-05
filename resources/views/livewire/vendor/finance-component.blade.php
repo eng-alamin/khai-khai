@@ -12,7 +12,7 @@
                 </div>
                 <div class="fin-summary-text">
                     <div class="fin-summary-value fin-value-green">৳{{ number_format($monthlyRevenue) }}</div>
-                    <div class="fin-summary-label">এই মাসের আয়</div>
+                    <div class="fin-summary-label">This Month's Revenue</div>
                 </div>
                 <div class="fin-summary-blob"></div>
             </div>
@@ -23,7 +23,7 @@
                 </div>
                 <div class="fin-summary-text">
                     <div class="fin-summary-value fin-value-pink">৳{{ number_format($monthlyCommission) }}</div>
-                    <div class="fin-summary-label">KhaiKhai কমিশন ({{ rtrim(rtrim(number_format($commissionRate, 1), '0'), '.') }}%)</div>
+                    <div class="fin-summary-label">KhaiKhai Commission ({{ rtrim(rtrim(number_format($commissionRate, 1), '0'), '.') }}%)</div>
                 </div>
                 <div class="fin-summary-blob"></div>
             </div>
@@ -34,7 +34,7 @@
                 </div>
                 <div class="fin-summary-text">
                     <div class="fin-summary-value fin-value-blue">৳{{ number_format($monthlyNet) }}</div>
-                    <div class="fin-summary-label">নেট আয়</div>
+                    <div class="fin-summary-label">Net Revenue</div>
                 </div>
                 <div class="fin-summary-blob"></div>
             </div>
@@ -45,7 +45,7 @@
                 </div>
                 <div class="fin-summary-text">
                     <div class="fin-summary-value fin-value-orange">{{ $nextPaymentDate }}</div>
-                    <div class="fin-summary-label">পরবর্তী পেমেন্ট</div>
+                    <div class="fin-summary-label">Next Payment</div>
                 </div>
                 <div class="fin-summary-blob"></div>
             </div>
@@ -54,18 +54,18 @@
 
         {{-- ── Payment History ── --}}
         <div class="fin-history-card">
-            <div class="fin-history-title">পেমেন্ট ইতিহাস</div>
+            <div class="fin-history-title">Payment History</div>
 
             @if(count($paymentHistory))
                 <div class="fin-table-wrap">
                     <table class="fin-table">
                         <thead>
                             <tr>
-                                <th>তারিখ</th>
-                                <th>বিক্রয়</th>
-                                <th>কমিশন</th>
-                                <th>নেট</th>
-                                <th>স্ট্যাটাস</th>
+                                <th>Date</th>
+                                <th>Sales</th>
+                                <th>Commission</th>
+                                <th>Net</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -77,13 +77,13 @@
                                     <td class="fin-cell-net">৳{{ number_format($row['net']) }}</td>
                                     <td>
                                         @if($row['status'] === 'paid')
-                                            <span class="fin-status-badge fin-status-paid">পেইড</span>
+                                            <span class="fin-status-badge fin-status-paid">Paid</span>
                                         @elseif($row['status'] === 'processing')
-                                            <span class="fin-status-badge fin-status-processing">প্রসেসিং</span>
+                                            <span class="fin-status-badge fin-status-processing">Processing</span>
                                         @elseif($row['status'] === 'pending')
-                                            <span class="fin-status-badge fin-status-pending">পেন্ডিং</span>
+                                            <span class="fin-status-badge fin-status-pending">Pending</span>
                                         @else
-                                            <span class="fin-status-badge fin-status-failed">ফেইলড</span>
+                                            <span class="fin-status-badge fin-status-failed">Failed</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -94,7 +94,7 @@
             @else
                 <div class="fin-empty">
                     <span class="material-icons-round fin-empty-icon">receipt_long</span>
-                    <p>কোনো পেমেন্ট ইতিহাস পাওয়া যায়নি।</p>
+                    <p>No payment history found.</p>
                 </div>
             @endif
         </div>

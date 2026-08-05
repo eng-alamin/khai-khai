@@ -5,20 +5,19 @@ namespace App\Livewire\Rider;
 use App\Models\Order;
 use App\Models\Review;
 use App\Models\RiderEarning;
+use App\Services\RiderDeliveryService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class DashboardComponent extends Component
 {
-    private const BANGLA_DIGITS = ['0'=>'০','1'=>'১','2'=>'২','3'=>'৩','4'=>'৪','5'=>'৫','6'=>'৬','7'=>'৭','8'=>'৮','9'=>'৯'];
-
-    private const BANGLA_DAYS = [
-        0 => 'রবি', 1 => 'সোম', 2 => 'মঙ্গল', 3 => 'বুধ',
-        4 => 'বৃহ', 5 => 'শুক্র', 6 => 'শনি',
+    private const DAY_LABELS = [
+        0 => 'Sun', 1 => 'Mon', 2 => 'Tue', 3 => 'Wed',
+        4 => 'Thu', 5 => 'Fri', 6 => 'Sat',
     ];
 
-    // ── আজকের ডেলিভারি সংখ্যা ──
+    // ── Today's delivery count ──
     public function getTodayDeliveriesProperty(): int
     {
         return Order::where('rider_id', Auth::id())
@@ -27,7 +26,7 @@ class DashboardComponent extends Component
             ->count();
     }
 
-    // ── আজকের আয় (টাকায়) ──
+    // ── Today's earnings (in currency) ──
     public function getTodayEarningsProperty(): int
     {
         $total = RiderEarning::where('rider_id', Auth::id())
@@ -37,7 +36,7 @@ class DashboardComponent extends Component
         return $total;
     }
 
-    // ── আমার গড় রেটিং (reviews.delivery_rating) ──
+    // ── My average rating (reviews.delivery_rating) ──
     public function getAvgRatingProperty(): string
     {
         $avg = Review::where('rider_id', Auth::id())
@@ -47,44 +46,46 @@ class DashboardComponent extends Component
         return $avg ? number_format($avg, 1) : '0.0';
     }
 
-    // ── আজকের মোট দূরত্ব (কিমি) — ASSUMPTION: orders.delivery_distance_km ──
+    // ── Today's total distance (km) ──
     public function getTodayDistanceProperty(): int
     {
-        return (int) Order::where('rider_id', Auth::id())
+        return (int) round(Order::where('rider_id', Auth::id())
             ->where('status', 'delivered')
             ->whereDate('delivered_at', today())
-            ->sum('id');
-            // ->sum('delivery_distance_km');
+            ->sum('delivery_distance_km'));
     }
 
-    // ── চলমান ডেলিভারি (accepted / picked_up) ──
+    // ── Ongoing deliveries (orders the rider has picked up and is delivering) ──
     public function getOngoingOrdersProperty(): array
     {
         return Order::with(['restaurant', 'customer', 'deliveryAddress'])
             ->where('rider_id', Auth::id())
-            ->whereIn('status', ['accepted', 'picked_up'])
+            ->where('status', 'picked_up')
             ->orderByDesc('updated_at')
             ->get()
             ->map(function (Order $order) {
-                $address = optional($order->deliveryAddress);
+                $address = $order->deliveryAddress;
+                $snapshot = $order->delivery_address_snapshot;
 
                 return [
                     'id'               => $order->id,
                     'order_number'     => $order->order_number,
-                    'restaurant'       => optional($order->restaurant)->name ?? 'রেস্টুরেন্ট',
+                    'restaurant'       => optional($order->restaurant)->name ?? 'Restaurant',
                     'restaurant_phone' => optional($order->restaurant)->phone,
                     'customer_phone'   => optional($order->customer)->phone,
-                    'address'          => $address->address_line ?? $order->delivery_address ?? 'ঠিকানা নেই',
-                    'status_label'     => $order->status === 'picked_up' ? 'চলমান' : 'চলমান',
+                    'address'          => $address->full_address
+                        ?? ($snapshot['full_address'] ?? null)
+                        ?? 'No address',
+                    'status_label'     => 'Ongoing',
                 ];
             })
             ->toArray();
     }
 
-    // ── এই সপ্তাহের প্রতিদিনের আয় (সোম–রবি) ──
+    // ── This week's daily earnings (Sat–Fri) ──
     public function getWeeklyEarningsProperty(): array
     {
-        $startOfWeek = now()->startOfWeek(Carbon::SATURDAY); // শনি থেকে সপ্তাহ শুরু
+        $startOfWeek = now()->startOfWeek(Carbon::SATURDAY); // Week starts on Saturday
         $days        = [];
 
         for ($i = 0; $i < 7; $i++) {
@@ -94,7 +95,7 @@ class DashboardComponent extends Component
                 ->sum('amount');
 
             $days[] = [
-                'label'  => self::BANGLA_DAYS[$day->dayOfWeek],
+                'label'  => self::DAY_LABELS[$day->dayOfWeek],
                 'amount' => $total,
             ];
         }
@@ -104,21 +105,9 @@ class DashboardComponent extends Component
 
     public function completeDelivery(int $orderId): void
     {
-        $order = Order::where('id', $orderId)
-            ->where('rider_id', Auth::id())
-            ->firstOrFail();
-
-        $order->update([
-            'status'       => 'delivered',
-            'delivered_at' => now(),
-        ]);
+        app(RiderDeliveryService::class)->completeDelivery($orderId, Auth::user());
 
         $this->dispatch('order-completed');
-    }
-
-    public function toBanglaNumber(int|string $number): string
-    {
-        return strtr((string) $number, self::BANGLA_DIGITS);
     }
 
     public function render()
@@ -127,11 +116,11 @@ class DashboardComponent extends Component
         $maxEarning  = max(array_column($weekly, 'amount') ?: [1]);
 
         return view('livewire.rider.dashboard-component', [
-            'todayDeliveries' => $this->toBanglaNumber($this->todayDeliveries),
-            'isBestPerformer' => $this->todayDeliveries >= 10,   // ASSUMPTION: ১০+ = সেরা
-            'todayEarnings'   => '৳' . $this->toBanglaNumber($this->todayEarnings),
+            'todayDeliveries' => $this->todayDeliveries,
+            'isBestPerformer' => $this->todayDeliveries >= 10,   // ASSUMPTION: 10+ = best performer
+            'todayEarnings'   => 'Tk ' . number_format($this->todayEarnings),
             'avgRating'       => $this->avgRating,
-            'todayDistance'   => $this->toBanglaNumber($this->todayDistance),
+            'todayDistance'   => $this->todayDistance,
             'ongoingOrders'   => $this->ongoingOrders,
             'weeklyEarnings'  => $weekly,
             'maxEarning'      => $maxEarning ?: 1,

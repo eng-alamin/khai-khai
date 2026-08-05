@@ -8,14 +8,6 @@
                 ?? $restaurant->logo_url
                 ?? 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80';
 
-            $deliveryFee = $restaurant->delivery_fee
-                ? 'ডেলিভারি ৳' . number_format($restaurant->delivery_fee)
-                : 'ফ্রি ডেলিভারি';
-
-            $deliveryTime = ($restaurant->avg_delivery_min && $restaurant->avg_delivery_max)
-                ? $restaurant->avg_delivery_min . '–' . $restaurant->avg_delivery_max . ' মিনিট'
-                : 'সময় অজানা';
-
             $rating = $restaurant->avg_rating
                 ? number_format($restaurant->avg_rating, 1)
                 : 'নতুন';
@@ -49,18 +41,6 @@
                 ">এখন বন্ধ</span>
             </div>
         @endif
-
-        {{-- Delivery fee badge top-right --}}
-        <span style="
-            position:absolute; top:10px; right:10px;
-            background:rgba(255,255,255,0.92);
-            color:var(--pink); font-size:11px; font-weight:700;
-            padding:3px 10px; border-radius:20px;
-            backdrop-filter:blur(4px);
-        ">
-            <i class="fa fa-motorcycle" style="font-size:10px;"></i>
-            {{ $deliveryFee }}
-        </span>
     </div>
 
     <div class="rest-info">
@@ -80,11 +60,7 @@
             @endif
         </div>
 
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-            <span style="font-size:12px; color:var(--text-3);">
-                <i class="fa fa-clock" style="color:var(--text-3);"></i>
-                {{ $deliveryTime }}
-            </span>
+        <div style="display:flex; align-items:center; justify-content:flex-end;">
             <span class="rest-rating" style="font-size:13px;">
                 ⭐ {{ $rating }}
                 @if($restaurant->total_reviews > 0)

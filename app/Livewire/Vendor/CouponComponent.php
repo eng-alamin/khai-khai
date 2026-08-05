@@ -5,6 +5,7 @@ namespace App\Livewire\Vendor;
 use Livewire\Component;
 use App\Models\Coupon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\WithPagination;
 
@@ -126,10 +127,11 @@ class CouponComponent extends Component
         $this->description      = $coupon->description;
         $this->type             = $coupon->type;
         $this->value            = (string) $coupon->value;
+        // Stored in paisa; show as taka in the form (see save() for the reverse).
         $this->min_order_amount = $coupon->min_order_amount
-            ? (string) ($coupon->min_order_amount) : '';
+            ? (string) ($coupon->min_order_amount / 100) : '';
         $this->max_discount     = $coupon->max_discount
-            ? (string) ($coupon->max_discount) : '';
+            ? (string) ($coupon->max_discount / 100) : '';
         $this->usage_limit      = (string) ($coupon->usage_limit ?? '');
         $this->per_user_limit   = (string) ($coupon->per_user_limit ?? '');
         $this->valid_from       = $coupon->valid_from?->format('Y-m-d\TH:i') ?? '';
@@ -150,11 +152,11 @@ class CouponComponent extends Component
             'description'      => $this->description,
             'type'             => $this->type,
             'value'            => $this->value,
-            // টাকা → paisa
+            // টাকা → paisa (×100)
             'min_order_amount' => $this->min_order_amount
-                ? (int) round((float) $this->min_order_amount) : null,
+                ? (int) round((float) $this->min_order_amount * 100) : null,
             'max_discount'     => ($this->type === 'percentage' && $this->max_discount !== '')
-                ? (int) round((float) $this->max_discount) : null,
+                ? (int) round((float) $this->max_discount * 100) : null,
             'usage_limit'      => $this->usage_limit ?: null,
             'per_user_limit'   => $this->per_user_limit ?: null,
             'valid_from'       => $this->valid_from ?: null,
@@ -162,15 +164,32 @@ class CouponComponent extends Component
             'is_active'        => $this->is_active,
         ];
 
-        if ($this->editId) {
-            Coupon::findOrFail($this->editId)->update($data);
-            $this->dispatch('show-toast', message: 'কুপন আপডেট হয়েছে ✅', type: 'success');
-        } else {
-            $data['created_by'] = Auth::id();
-            $data['used_count'] = 0;
-            Coupon::create($data);
-            $this->dispatch('show-toast', message: 'নতুন কুপন তৈরি হয়েছে ✅', type: 'success');
-        }
+        DB::transaction(function () use ($data) {
+            if ($this->editId) {
+                $coupon = Coupon::findOrFail($this->editId);
+                $coupon->update($data);
+
+                activity()
+                    ->causedBy(Auth::user())
+                    ->performedOn($coupon)
+                    ->withProperties(['attributes' => $data])
+                    ->log('Vendor updated coupon');
+
+                $this->dispatch('show-toast', message: 'কুপন আপডেট হয়েছে ✅', type: 'success');
+            } else {
+                $data['created_by'] = Auth::id();
+                $data['used_count'] = 0;
+                $coupon = Coupon::create($data);
+
+                activity()
+                    ->causedBy(Auth::user())
+                    ->performedOn($coupon)
+                    ->withProperties(['attributes' => $data])
+                    ->log('Vendor created coupon');
+
+                $this->dispatch('show-toast', message: 'নতুন কুপন তৈরি হয়েছে ✅', type: 'success');
+            }
+        });
 
         $this->showModal = false;
         $this->resetForm();
@@ -182,6 +201,13 @@ class CouponComponent extends Component
     {
         $coupon = Coupon::findOrFail($id);
         $coupon->update(['is_active' => ! $coupon->is_active]);
+
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($coupon)
+            ->withProperties(['is_active' => $coupon->is_active])
+            ->log($coupon->is_active ? 'Vendor activated coupon' : 'Vendor deactivated coupon');
+
         $this->dispatch(
             'show-toast',
             message: $coupon->is_active ? 'কুপন সক্রিয় করা হয়েছে।' : 'কুপন নিষ্ক্রিয় করা হয়েছে।',
@@ -198,7 +224,17 @@ class CouponComponent extends Component
 
     public function deleteRecord(): void
     {
-        Coupon::findOrFail($this->deleteId)->delete();
+        $coupon = Coupon::findOrFail($this->deleteId);
+        $couponCode = $coupon->code;
+        $couponId   = $coupon->id;
+
+        $coupon->delete();
+
+        activity()
+            ->causedBy(Auth::user())
+            ->withProperties(['coupon_id' => $couponId, 'code' => $couponCode])
+            ->log('Vendor deleted coupon');
+
         $this->confirmDelete = false;
         $this->deleteId      = null;
         $this->dispatch('show-toast', message: 'কুপন মুছে ফেলা হয়েছে।', type: 'info');

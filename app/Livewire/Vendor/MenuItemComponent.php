@@ -5,6 +5,7 @@ namespace App\Livewire\Vendor;
 use App\Models\MenuItem;
 use App\Models\MenuCategory;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
@@ -44,7 +45,15 @@ class MenuItemComponent extends Component
     // ── Restaurant helper ─────────────────────────────────
     private function restaurantId(): int
     {
-        return Auth::user()->restaurant->id;
+        $restaurant = Auth::user()->restaurant;
+
+        abort_if(
+            ! $restaurant,
+            403,
+            'No restaurant is linked to your account yet. Please contact support.'
+        );
+
+        return $restaurant->id;
     }
 
     // ── Categories for dropdown ───────────────────────────
@@ -154,15 +163,31 @@ class MenuItemComponent extends Component
             'is_available'  => $this->is_available,
         ];
 
-        if ($this->editId) {
-            MenuItem::where('restaurant_id', $this->restaurantId())
-                ->findOrFail($this->editId)
-                ->update($data);
-            session()->flash('success', 'Menu item updated successfully!');
-        } else {
-            MenuItem::create($data);
-            session()->flash('success', 'New menu item created!');
-        }
+        DB::transaction(function () use ($data) {
+            if ($this->editId) {
+                $item = MenuItem::where('restaurant_id', $this->restaurantId())
+                    ->findOrFail($this->editId);
+                $item->update($data);
+
+                activity()
+                    ->causedBy(Auth::user())
+                    ->performedOn($item)
+                    ->withProperties(['attributes' => $data])
+                    ->log('Vendor updated menu item');
+
+                session()->flash('success', 'Menu item updated successfully!');
+            } else {
+                $item = MenuItem::create($data);
+
+                activity()
+                    ->causedBy(Auth::user())
+                    ->performedOn($item)
+                    ->withProperties(['attributes' => $data])
+                    ->log('Vendor created menu item');
+
+                session()->flash('success', 'New menu item created!');
+            }
+        });
 
         $this->showModal = false;
         $this->resetForm();
@@ -173,6 +198,13 @@ class MenuItemComponent extends Component
     {
         $item = MenuItem::where('restaurant_id', $this->restaurantId())->findOrFail($id);
         $item->update(['is_available' => ! $item->is_available]);
+
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($item)
+            ->withProperties(['is_available' => $item->is_available])
+            ->log($item->is_available ? 'Vendor marked menu item available' : 'Vendor marked menu item unavailable');
+
         session()->flash('success', $item->is_available ? 'Item marked as available.' : 'Item marked as unavailable.');
     }
 
@@ -188,13 +220,24 @@ class MenuItemComponent extends Component
         $record = MenuItem::where('restaurant_id', $this->restaurantId())
             ->findOrFail($this->deleteId);
 
-        if ($record->image_url && str_starts_with($record->image_url, '/storage/')) {
-            Storage::disk('public')->delete(
-                str_replace('/storage/', '', $record->image_url)
-            );
-        }
+        DB::transaction(function () use ($record) {
+            if ($record->image_url && str_starts_with($record->image_url, '/storage/')) {
+                Storage::disk('public')->delete(
+                    str_replace('/storage/', '', $record->image_url)
+                );
+            }
 
-        $record->delete();
+            $itemName = $record->name;
+            $itemId   = $record->id;
+
+            $record->delete();
+
+            activity()
+                ->causedBy(Auth::user())
+                ->withProperties(['item_id' => $itemId, 'name' => $itemName])
+                ->log('Vendor deleted menu item');
+        });
+
         $this->confirmDelete = false;
         $this->deleteId      = null;
         session()->flash('success', 'Menu item deleted successfully!');

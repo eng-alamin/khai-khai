@@ -35,9 +35,14 @@
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/orders') == true ? 'active' : '' }}" href="{{ route('admin.orders') }}"><span class="material-icons-round nav-icon">shopping_bag</span><span class="nav-label">Orders</span></a></li>
      
       <li class="nav-section">Management</li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/products') == true ? 'active' : '' }}" href="{{ route('admin.products') }}"><span class="material-icons-round nav-icon">store</span><span class="nav-label">Products</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/categories') == true ? 'active' : '' }}" href="{{ route('admin.categories') }}"><span class="material-icons-round nav-icon">category</span><span class="nav-label">Categories</span></a></li>
+
+      <li class="nav-section">Management</li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/vendors') == true ? 'active' : '' }}" href="{{ route('admin.vendors') }}"><span class="material-icons-round nav-icon">storefront</span><span class="nav-label">Vendors</span></a></li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/riders') == true ? 'active' : '' }}" href="{{ route('admin.riders') }}"><span class="material-icons-round nav-icon">directions_bike</span><span class="nav-label">Riders</span></a></li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/customers') == true ? 'active' : '' }}" href="{{ route('admin.customers') }}"><span class="material-icons-round nav-icon">accessible</span><span class="nav-label">Customers</span></a></li>
+      
       <li class="nav-section">Report</li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/revenues') == true ? 'active' : '' }}" href="{{ route('admin.revenues') }}"><span class="material-icons-round nav-icon">attach_money</span><span class="nav-label">Revenues</span></a></li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/settings') == true ? 'active' : '' }}" href="{{ route('admin.settings') }}"><span class="material-icons-round nav-icon">manage_accounts</span><span class="nav-label">Settings</span></a></li>
@@ -45,8 +50,11 @@
   </div>
   <div class="sidebar-footer">
     <div class="sf-user">
-      <img src="https://i.pravatar.cc/80?img=12" class="sf-avatar" alt="Admin"/>
-      <div><div class="sf-name">{{ auth()->user()->name ?? 'Unknown' }}</div><div class="sf-role">{{ auth()->user()->name ?? 'Unknown' }}</div></div>
+      <img src="{{ auth()->user()->avatar ?? 'https://i.pravatar.cc/80?img=12' }}" class="sf-avatar" alt="{{ auth()->user()->name ?? 'Admin' }}"/>
+      <div>
+        <div class="sf-name">{{ config('app.name') }}</div>
+        <div class="sf-role">{{ ucfirst(auth()->user()->role ?? 'Unknown') }}</div>
+      </div>
     </div>
   </div>
 </aside>
@@ -57,7 +65,6 @@
     <button class="topnav-toggle" onclick="toggleSidebar()"><span class="material-icons-round">menu</span></button>
     <div class="breadcrumb-wrap">
       <div class="breadcrumb-title">{{ $breadcrumbTitle ?? config('app.name') }}</div>
-      {{-- <div class="breadcrumb-sub">মা'র রান্নাঘর — গাজীপুর বাজার</div> --}}
     </div>
     <div class="topnav-right d-flex align-items-center gap-1 ms-auto">
       <div class="dropdown">
@@ -73,13 +80,26 @@
         </ul>
       </div>
       <div class="dropdown">
-        <img src="https://i.pravatar.cc/80?img=12" class="topnav-avatar" data-bs-toggle="dropdown" data-bs-auto-close="outside" alt="Admin"/>
+        <img src="{{ auth()->user()->avatar ?? 'https://i.pravatar.cc/80?img=12' }}" class="topnav-avatar" data-bs-toggle="dropdown" data-bs-auto-close="outside" alt="{{ auth()->user()->name ?? 'Admin' }}"/>
         <div class="dropdown-menu dropdown-menu-end user-dropdown-menu">
           <div class="user-info-block">
-            <img src="https://i.pravatar.cc/80?img=12" class="user-avatar-lg" alt="Admin"/>
-            <div><div class="user-name">{{ auth()->user()->name ?? 'Unknown' }} <span class="badge-pro">Admin</span></div><a href="#" class="user-email">{{ auth()->user()->email ?? 'Unknown' }}</a></div>
+            <img src="{{ auth()->user()->avatar ?? 'https://i.pravatar.cc/80?img=12' }}" class="user-avatar-lg" alt="{{ auth()->user()->name ?? 'Admin' }}"/>
+            <div>
+              <div class="user-name">{{ auth()->user()->name ?? 'Unknown' }} <span class="badge-pro">{{ ucfirst(auth()->user()->role ?? 'Admin') }}</span></div>
+              <a href="#" class="user-email">{{ auth()->user()->email ?? 'Unknown' }}</a>
+            </div>
           </div>
           <hr class="dropdown-sep"/>
+
+          <div class="ud-item">
+            <a href="{{ route('admin.profile') }}" class="ud-link">
+              <span class="d-flex align-items-center">
+                <span class="material-icons-round ud-icon">person</span>
+                Profile
+              </span>
+            </a>
+          </div>
+
           <div class="ud-item">
             <a href="{{route('logout') }}" class="ud-link signout" onclick="event.preventDefault(); document.getElementById('logout-form').submit()">
               <span class="d-flex align-items-center">

@@ -132,6 +132,32 @@ class Order extends Model
     {
         return $this->items->sum('quantity');
     }
+
+    /**
+     * Short, human-readable summary of the items in this order, e.g.
+     * "Chicken Biriyani x2, Cold Coffee x1, +3 more".
+     * Relies on the `items` relation — eager-load it (::with('items'))
+     * before using this accessor to avoid N+1 queries.
+     */
+    public function getItemsSummaryAttribute(): string
+    {
+        $items = $this->relationLoaded('items') ? $this->items : $this->items()->get();
+
+        if ($items->isEmpty()) {
+            return '';
+        }
+
+        $parts = $items->take(2)
+            ->map(fn ($item) => "{$item->item_name} x{$item->quantity}")
+            ->all();
+
+        $remaining = $items->count() - 2;
+        if ($remaining > 0) {
+            $parts[] = "+{$remaining} more";
+        }
+
+        return implode(', ', $parts);
+    }
  
     // অর্ডার pending কিনা
     public function isPending(): bool

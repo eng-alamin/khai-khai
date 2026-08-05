@@ -4,8 +4,10 @@ namespace App\Livewire\Vendor;
 
 use App\Models\Order;
 use App\Models\OrderStatusLog;
+use App\Models\Restaurant;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class OrderLiveComponent extends Component
@@ -30,7 +32,22 @@ class OrderLiveComponent extends Component
     // ── Restaurant helper ─────────────────────────────────
     private function restaurantId(): int
     {
-        return Auth::user()->restaurant->id;
+        $restaurant = Auth::user()->restaurant;
+
+        abort_if(
+            ! $restaurant,
+            403,
+            'No restaurant is linked to your account yet. Please contact support.'
+        );
+
+        return $restaurant->id;
+    }
+
+    public function mount(): void
+    {
+        // Reflect the restaurant's real open/closed state instead of
+        // always defaulting to "online" regardless of DB value.
+        $this->isOnline = (bool) Restaurant::findOrFail($this->restaurantId())->is_open;
     }
 
     // ── Status meta (OrderListComponent প্যাটার্ন অনুসরণ) ──
@@ -107,8 +124,22 @@ class OrderLiveComponent extends Component
 
     public function toggleOnline(): void
     {
-        $this->isOnline = ! $this->isOnline;
-        // TODO: Restaurant::find($this->restaurantId())->update(['is_open' => $this->isOnline]);
+        $restaurant = Restaurant::findOrFail($this->restaurantId());
+        $restaurant->update(['is_open' => ! $restaurant->is_open]);
+
+        $this->isOnline = (bool) $restaurant->is_open;
+
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($restaurant)
+            ->withProperties(['is_open' => $this->isOnline])
+            ->log($this->isOnline ? 'Vendor opened restaurant' : 'Vendor closed restaurant');
+
+        $this->dispatch(
+            'show-toast',
+            message: $this->isOnline ? 'Restaurant is now Open 🟢' : 'Restaurant is now Closed 🔴',
+            type: $this->isOnline ? 'success' : 'warning'
+        );
     }
 
     // ── Details modal ──────────────────────────────────────
@@ -148,13 +179,21 @@ class OrderLiveComponent extends Component
 
         $from = $order->status;
 
-        $order->status = $next;
-        if ($next === 'delivered') {
-            $order->delivered_at = now();
-        }
-        $order->save();
+        DB::transaction(function () use ($order, $from, $next) {
+            $order->status = $next;
+            if ($next === 'delivered') {
+                $order->delivered_at = now();
+            }
+            $order->save();
 
-        $this->logStatus($order, $from, $next);
+            $this->logStatus($order, $from, $next);
+
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($order)
+                ->withProperties(['from' => $from, 'to' => $next])
+                ->log('Vendor advanced live order status');
+        });
 
         session()->flash('success', "Order #{$order->order_number} marked as {$this->statusMeta($next)['label']}.");
     }
@@ -189,13 +228,21 @@ class OrderLiveComponent extends Component
 
         $from = $order->status;
 
-        $order->update([
-            'status'        => 'cancelled',
-            'cancelled_at'  => now(),
-            'cancel_reason' => $this->reject_reason,
-        ]);
+        DB::transaction(function () use ($order, $from) {
+            $order->update([
+                'status'        => 'cancelled',
+                'cancelled_at'  => now(),
+                'cancel_reason' => $this->reject_reason,
+            ]);
 
-        $this->logStatus($order, $from, 'cancelled', $this->reject_reason);
+            $this->logStatus($order, $from, 'cancelled', $this->reject_reason);
+
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($order)
+                ->withProperties(['from' => $from, 'to' => 'cancelled', 'reason' => $this->reject_reason])
+                ->log('Vendor rejected order');
+        });
 
         $this->confirmReject = false;
         $this->rejectId      = null;

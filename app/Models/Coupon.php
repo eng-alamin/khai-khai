@@ -84,6 +84,7 @@ class Coupon extends Model
     {
         return $query->where('is_active', true)
             ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', now()))
-            ->where(fn ($q) => $q->whereNull('valid_from')->orWhere('valid_from', '<=', now()));
+            ->where(fn ($q) => $q->whereNull('valid_from')->orWhere('valid_from', '<=', now()))
+            ->where(fn ($q) => $q->whereNull('usage_limit')->orWhereColumn('used_count', '<', 'usage_limit'));
     }
 }

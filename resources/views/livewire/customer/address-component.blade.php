@@ -325,13 +325,22 @@
       if (el) bootstrap.Modal.getOrCreateInstance(el).hide();
     });
 
-    // Backdrop click / ESC চাপলে Livewire state sync
-    document.getElementById('addressModal')?.addEventListener('hidden.bs.modal', () => {
-      @this.set('showModal', false);
+    // FIX: use event delegation on `document` instead of capturing
+    // #addressModal / #useCurrentLocationBtn once via getElementById() inside
+    // livewire:init. That element may not exist yet at init time (Livewire
+    // mounts async), and any later Livewire re-render can replace the node,
+    // silently detaching the old listener. Delegation always finds the
+    // current element, filtered by event.target/its closest ancestor id.
+    document.addEventListener('hidden.bs.modal', (event) => {
+      if (event.target.id === 'addressModal') {
+        @this.set('showModal', false);
+      }
     });
 
-    // "Use my location" button
-    document.getElementById('useCurrentLocationBtn')?.addEventListener('click', () => {
+    document.addEventListener('click', (event) => {
+      const btn = event.target.closest('#useCurrentLocationBtn');
+      if (!btn) return;
+
       if (!navigator.geolocation) {
         alert('Geolocation is not supported by this browser.');
         return;

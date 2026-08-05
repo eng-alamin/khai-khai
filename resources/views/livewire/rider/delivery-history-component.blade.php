@@ -2,8 +2,8 @@
 
     {{-- HEADER --}}
     <div class="dh-header">
-        <div class="dh-title">ডেলিভারি ইতিহাস</div>
-        <span class="dh-badge-total">মোট {{ $this->toBanglaNumber($totalDelivered) }}টি</span>
+        <div class="dh-title">Delivery History</div>
+        <span class="dh-badge-total">Total {{ $totalDelivered }}</span>
     </div>
 
     {{-- TABLE --}}
@@ -11,12 +11,12 @@
         <table class="dh-table">
             <thead>
                 <tr>
-                    <th>অর্ডার</th>
-                    <th>গ্রাহক</th>
-                    <th>রেস্টোরাঁ</th>
-                    <th>তারিখ</th>
-                    <th>আয়</th>
-                    <th>রেটিং</th>
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>Restaurant</th>
+                    <th>Date</th>
+                    <th>Earning</th>
+                    <th>Rating</th>
                 </tr>
             </thead>
             <tbody>
@@ -40,7 +40,7 @@
                         <td colspan="6">
                             <div class="dh-empty">
                                 <div style="font-size:40px;" class="mb-2">📦</div>
-                                <div style="font-weight:700;color:var(--text-2);">এখনো কোনো ডেলিভারি সম্পন্ন হয়নি</div>
+                                <div style="font-weight:700;color:var(--text-2);">No deliveries completed yet</div>
                             </div>
                         </td>
                     </tr>
@@ -57,11 +57,11 @@
                 wire:click="previousPage"
                 @if($rows->onFirstPage()) disabled @endif
             >
-                « পূর্ববর্তী
+                « Previous
             </button>
 
             <span class="dh-page-info">
-                পেজ {{ $this->toBanglaNumber($rows->currentPage()) }} / {{ $this->toBanglaNumber($rows->lastPage()) }}
+                Page {{ $rows->currentPage() }} / {{ $rows->lastPage() }}
             </span>
 
             <button
@@ -69,7 +69,7 @@
                 wire:click="nextPage"
                 @if(! $rows->hasMorePages()) disabled @endif
             >
-                পরবর্তী »
+                Next »
             </button>
         </div>
     @endif

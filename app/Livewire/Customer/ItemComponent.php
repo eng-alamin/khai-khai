@@ -27,6 +27,9 @@ class ItemComponent extends Component
 
         $itemsQuery = MenuItem::query()
             ->where('is_available', true)
+            ->whereHas('restaurant', fn ($q) =>
+                $q->where('is_active', true)->where('is_approved', true)
+            )
             ->with('category:id,name,emoji', 'restaurant:id,name,slug')
             ->orderBy('sort_order');
 

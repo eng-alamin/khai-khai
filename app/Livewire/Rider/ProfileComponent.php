@@ -2,180 +2,160 @@
 
 namespace App\Livewire\Rider;
 
-use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use App\Models\RiderProfile;
+use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class ProfileComponent extends Component
 {
-    // User fields
-    public string $name   = '';
-    public string $role   = '';
-    public string $avatar = '';
-    public string $email  = '';
-    public string $phone  = '';
+    use WithFileUploads;
 
-    // Rider profile fields (from rider_profiles table)
-    public ?int    $riderProfileId = null;
-    public string  $vehicleType    = '';
-    public ?string $vehiclePlate   = null;
-    public ?string $licenseNumber  = null;
-    public ?string $nidNumber      = null;
-    public ?string $zone           = null;
+    // ── Profile Info ──────────────────────────────────────
+    public string  $name          = '';
+    public string  $phone         = '';
+    public string  $email         = '';
+    public         $avatar        = null;
+    public ?string $existingAvatar = null;
 
-    // Current location (map picker) — maps to rider_profiles.current_lat / current_lng
-    public ?float $currentLat = null;
-    public ?float $currentLng = null;
+    // ── Password Change ───────────────────────────────────
+    public string $current_password      = '';
+    public string $new_password           = '';
+    public string $new_password_confirmation = '';
 
-    // Stats (read-only, shown on UI)
-    public ?float $avgRating       = null;
-    public int    $totalDeliveries = 0;
-    public bool   $isOnline        = false;
-    public bool   $isApproved      = false;
-
-    protected function rules(): array
-    {
-        return [
-            'phone'         => 'required|string|max:15',
-            'email'         => 'nullable|email|max:150',
-            'vehicleType'   => 'required|string|max:40',
-            'vehiclePlate'  => ['nullable', 'string', 'max:20', Rule::unique('rider_profiles', 'vehicle_plate')->ignore($this->riderProfileId)],
-            'licenseNumber' => ['nullable', 'string', 'max:30', Rule::unique('rider_profiles', 'license_number')->ignore($this->riderProfileId)],
-            'nidNumber'     => ['nullable', 'string', 'max:20', Rule::unique('rider_profiles', 'nid_number')->ignore($this->riderProfileId)],
-            'zone'          => 'nullable|string|max:80',
-            'currentLat'    => 'nullable|numeric|between:-90,90',
-            'currentLng'    => 'nullable|numeric|between:-180,180',
-        ];
-    }
+    // ── UI State ──────────────────────────────────────────
+    public bool $confirmRemoveAvatar = false;
 
     public function mount(): void
     {
         $user = Auth::user();
 
-        $this->name   = $user->name;
-        $this->role   = ucfirst($user->role);
-        $this->avatar = $user->avatar
-            ? $user->avatar
-            : strtoupper(substr($user->name, 0, 1));
-        $this->email  = $user->email ?? '';
-        $this->phone  = $user->phone ?? '';
-
-        // Rider profile stats & info
-        $profile = $user->riderProfile;
-
-        if ($profile) {
-            $this->riderProfileId  = $profile->id;
-            $this->vehicleType     = $profile->vehicle_type;
-            $this->vehiclePlate    = $profile->vehicle_plate;
-            $this->licenseNumber   = $profile->license_number;
-            $this->nidNumber       = $profile->nid_number;
-            $this->zone            = $profile->zone;
-            $this->currentLat      = $profile->current_lat !== null ? (float) $profile->current_lat : null;
-            $this->currentLng      = $profile->current_lng !== null ? (float) $profile->current_lng : null;
-            $this->avgRating       = $profile->avg_rating;
-            $this->totalDeliveries = $profile->total_deliveries;
-            $this->isOnline        = (bool) $profile->is_online;
-            $this->isApproved      = (bool) $profile->is_approved;
-        }
+        $this->name           = $user->name;
+        $this->phone          = $user->phone ?? '';
+        $this->email          = $user->email ?? '';
+        $this->existingAvatar = $user->avatar;
     }
 
-    /* ── Clear validation errors when the map picker sets coordinates ── */
-    public function updatedCurrentLat($value): void
+    // ── Validation ────────────────────────────────────────
+    protected function rules(): array
     {
-        $this->resetErrorBag('currentLat');
+        $user = Auth::user();
+
+        return [
+            'name'   => 'required|string|max:100',
+            'phone'  => ['nullable', 'string', 'max:15', Rule::unique('users', 'phone')->ignore($user->id)],
+            'email'  => ['nullable', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
+            'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ];
     }
 
-    public function updatedCurrentLng($value): void
+    protected function messages(): array
     {
-        $this->resetErrorBag('currentLng');
+        return [
+            'name.required'  => 'Please enter your name.',
+            'phone.unique'   => 'This phone number is already in use.',
+            'email.unique'   => 'This email is already in use.',
+            'avatar.image'   => 'Avatar must be an image.',
+            'avatar.max'     => 'Avatar must not exceed 2 MB.',
+        ];
     }
 
-    public function saveProfile(): void
+    // ── Update Profile Info ────────────────────────────────
+    public function updateProfile(): void
     {
-        $this->validate();
+        $this->validate([
+            'name'   => $this->rules()['name'],
+            'phone'  => $this->rules()['phone'],
+            'email'  => $this->rules()['email'],
+            'avatar' => $this->rules()['avatar'],
+        ]);
 
         $user = Auth::user();
 
-        // Update user
+        $avatarPath = $this->existingAvatar;
+        if ($this->avatar) {
+            if ($this->existingAvatar && str_starts_with($this->existingAvatar, '/storage/')) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $this->existingAvatar));
+            }
+            $stored     = $this->avatar->store('avatars', 'public');
+            $avatarPath = Storage::url($stored);
+        }
+
         $user->update([
-            'email' => $this->email ?: null,
-            'phone' => $this->phone,
+            'name'   => $this->name,
+            'phone'  => $this->phone ?: null,
+            'email'  => $this->email ?: null,
+            'avatar' => $avatarPath,
         ]);
 
-        // Update or create rider profile
-        $data = [
-            'vehicle_type'   => $this->vehicleType,
-            'vehicle_plate'  => $this->vehiclePlate ?: null,
-            'license_number' => $this->licenseNumber ?: null,
-            'nid_number'     => $this->nidNumber ?: null,
-            'zone'           => $this->zone ?: null,
-            'current_lat'    => $this->currentLat,
-            'current_lng'    => $this->currentLng,
-            'location_updated_at' => ($this->currentLat !== null && $this->currentLng !== null) ? now() : null,
-        ];
+        activity()->causedBy($user)->performedOn($user)->log('Updated own profile');
 
-        if ($this->riderProfileId) {
-            RiderProfile::where('id', $this->riderProfileId)->update($data);
-        } else {
-            $profile = $user->riderProfile()->create($data);
-            $this->riderProfileId = $profile->id;
-        }
+        $this->existingAvatar = $avatarPath;
+        $this->avatar = null;
 
-        $this->dispatch('show-toast', message: 'Profile updated ✅', type: 'success');
+        session()->flash('success', 'Profile updated successfully!');
     }
 
-    public function toggleOnlineStatus(): void
+    // ── Remove Avatar ──────────────────────────────────────
+    public function confirmAvatarRemove(): void
     {
-        if (! $this->riderProfileId) {
-            $this->dispatch('show-toast', message: 'Profile not set up yet', type: 'warning');
+        $this->confirmRemoveAvatar = true;
+    }
+
+    public function removeAvatar(): void
+    {
+        $user = Auth::user();
+
+        if ($this->existingAvatar && str_starts_with($this->existingAvatar, '/storage/')) {
+            Storage::disk('public')->delete(str_replace('/storage/', '', $this->existingAvatar));
+        }
+
+        $user->update(['avatar' => null]);
+        $this->existingAvatar = null;
+        $this->confirmRemoveAvatar = false;
+
+        session()->flash('success', 'Avatar removed.');
+    }
+
+    // ── Update Password ─────────────────────────────────────
+    public function updatePassword(): void
+    {
+        $this->validate([
+            'current_password'         => 'required|string',
+            'new_password'             => 'required|string|min:6|confirmed',
+        ], [
+            'current_password.required' => 'Please enter your current password.',
+            'new_password.required'     => 'Please enter a new password.',
+            'new_password.min'          => 'New password must be at least 6 characters.',
+            'new_password.confirmed'    => 'Password confirmation does not match.',
+        ]);
+
+        $user = Auth::user();
+
+        if (! Hash::check($this->current_password, $user->password)) {
+            $this->addError('current_password', 'Your current password is incorrect.');
             return;
         }
 
-        if (! $this->isApproved) {
-            $this->dispatch('show-toast', message: 'Account not approved yet', type: 'warning');
-            return;
-        }
+        $user->update(['password' => Hash::make($this->new_password)]);
 
-        $this->isOnline = ! $this->isOnline;
+        activity()->causedBy($user)->performedOn($user)->log('Changed own password');
 
-        RiderProfile::where('id', $this->riderProfileId)->update([
-            'is_online' => $this->isOnline,
-        ]);
+        $this->reset(['current_password', 'new_password', 'new_password_confirmation']);
+        $this->resetValidation();
 
-        $this->dispatch(
-            'show-toast',
-            message: $this->isOnline ? 'You are now Online 🟢' : 'You are now Offline 🔴',
-            type: 'success'
-        );
-    }
-
-    public function changePassword(): void
-    {
-        $this->dispatch('show-toast', message: 'Change Password', type: 'info');
-        // TODO: $this->redirect(route('rider.change-password'));
-    }
-
-    public function notifications(): void
-    {
-        $this->dispatch('show-toast', message: 'Notification Settings', type: 'info');
-        // TODO: $this->redirect(route('rider.notifications'));
-    }
-
-    public function logout(): void
-    {
-        Auth::logout();
-        session()->invalidate();
-        session()->regenerateToken();
-        $this->redirect(route('login'), navigate: true);
+        session()->flash('success', 'Password changed successfully!');
     }
 
     public function render()
     {
-        return view('livewire.rider.profile-component')
-            ->layout('layouts.rider', [
-                'title'           => 'Profile | KhaiKhai',
-                'breadcrumbTitle' => 'My Profile',
-            ]);
+        return view('livewire.rider.profile-component', [
+            'user' => Auth::user(),
+        ])->layout('layouts.rider', [
+            'title'           => 'My Profile | KhaiKhai',
+            'breadcrumbTitle' => 'Profile',
+        ]);
     }
 }

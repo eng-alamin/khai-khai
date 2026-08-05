@@ -19,6 +19,7 @@ class ProfileComponent extends Component
     public int    $totalOrders = 0;
     public int    $points      = 0;
     public ?float $avgRating   = null;
+    public bool   $isVerified  = false;
 
     // Address fields (from default customer_address)
     public ?int   $defaultAddressId = null;
@@ -29,12 +30,22 @@ class ProfileComponent extends Component
 
     protected function rules(): array
     {
+        $userId = Auth::id();
+
         return [
-            'phone'       => 'required|string|max:15',
-            'email'       => 'nullable|email|max:150',
+            'phone'       => "required|string|max:15|unique:users,phone,{$userId}",
+            'email'       => "nullable|email|max:150|unique:users,email,{$userId}",
             'fullAddress' => 'nullable|string|max:500',
             'city'        => 'nullable|string|max:60',
             'postalCode'  => 'nullable|string|max:10',
+        ];
+    }
+
+    protected function messages(): array
+    {
+        return [
+            'phone.unique' => 'This phone number is already registered with another account.',
+            'email.unique' => 'This email is already registered with another account.',
         ];
     }
 
@@ -50,6 +61,7 @@ class ProfileComponent extends Component
         $this->email  = $user->email ?? '';
         $this->phone  = $user->phone;
         $this->points = $user->points;
+        $this->isVerified = (bool) $user->is_verified;
 
         // Customer profile stats 
         $profile          = $user->customerProfile;
@@ -73,35 +85,39 @@ class ProfileComponent extends Component
 
         $user = Auth::user();
 
-        // Update user
-        $user->update([
-            'email' => $this->email ?: null,
-            'phone' => $this->phone,
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user) {
+            // Update user
+            $user->update([
+                'email' => $this->email ?: null,
+                'phone' => $this->phone,
+            ]);
 
-        // Update or create default address
-        if ($this->fullAddress) {
-            if ($this->defaultAddressId) {
-                CustomerAddress::where('id', $this->defaultAddressId)->update([
-                    'full_address' => $this->fullAddress,
-                    'city'         => $this->city,
-                    'postal_code'  => $this->postalCode ?: null,
-                ]);
-            } else {
-                // Clear any existing defaults first
-                $user->addresses()->update(['is_default' => false]);
+            // Update or create default address
+            if ($this->fullAddress) {
+                if ($this->defaultAddressId) {
+                    CustomerAddress::where('id', $this->defaultAddressId)->update([
+                        'full_address' => $this->fullAddress,
+                        'city'         => $this->city,
+                        'postal_code'  => $this->postalCode ?: null,
+                    ]);
+                } else {
+                    // Clear any existing defaults first
+                    $user->addresses()->update(['is_default' => false]);
 
-                $addr = $user->addresses()->create([
-                    'label'        => $this->addressLabel,
-                    'full_address' => $this->fullAddress,
-                    'city'         => $this->city,
-                    'postal_code'  => $this->postalCode ?: null,
-                    'is_default'   => true,
-                ]);
+                    $addr = $user->addresses()->create([
+                        'label'        => $this->addressLabel,
+                        'full_address' => $this->fullAddress,
+                        'city'         => $this->city,
+                        'postal_code'  => $this->postalCode ?: null,
+                        'is_default'   => true,
+                    ]);
 
-                $this->defaultAddressId = $addr->id;
+                    $this->defaultAddressId = $addr->id;
+                }
             }
-        }
+
+            activity()->causedBy($user)->performedOn($user)->log('Customer updated profile');
+        });
 
         $this->dispatch('show-toast', message: 'Profile updated ✅', type: 'success');
     }

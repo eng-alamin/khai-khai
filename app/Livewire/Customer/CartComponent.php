@@ -29,7 +29,7 @@ class CartComponent extends Component
 
 
     #[On('add-to-cart')]
-    public function addItem(int $id, string $name, int $price): void
+    public function addItem(int $id, string $name, float $price): void
     {
         if (isset($this->items[$id])) {
             $this->items[$id]['qty']++;
@@ -198,7 +198,58 @@ class CartComponent extends Component
             return;
         }
 
-        $items          = $this->items;
+        // ── Re-verify cart against the DB — never trust stale session prices/availability ──
+        $cartItemIds = array_keys($this->items);
+        $freshItems  = MenuItem::whereIn('id', $cartItemIds)->get()->keyBy('id');
+
+        $missingOrUnavailable = [];
+        foreach ($this->items as $id => $cartItem) {
+            $menuItem = $freshItems->get($id);
+            if (! $menuItem || ! $menuItem->is_available) {
+                $missingOrUnavailable[] = $cartItem['name'];
+                unset($this->items[$id]);
+            }
+        }
+
+        if (! empty($missingOrUnavailable)) {
+            $this->dispatch('notify', type: 'error', message:
+                'কিছু আইটেম আর পাওয়া যাচ্ছে না এবং কার্ট থেকে সরানো হয়েছে: ' . implode(', ', $missingOrUnavailable)
+            );
+            if (empty($this->items)) {
+                return;
+            }
+        }
+
+        $firstFreshItem = $freshItems->get(array_key_first($this->items));
+        $restaurant     = $firstFreshItem
+            ? Restaurant::find($firstFreshItem->restaurant_id)
+            : null;
+
+        if (! $restaurant || ! $restaurant->is_active || ! $restaurant->is_approved) {
+            $this->dispatch('notify', type: 'error', message: 'এই রেস্টুরেন্ট থেকে এখন অর্ডার নেওয়া সম্ভব নয়।');
+            return;
+        }
+
+        if (! $restaurant->is_open) {
+            $this->dispatch('notify', type: 'error', message: 'রেস্টুরেন্টটি এখন বন্ধ, দয়া করে পরে চেষ্টা করুন।');
+            return;
+        }
+
+        // Rebuild items using the CURRENT DB price, not the stale cart price
+        $items = [];
+        foreach ($this->items as $id => $cartItem) {
+            $menuItem   = $freshItems->get($id);
+            $items[$id] = [
+                'name'          => $menuItem->name,
+                'price'         => $menuItem->price,
+                'qty'           => $cartItem['qty'],
+                'image_url'     => $menuItem->image_url,
+                'emoji'         => $menuItem->emoji ?? null,
+                'restaurant_id' => $menuItem->restaurant_id,
+            ];
+        }
+        $this->items = $items;
+
         $subtotal       = $this->subtotal;
         $deliveryData   = $this->deliveryData;
         $deliveryFee    = $deliveryData['fee'];

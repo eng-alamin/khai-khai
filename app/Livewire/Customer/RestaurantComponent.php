@@ -4,11 +4,15 @@
 namespace App\Livewire\Customer;
 
 use App\Models\Restaurant;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class RestaurantComponent extends Component
 {
     public ?string $activeCategory = null; // null = সব
+
+    #[Url(as: 'search', keep: true)]
+    public string $search = '';
 
     public function setCategory(?string $category): void
     {
@@ -29,6 +33,12 @@ class RestaurantComponent extends Component
         $restaurantsQuery = Restaurant::query()
             ->where('is_active', true)
             ->where('is_approved', true)
+            ->when($this->search !== '', fn ($q) =>
+                $q->where(fn ($q2) =>
+                    $q2->where('name', 'like', "%{$this->search}%")
+                       ->orWhere('category', 'like', "%{$this->search}%")
+                )
+            )
             ->orderByDesc('avg_rating');
 
         if ($this->activeCategory !== null) {

@@ -4,16 +4,16 @@
     {{-- ===== HERO BANNER ===== --}}
     <div class="hero-banner">
         <div class="hero-text">
-            <h2>আপনার পছন্দের খাবার<br><span>দ্রুত ডেলিভারিতে!</span></h2>
-            <p>Gazipur ও Dhaka-র সেরা রেস্তোরাঁ থেকে অর্ডার করুন</p>
+            <h2>Your Favorite Food<br><span>Delivered Fast!</span></h2>
+            <p>Order from the best restaurants in Gazipur & Dhaka</p>
             <div class="hero-search">
                 <input
                     wire:model="searchQuery"
                     wire:keydown.enter="searchFood"
-                    placeholder="খাবার বা রেস্তোরাঁ খুঁজুন..."
+                    placeholder="Search food or restaurant..."
                 >
                 <button wire:click="searchFood">
-                    <i class="fa fa-search"></i> খুঁজুন
+                    <i class="fa fa-search"></i> Search
                 </button>
             </div>
         </div>
@@ -24,54 +24,56 @@
         >
     </div>
 
-    {{-- ===== STATS ===== --}}
+    {{-- ===== FEATURED PRODUCTS ===== --}}
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="card-title">🛍️ Featured Products</div>
+    </div>
     <div class="row g-3 mb-4">
-        <div class="col-md-3 col-6">
-            <div class="stat-card sc-pink">
-                <div class="stat-icon"><i class="fa fa-store"></i></div>
-                <div class="stat-info"><div class="num">500+</div><div class="label">রেস্তোরাঁ পার্টনার</div>
-                <div class="change up"><i class="fa fa-arrow-up"></i> ১২টি নতুন</div></div>
+        @php $colors = ['sc-pink', 'sc-green', 'sc-orange', 'sc-blue']; @endphp
+        @forelse($products as $index => $product)
+            <div class="col-md-3 col-6">
+                <div class="stat-card {{ $colors[$index % 4] }} product-card">
+                    <div class="stat-icon product-icon">
+                        <img
+                            src="{{ $product->image_url ?? 'https://via.placeholder.com/80?text=' . urlencode($product->emoji ?? '🛍') }}"
+                            alt="{{ $product->name }}"
+                        >
+                    </div>
+                    <div class="stat-info">
+                        <div class="num">৳{{ number_format($product->price, 0) }}</div>
+                        <div class="label">{{ $product->name }}</div>
+                        @if($product->compare_price && $product->compare_price > $product->price)
+                            <div class="change up">
+                                <i class="fa fa-arrow-down"></i>
+                                -{{ round((($product->compare_price - $product->price) / $product->compare_price) * 100) }}%
+                                <span class="old-price">৳{{ number_format($product->compare_price, 0) }}</span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card sc-green">
-                <div class="stat-icon"><i class="fa fa-clock"></i></div>
-                <div class="stat-info"><div class="num">28 মিনিট</div><div class="label">গড় ডেলিভারি সময়</div>
-                <div class="change up"><i class="fa fa-arrow-up"></i> সেরা সময়!</div></div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card sc-orange">
-                <div class="stat-icon"><i class="fa fa-tag"></i></div>
-                <div class="stat-info"><div class="num">৳0</div><div class="label">প্রথম অর্ডারে ফি</div>
-                <div class="change up"><i class="fa fa-gift"></i> Welcome অফার</div></div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card sc-blue">
-                <div class="stat-icon"><i class="fa fa-headset"></i></div>
-                <div class="stat-info"><div class="num">24/7</div><div class="label">কাস্টমার সাপোর্ট</div>
-                <div class="change up"><i class="fa fa-check"></i> সবসময় আছি</div></div>
-            </div>
-        </div>
+        @empty
+            <div class="col-12 text-center text-muted py-4">No products available right now.</div>
+        @endforelse
     </div>
 
     {{-- ===== CATEGORY PILLS ===== --}}
     <div class="cat-pills">
-        <div class="cat-pill active"><span class="emoji">🍽️</span> সব</div>
-        <div class="cat-pill"><span class="emoji">🍚</span> ভাত</div>
-        <div class="cat-pill"><span class="emoji">🍗</span> বিরিয়ানি</div>
-        <div class="cat-pill"><span class="emoji">🍔</span> বার্গার</div>
-        <div class="cat-pill"><span class="emoji">🍕</span> পিৎজা</div>
-        <div class="cat-pill"><span class="emoji">🍜</span> নুডলস</div>
-        <div class="cat-pill"><span class="emoji">☕</span> ড্রিংকস</div>
+        <div class="cat-pill active" wire:click="filterByCategory()">
+            <span class="emoji">🍽️</span> All
+        </div>
+        @foreach($categories as $category)
+            <div class="cat-pill" wire:click="filterByCategory({{ $category->id }})">
+                <span class="emoji">{{ $category->emoji }}</span> {{ $category->name }}
+            </div>
+        @endforeach
     </div>
 
     {{-- ===== POPULAR RESTAURANTS ===== --}}
     <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="card-title">🔥 জনপ্রিয় রেস্তোরাঁ</div>
+        <div class="card-title">🔥 Popular Restaurants</div>
         <a href="{{ route('customer.restaurants') }}" class="btn-kk btn-ghost-kk btn-sm-kk">
-            সব দেখুন <i class="fa fa-arrow-right"></i>
+            View All <i class="fa fa-arrow-right"></i>
         </a>
     </div>
     <div class="row g-3 mb-4">
@@ -84,9 +86,9 @@
 
     {{-- ===== QUICK ORDER MENU ===== --}}
     <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="card-title">⚡ দ্রুত অর্ডার করুন</div>
+        <div class="card-title">⚡ Quick Order</div>
         <a href="{{ route('customer.items') }}" class="btn-kk btn-ghost-kk btn-sm-kk">
-            সব মেনু <i class="fa fa-arrow-right"></i>
+            All Menu <i class="fa fa-arrow-right"></i>
         </a>
     </div>
     <div class="row g-3">
@@ -98,3 +100,40 @@
     </div>
 
 </div>
+
+
+@push('styles')
+    <style>
+        .product-card {
+            align-items: center;
+            gap: 12px;
+        }
+        .product-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .product-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .stat-info .label {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+        }
+        .old-price {
+            text-decoration: line-through;
+            color: #999;
+            font-weight: 400;
+            margin-left: 4px;
+        }
+    </style>
+@endpush

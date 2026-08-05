@@ -10,9 +10,6 @@ class RevenueComponent extends Component
     // Number of months to show in the trend chart
     public int $trendMonths = 5;
 
-    // KhaiKhai commission rate (%)
-    protected float $commissionRate = 12.0;
-
     private array $months = [
         1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
         5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
@@ -20,6 +17,11 @@ class RevenueComponent extends Component
     ];
 
     // ── Helpers ──────────────────────────────────────────────
+    private function commissionRate(): float
+    {
+        return (float) \App\Models\AdminSetting::get('default_commission_rate', 0);
+    }
+
     private function toLakh(float $taka): float
     {
         return round($taka / 100000, 2);
@@ -43,7 +45,7 @@ class RevenueComponent extends Component
         $thisMonthTaka = intdiv($thisMonthRevenue, 100);
         $lastMonthTaka = intdiv($lastMonthRevenue, 100);
 
-        $commission = $thisMonthTaka * ($this->commissionRate / 100);
+        $commission = $thisMonthTaka * ($this->commissionRate() / 100);
 
         $growth = $lastMonthTaka > 0
             ? round((($thisMonthTaka - $lastMonthTaka) / $lastMonthTaka) * 100)
@@ -97,7 +99,7 @@ class RevenueComponent extends Component
             'trend' => $this->monthlyTrend,
         ])->layout('layouts.admin', [
             'title'           => 'Revenue | KhaiKhai',
-            'breadcrumbTitle' => 'Revenue Management',
+            'breadcrumbTitle' => 'Revenues',
         ]);
     }
 }

@@ -22,9 +22,15 @@
           <div style="font-size:20px; font-weight:800;">{{ $name }}</div>
           <div style="color:var(--text-3); font-size:13px;">{{ $role }}</div>
           <div class="mt-3">
-            <span class="badge-kk badge-green">
-              <i class="fa fa-check-circle"></i> Verified
-            </span>
+            @if($isVerified)
+              <span class="badge-kk badge-green">
+                <i class="fa fa-check-circle"></i> Verified
+              </span>
+            @else
+              <span class="badge-kk badge-orange">
+                <i class="fa fa-exclamation-circle"></i> Not Verified
+              </span>
+            @endif
           </div>
         </div>
 

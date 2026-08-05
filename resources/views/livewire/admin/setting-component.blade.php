@@ -159,52 +159,6 @@
             </form>
         </div>
 
-        {{-- ── Security Card ── --}}
-        <div class="set-card">
-            <div class="set-card-title">Security</div>
-
-            @if(session('success_security'))
-                <div class="set-alert set-alert-success">
-                    <span class="material-icons-round">check_circle</span>
-                    <span>{{ session('success_security') }}</span>
-                    <button onclick="this.parentElement.remove()" class="set-alert-close">&times;</button>
-                </div>
-            @endif
-
-            <form wire:submit.prevent="updateSecurity">
-
-                <div class="set-field">
-                    <label class="set-label">Admin Password</label>
-                    <input type="password"
-                           class="set-input @error('adminPassword') set-input-error @enderror"
-                           wire:model.defer="adminPassword"
-                           placeholder="Enter a new password if you want to change it">
-                    @error('adminPassword') <span class="set-error">{{ $message }}</span> @enderror
-                </div>
-
-                <div class="set-field" x-data x-show="$wire.adminPassword.length > 0" x-cloak>
-                    <label class="set-label">Confirm Password</label>
-                    <input type="password"
-                           class="set-input"
-                           wire:model.defer="adminPasswordConf">
-                </div>
-
-                <div class="set-field">
-                    <label class="set-label">Two-Factor Verification</label>
-                    <label class="set-checkbox-wrap">
-                        <input type="checkbox" wire:model.defer="smsOtpEnabled">
-                        <span>Enable SMS OTP</span>
-                    </label>
-                </div>
-
-                <button type="submit" class="set-update-btn" wire:loading.attr="disabled" wire:target="updateSecurity">
-                    <span class="material-icons-round" wire:loading.remove wire:target="updateSecurity">shield</span>
-                    <span class="material-icons-round set-spin" wire:loading wire:target="updateSecurity">progress_activity</span>
-                    Update
-                </button>
-            </form>
-        </div>
-
     </div>
 
 </div>

@@ -3,8 +3,10 @@
 namespace App\Livewire\Customer;
 
 use Livewire\Component;
+use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\Restaurant;
+use App\Models\Product;
 
 class HomeComponent extends Component
 {
@@ -13,6 +15,11 @@ class HomeComponent extends Component
     public function searchFood(): void
     {
         $this->redirectRoute('customer.restaurants', ['search' => $this->searchQuery]);
+    }
+
+    public function filterByCategory(?int $categoryId = null): void
+    {
+        $this->redirectRoute('customer.items', $categoryId ? ['category' => $categoryId] : []);
     }
 
     public function render()
@@ -30,14 +37,33 @@ class HomeComponent extends Component
 
         $menuItems = MenuItem::query()
             ->where('is_available', true)
+            ->whereHas('restaurant', fn ($q) =>
+                $q->where('is_active', true)->where('is_approved', true)
+            )
             ->with('category:id,name,emoji', 'restaurant:id,name')
             ->orderBy('sort_order')
             ->limit(8)
             ->get();
 
+        $products = Product::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->limit(4)
+            ->get([
+                'id', 'category_id', 'name', 'slug', 'price',
+                'compare_price', 'emoji', 'image_url', 'section', 'sort_order',
+            ]);
+
+        $categories = MenuCategory::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'name', 'emoji']);
+
         return view('livewire.customer.home-component', [
                 'restaurants' => $restaurants,
                 'menuItems'   => $menuItems,
+                'products'    => $products,
+                'categories'  => $categories,
             ])
             ->layout('layouts.customer', [
                 'title'           => 'Home | KhaiKhai',

@@ -85,7 +85,7 @@ class CustomerComponent extends Component
             'stats'     => $this->stats,
         ])->layout('layouts.admin', [
             'title'           => 'Customer Management | KhaiKhai',
-            'breadcrumbTitle' => 'Customer Management',
+            'breadcrumbTitle' => 'Customer',
         ]);
     }
 }

@@ -5,7 +5,9 @@ namespace App\Livewire\Admin;
 use Livewire\Component;
 use App\Models\AdminSetting;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class SettingComponent extends Component
@@ -14,11 +16,6 @@ class SettingComponent extends Component
     public string $platformName  = '';
     public string $supportEmail  = '';
     public string $helpline      = '';
-
-    // ── Security Fields ──────────────────────────────────────
-    public string $adminPassword     = '';
-    public string $adminPasswordConf = '';
-    public bool   $smsOtpEnabled     = true;
 
     // ── Delivery Charge Fields (displayed in Taka, stored in Paisa) ──
     public float $minimumDeliveryCharge = 40;
@@ -84,14 +81,6 @@ class SettingComponent extends Component
         ];
     }
 
-    protected function securityRules(): array
-    {
-        return [
-            'adminPassword'     => ['nullable', 'string', 'min:8', 'confirmed'],
-            'smsOtpEnabled'     => ['boolean'],
-        ];
-    }
-
     protected function deliveryRules(): array
     {
         return [
@@ -115,11 +104,6 @@ class SettingComponent extends Component
         'supportEmail.required' => 'Support email is required.',
         'supportEmail.email'    => 'Please enter a valid email.',
         'helpline.required'     => 'Helpline number is required.',
-    ];
-
-    protected array $securityMessages = [
-        'adminPassword.min'       => 'Password must be at least 8 characters.',
-        'adminPassword.confirmed' => 'Password confirmation does not match.',
     ];
 
     protected array $deliveryMessages = [
@@ -147,41 +131,36 @@ class SettingComponent extends Component
     {
         $validated = $this->validate($this->generalRules(), $this->generalMessages);
 
-        foreach ($this->generalKeyMap as $property => $key) {
-            AdminSetting::updateOrCreate(
-                ['key' => $key],
-                [
-                    'value'      => (string) $validated[$property],
-                    'updated_by' => Auth::id(),
-                ]
-            );
-        }
+        try {
+            DB::beginTransaction();
 
-        session()->flash('success_general', 'General settings saved successfully.');
-    }
+            foreach ($this->generalKeyMap as $property => $key) {
+                AdminSetting::updateOrCreate(
+                    ['key' => $key],
+                    [
+                        'value'      => (string) $validated[$property],
+                        'updated_by' => Auth::id(),
+                    ]
+                );
+                Cache::forget("admin_setting:{$key}");
+            }
 
-    // ── Save: Security Settings ───────────────────────────────
-    public function updateSecurity(): void
-    {
-        $this->validate($this->securityRules(), $this->securityMessages);
+            activity()
+                ->causedBy(Auth::user())
+                ->withProperties($validated)
+                ->log('General settings updated');
 
-        if (filled($this->adminPassword)) {
-            Auth::user()->update([
-                'password' => $this->adminPassword,
+            DB::commit();
+
+            session()->flash('success_general', 'General settings saved successfully.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('General settings save failed', [
+                'admin_id' => Auth::id(),
+                'error'    => $e->getMessage(),
             ]);
+            session()->flash('error_general', 'Failed to save general settings. Please try again.');
         }
-
-        AdminSetting::updateOrCreate(
-            ['key' => 'sms_otp_enabled'],
-            [
-                'value'      => $this->smsOtpEnabled ? '1' : '0',
-                'updated_by' => Auth::id(),
-            ]
-        );
-
-        $this->reset(['adminPassword', 'adminPasswordConf']);
-
-        session()->flash('success_security', 'Security settings updated successfully.');
     }
 
     // ── Save: Delivery Charge Settings ───────────────────────
@@ -199,6 +178,7 @@ class SettingComponent extends Component
                     'updated_by' => Auth::id(),
                 ]
             );
+            Cache::forget('admin_setting:minimum_delivery_charge');
 
             AdminSetting::updateOrCreate(
                 ['key' => 'per_km_delivery_rate'],
@@ -207,6 +187,7 @@ class SettingComponent extends Component
                     'updated_by' => Auth::id(),
                 ]
             );
+            Cache::forget('admin_setting:per_km_delivery_rate');
 
             AdminSetting::updateOrCreate(
                 ['key' => 'included_km_in_minimum'],
@@ -215,6 +196,7 @@ class SettingComponent extends Component
                     'updated_by' => Auth::id(),
                 ]
             );
+            Cache::forget('admin_setting:included_km_in_minimum');
 
             activity()
                 ->causedBy(Auth::user())
@@ -254,6 +236,7 @@ class SettingComponent extends Component
                         'updated_by' => Auth::id(),
                     ]
                 );
+                Cache::forget("admin_setting:{$key}");
             }
 
             activity()
@@ -284,7 +267,7 @@ class SettingComponent extends Component
         return view('livewire.admin.setting-component')
             ->layout('layouts.admin', [
                 'title'           => 'Settings | KhaiKhai',
-                'breadcrumbTitle' => 'Platform Settings',
+                'breadcrumbTitle' => 'Settings',
             ]);
     }
 }

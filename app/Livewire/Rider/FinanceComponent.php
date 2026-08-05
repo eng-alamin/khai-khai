@@ -16,15 +16,13 @@ class FinanceComponent extends Component
 
     public int $perPage = 10;
 
-    private const BANGLA_DIGITS = ['0'=>'০','1'=>'১','2'=>'২','3'=>'৩','4'=>'৪','5'=>'৫','6'=>'৬','7'=>'৭','8'=>'৮','9'=>'৯'];
-
-    private const BANGLA_MONTHS = [
-        1 => 'জানুয়ারি', 2 => 'ফেব্রুয়ারি', 3 => 'মার্চ',     4 => 'এপ্রিল',
-        5 => 'মে',        6 => 'জুন',        7 => 'জুলাই',     8 => 'আগস্ট',
-        9 => 'সেপ্টেম্বর', 10 => 'অক্টোবর',   11 => 'নভেম্বর',  12 => 'ডিসেম্বর',
+    private const MONTH_LABELS = [
+        1 => 'Jan', 2 => 'Feb', 3 => 'Mar',  4 => 'Apr',
+        5 => 'May', 6 => 'Jun', 7 => 'Jul',  8 => 'Aug',
+        9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec',
     ];
 
-    /* ── এই মাসের মোট আয় (টাকায়) ── */
+    /* ── This month's total earnings (in Taka) ── */
     public function getMonthlyEarningsProperty(): int
     {
         $total = RiderEarning::where('rider_id', Auth::id())
@@ -35,7 +33,7 @@ class FinanceComponent extends Component
         return $total;
     }
 
-    /* ── এই মাসের মোট ডেলিভারি সংখ্যা ── */
+    /* ── This month's total delivery count ── */
     public function getMonthlyDeliveriesProperty(): int
     {
         return Order::where('rider_id', Auth::id())
@@ -45,7 +43,7 @@ class FinanceComponent extends Component
             ->count();
     }
 
-    /* ── ব্যাংকে পাঠানো মোট (সর্বকালীন paid payout সমষ্টি) ── */
+    /* ── Total sent to bank (all-time sum of paid payouts) ── */
     public function getTotalPayoutProperty(): int
     {
         $total = RiderPayout::where('rider_id', Auth::id())
@@ -55,24 +53,19 @@ class FinanceComponent extends Component
         return $total;
     }
 
-    /* ── Paginated পেমেন্ট ইতিহাস ── */
+    /* ── Paginated payment history ── */
     public function getPayoutHistoryProperty()
     {
         return RiderPayout::where('rider_id', Auth::id())
-            ->orderByDesc('paid_at')
+            ->orderByRaw('COALESCE(resolved_at, created_at) DESC')
             ->paginate($this->perPage);
     }
 
-    public function toBanglaNumber(int|string $number): string
+    private function formatDate(Carbon $date): string
     {
-        return strtr((string) $number, self::BANGLA_DIGITS);
-    }
-
-    private function formatMonthYear(Carbon $date): string
-    {
-        return $this->toBanglaNumber($date->day) . ' ' .
-               self::BANGLA_MONTHS[$date->month] . ' ' .
-               $this->toBanglaNumber($date->year);
+        return $date->day . ' ' .
+               self::MONTH_LABELS[$date->month] . ' ' .
+               $date->year;
     }
 
     public function render()
@@ -80,20 +73,20 @@ class FinanceComponent extends Component
         $rows = $this->payoutHistory->through(function (RiderPayout $payout) {
             return [
                 'id'         => $payout->id,
-                'date_label' => $payout->paid_at
-                    ? $this->formatMonthYear($payout->paid_at)
-                    : $this->formatMonthYear($payout->created_at),
+                'date_label' => $payout->resolved_at
+                    ? $this->formatDate($payout->resolved_at)
+                    : $this->formatDate($payout->created_at),
                 'method'     => $payout->method ?? 'bKash',   // e.g. bKash, Nagad, Bank
-                'amount'     => '৳' . $payout->amount,
-                'status'     => $payout->status,              // 'paid' | 'pending' | 'processing'
+                'amount'     => 'Tk ' . $payout->amount,
+                'status'     => $payout->status,              // pending|approved|processing|paid|rejected|failed
             ];
         });
 
         return view('livewire.rider.finance-component', [
             'rows'              => $rows,
-            'monthlyEarnings'   => '৳' . $this->toBanglaNumber($this->monthlyEarnings),
-            'monthlyDeliveries' => $this->toBanglaNumber($this->monthlyDeliveries),
-            'totalPayout'       => '৳' . $this->toBanglaNumber($this->totalPayout),
+            'monthlyEarnings'   => 'Tk ' . number_format($this->monthlyEarnings),
+            'monthlyDeliveries' => $this->monthlyDeliveries,
+            'totalPayout'       => 'Tk ' . number_format($this->totalPayout),
         ])->layout('layouts.rider', [
             'title'           => 'Finance | KhaiKhai',
             'breadcrumbTitle' => 'Finance',
