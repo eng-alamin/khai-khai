@@ -9,7 +9,27 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Restaurant extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'name',
+        'slug',
+        'category',
+        'emoji',
+        'logo_url',
+        'banner_url',
+        'address',
+        'city',
+        'latitude',
+        'longitude',
+        'phone',
+        'tag',
+        'owner_id',
+        'commission_rate',
+        'is_open',
+        'is_approved',
+        'is_active',
+        'avg_rating',
+        'total_reviews',
+    ];
 
     // ✅ Status helper — schema অনুযায়ী
     public function getStatusAttribute(): string

@@ -37,6 +37,7 @@
       <li class="nav-section">Management</li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/products') == true ? 'active' : '' }}" href="{{ route('admin.products') }}"><span class="material-icons-round nav-icon">store</span><span class="nav-label">Products</span></a></li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/categories') == true ? 'active' : '' }}" href="{{ route('admin.categories') }}"><span class="material-icons-round nav-icon">category</span><span class="nav-label">Categories</span></a></li>
+      <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/sliders') == true ? 'active' : '' }}" href="{{ route('admin.sliders') }}"><span class="material-icons-round nav-icon">category</span><span class="nav-label">Sliders</span></a></li>
 
       <li class="nav-section">Management</li>
       <li class="nav1-item"><a class="nav1-link {{ str_contains(request()->url(), 'admin/vendors') == true ? 'active' : '' }}" href="{{ route('admin.vendors') }}"><span class="material-icons-round nav-icon">storefront</span><span class="nav-label">Vendors</span></a></li>
@@ -67,16 +68,46 @@
       <div class="breadcrumb-title">{{ $breadcrumbTitle ?? config('app.name') }}</div>
     </div>
     <div class="topnav-right d-flex align-items-center gap-1 ms-auto">
+      @php
+        $__headerNotifications = \App\Models\Notification::query()
+            ->where(function ($q) {
+                $q->whereNull('user_id')->orWhere('user_id', auth()->id());
+            })
+            ->latest()
+            ->limit(3)
+            ->get();
+        $__headerUnreadCount = \App\Models\Notification::query()
+            ->where(function ($q) {
+                $q->whereNull('user_id')->orWhere('user_id', auth()->id());
+            })
+            ->unread()
+            ->count();
+      @endphp
       <div class="dropdown">
         <button class="icon-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside">
           <span class="material-icons-round">notifications</span>
-          <span class="notif-badge">7</span>
+          @if($__headerUnreadCount > 0)
+            <span class="notif-badge">{{ $__headerUnreadCount > 9 ? '9+' : $__headerUnreadCount }}</span>
+          @endif
         </button>
         <ul class="dropdown-menu dropdown-menu-end notif-dropdown-menu">
-          <li><div class="notif-header"><h6>নোটিফিকেশন</h6></div></li>
-          <li><a class="notif-item" href="#"><div class="notif-icon cart"><span class="material-icons-round">shopping_bag</span></div><div class="notif-text"><strong>নতুন অর্ডার #KK2615</strong><span>এইমাত্র</span></div></a></li>
-          <li><a class="notif-item" href="#"><div class="notif-icon podcast"><span class="material-icons-round">payments</span></div><div class="notif-text"><strong>পেমেন্ট ৳37,664 সম্পন্ন</strong><span>1 ঘন্টা আগে</span></div></a></li>
-          <li><div class="notif-footer"><a href="#">সব দেখুন</a></div></li>
+          <li><div class="notif-header"><h6>Notifications</h6></div></li>
+          @forelse($__headerNotifications as $__n)
+            <li>
+              <a class="notif-item" href="{{ route('admin.notifications') }}">
+                <div class="notif-icon {{ $__n->priority === 'high' ? 'cart' : 'podcast' }}">
+                  <span class="material-icons-round">{{ $__n->priority === 'high' ? 'priority_high' : 'notifications' }}</span>
+                </div>
+                <div class="notif-text">
+                  <strong>{{ $__n->title }}</strong>
+                  <span>{{ $__n->created_at->diffForHumans() }}</span>
+                </div>
+              </a>
+            </li>
+          @empty
+            <li><div class="notif-item text-muted">No notifications yet</div></li>
+          @endforelse
+          <li><div class="notif-footer"><a href="{{ route('admin.notifications') }}">View all</a></div></li>
         </ul>
       </div>
       <div class="dropdown">

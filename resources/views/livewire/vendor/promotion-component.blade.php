@@ -84,7 +84,7 @@
                 }
             @endphp
 
-            <div class="promo-card">
+            <div class="promo-card" wire:key="promo-{{ $promo->id }}">
                 {{-- Top Row --}}
                 <div class="promo-card-top">
                     <div class="promo-card-title">{{ $promo->title }}</div>

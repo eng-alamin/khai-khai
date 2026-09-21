@@ -69,7 +69,7 @@
                         ];
                         $statusInfo = $statusMap[$order->status] ?? ['label' => ucwords(str_replace('_', ' ', $order->status)), 'class' => 'ord-status-default'];
                     @endphp
-                    <tr>
+                    <tr wire:key="order-{{ $order->id }}">
                         <td class="ord-id">#KK{{ $order->id }}</td>
                         <td class="ord-customer">{{ $order->customer->name ?? '—' }}</td>
                         <td class="ord-restaurant">{{ $order->restaurant->name ?? '—' }}</td>

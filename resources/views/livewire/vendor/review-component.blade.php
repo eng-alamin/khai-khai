@@ -107,7 +107,7 @@
         <div class="rv-list" wire:loading.class="rv-list--loading">
 
             @forelse ($reviews as $review)
-                <div class="rv-item">
+                <div class="rv-item" wire:key="review-{{ $review->id }}">
 
                     {{-- Head row --}}
                     <div class="rv-item-head">

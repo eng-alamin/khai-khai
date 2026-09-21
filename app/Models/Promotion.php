@@ -7,7 +7,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Promotion extends Model
 {
-    protected $guarded = [];
+    // used_count is incremented by redemption logic, not user input.
+    protected $fillable = [
+        'restaurant_id',
+        'title',
+        'description',
+        'type',
+        'discount_type',
+        'discount_value',
+        'applies_to',
+        'target_id',
+        'minimum_order_amount',
+        'usage_limit',
+        'starts_at',
+        'ends_at',
+        'is_active',
+    ];
 
     protected $casts = [
         'discount_value' => 'decimal:2',

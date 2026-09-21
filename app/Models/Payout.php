@@ -7,7 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payout extends Model
 {
-    protected $guarded = [];
+    // Financial settlement record — only period fields are ever set by an
+    // admin action; every money/status column is computed or updated
+    // through dedicated payout-processing code, never mass-assigned.
+    protected $fillable = [
+        'restaurant_id',
+        'period_start',
+        'period_end',
+    ];
 
     protected $casts = [
         'period_start'      => 'date',

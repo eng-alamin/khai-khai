@@ -23,7 +23,7 @@ return new class extends Migration
             $table->json('coupon_snapshot')->nullable();
 
             $table->foreignId('delivery_address_id')->nullable()->constrained('customer_addresses')->nullOnDelete();
-            $table->json('delivery_address_snapshot')->comment('Immutable delivery address at order time');
+            $table->json('delivery_address_snapshot')->nullable()->comment('Immutable delivery address at order time');
             $table->decimal('delivery_distance_km', 6, 2)->nullable()->comment('Distance in KM at order time');
 
             $table->enum('status', [

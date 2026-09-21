@@ -109,7 +109,7 @@ class AddressComponent extends Component
                 ->update($payload);
 
             activity()->causedBy($user)
-                ->performedOn(CustomerAddress::find($this->editingId))
+                ->performedOn($user->addresses()->find($this->editingId))
                 ->log('Customer address updated');
 
             $this->dispatch('show-toast', message: 'Address updated ✅', type: 'success');
@@ -143,8 +143,13 @@ class AddressComponent extends Component
             $user->addresses()->where('id', $id)->update(['is_default' => true]);
             $user->customerProfile?->update(['default_address_id' => $id]);
 
+            // BUG FIX: was CustomerAddress::find($id) with no customer_id
+            // scope — harmless today since the update above already scoped
+            // the change, but it meant the activity log's performedOn()
+            // could point at the wrong record if $id ever belonged to a
+            // different customer. Scope it the same way as the update.
             activity()->causedBy($user)
-                ->performedOn(CustomerAddress::find($id))
+                ->performedOn($user->addresses()->find($id))
                 ->log('Customer default address changed');
         });
 

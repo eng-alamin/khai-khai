@@ -7,7 +7,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Review extends Model
 {
-    protected $guarded = [];
+    // Moderation fields (status, helpful_count) are excluded from mass assignment.
+    protected $fillable = [
+        'order_id',
+        'customer_id',
+        'restaurant_id',
+        'rider_id',
+        'food_rating',
+        'delivery_rating',
+        'comment',
+    ];
 
     public function order(): BelongsTo
     {

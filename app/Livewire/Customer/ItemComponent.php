@@ -6,14 +6,18 @@ namespace App\Livewire\Customer;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class ItemComponent extends Component
 {
+    use WithPagination;
+
     public ?string $activeCategory = null; // null = সব, otherwise category name
 
     public function setCategory(?string $categoryName): void
     {
         $this->activeCategory = $categoryName;
+        $this->resetPage();
     }
 
     public function render()
@@ -41,7 +45,7 @@ class ItemComponent extends Component
 
         return view('livewire.customer.item-component', [
                 'categories'    => $categories,
-                'filteredItems' => $itemsQuery->get(),
+                'filteredItems' => $itemsQuery->paginate(20),
             ])
             ->layout('layouts.customer', [
                 'title'           => 'Menu | KhaiKhai',

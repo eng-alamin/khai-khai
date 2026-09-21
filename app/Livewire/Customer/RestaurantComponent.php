@@ -6,9 +6,12 @@ namespace App\Livewire\Customer;
 use App\Models\Restaurant;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class RestaurantComponent extends Component
 {
+    use WithPagination;
+
     public ?string $activeCategory = null; // null = সব
 
     #[Url(as: 'search', keep: true)]
@@ -17,6 +20,12 @@ class RestaurantComponent extends Component
     public function setCategory(?string $category): void
     {
         $this->activeCategory = $category;
+        $this->resetPage();
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
     }
 
     public function render()
@@ -45,7 +54,7 @@ class RestaurantComponent extends Component
             $restaurantsQuery->where('category', $this->activeCategory);
         }
 
-        $filteredRestaurants = $restaurantsQuery->get([
+        $filteredRestaurants = $restaurantsQuery->paginate(20, [
             'id', 'name', 'slug', 'category', 'emoji',
             'logo_url', 'banner_url', 'city',
             'avg_rating', 'total_reviews',

@@ -6,7 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class MenuCategory extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'restaurant_id',
+        'name',
+        'emoji',
+        'sort_order',
+        'is_active',
+    ];
 
     public function restaurant()
     {

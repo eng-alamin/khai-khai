@@ -4,11 +4,14 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use App\Models\User;
+use App\Livewire\Concerns\HasAccountRegistrationValidation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CustomerRegistrationComponent extends Component
 {
+    use HasAccountRegistrationValidation;
+
     // ── Account info (Single Step) ────────────────────────────
     public string $name     = '';
     public string $phone    = '';
@@ -19,27 +22,12 @@ class CustomerRegistrationComponent extends Component
     // ── Validation rules ──────────────────────────────────────
     protected function rules(): array
     {
-        return [
-            'name'                  => 'required|string|min:3|max:100',
-            'phone'                 => 'nullable|string|regex:/^01[3-9]\d{8}$/|unique:users,phone',
-            'email'                 => 'required|email|max:150|unique:users,email',
-            'password'              => 'required|string|min:8|confirmed',
-            'password_confirmation' => 'required',
-        ];
+        return $this->accountRegistrationRules();
     }
 
     protected function messages(): array
     {
-        return [
-            'name.required'       => 'Name is required.',
-            'phone.regex'         => 'Please enter a valid Bangladeshi mobile number (01XXXXXXXXX).',
-            'phone.unique'        => 'This mobile number is already registered.',
-            'email.required'      => 'Email is required.',
-            'email.email'         => 'Please enter a valid email address.',
-            'email.unique'        => 'This email is already in use.',
-            'password.min'        => 'Password must be at least 8 characters.',
-            'password.confirmed'  => 'Passwords do not match.',
-        ];
+        return $this->accountRegistrationMessages();
     }
 
     // ── Submit ────────────────────────────────────────────────
@@ -68,9 +56,6 @@ class CustomerRegistrationComponent extends Component
             return $user;
         });
 
-        // FIX: route('customer.registration.success') requires a {user} parameter
-        // now that the route actually exists — previously this route didn't exist
-        // at all, so every signup ended in a RouteNotFoundException.
         $this->redirect(route('customer.registration.success', ['user' => $user->id]), navigate: true);
     }
 

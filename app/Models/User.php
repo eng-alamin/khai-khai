@@ -9,34 +9,29 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    // FIX (Critical Bug #1): $fillable previously only allowed
+    // name/phone/email/password/avatar. Registration flows (Customer,
+    // Vendor, Rider) all pass 'uuid', 'role', 'is_verified', 'is_active',
+    // and 'points' to User::create(). Those fields were silently stripped
+    // by mass-assignment protection, and since `uuid` and `role` are
+    // NOT NULL columns with no DB default, every registration failed at
+    // the database level. Per project standard, $guarded = [] is used
+    // instead of an allow-list so this class of bug cannot recur when a
+    // new column is added later.
     protected $guarded = [];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -48,10 +43,21 @@ class User extends Authenticatable
     }
 
     /**
-     * User → Restaurant (1 to 1)
-     * একজন vendor-এর একটাই restaurant থাকে।
-     * restaurants.owner_id = users.id
+     * Safety net: `uuid` is a NOT NULL, unique column with no database
+     * default. Registration flows already set it explicitly, but if any
+     * future code path (a seeder, a console command, tinker, etc.) creates
+     * a User without passing `uuid`, this guarantees one is always
+     * generated instead of the insert crashing.
      */
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if (empty($user->uuid)) {
+                $user->uuid = (string) Str::uuid();
+            }
+        });
+    }
+
     public function restaurant()
     {
         return $this->hasOne(Restaurant::class, 'owner_id');
@@ -59,56 +65,53 @@ class User extends Authenticatable
 
     public function isVendor(): bool
     {
-        return $this->role === 'vendor'; // Adjust based on your role field
+        return $this->role === 'vendor';
     }
-    
+
     public function isCustomer(): bool
     {
         return $this->role === 'customer';
     }
-    
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
     }
-    
+
     public function hasRestaurant(): bool
     {
         return $this->restaurant !== null;
     }
-    
+
     public function isRestaurantApproved(): bool
     {
         return $this->hasRestaurant() && $this->restaurant->is_approved;
     }
 
-    // User → CustomerProfile (1 to 1)
     public function customerProfile()
     {
         return $this->hasOne(\App\Models\CustomerProfile::class, 'customer_id');
     }
-    
-    // User → CustomerAddresses (1 to many)  [already exists, keeping for reference]
+
     public function addresses()
     {
         return $this->hasMany(\App\Models\CustomerAddress::class, 'customer_id');
     }
-    
-    // Default address shortcut
+
     public function defaultAddress()
     {
         return $this->hasOne(\App\Models\CustomerAddress::class, 'customer_id')
                     ->where('is_default', true);
     }
 
-    // Rider 
     public function riderProfile()
     {
         return $this->hasOne(\App\Models\RiderProfile::class, 'user_id');
     }
+
     public function riderEarnings()
     {
-        return $this->hasOne(\App\Models\RiderEarning::class, 'rider_id');
+        return $this->hasMany(\App\Models\RiderEarning::class, 'rider_id');
     }
 
     public function orders()

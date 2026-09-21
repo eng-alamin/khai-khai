@@ -7,7 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SupportTicket extends Model
 {
-    protected $guarded = [];
+    // status/reply/replied_by/replied_at are set only by support-agent actions.
+    protected $fillable = [
+        'customer_id',
+        'order_id',
+        'category',
+        'subject',
+        'message',
+    ];
 
     protected $casts = [
         'replied_at' => 'datetime',

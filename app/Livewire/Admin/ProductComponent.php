@@ -11,10 +11,11 @@ use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use App\Livewire\Concerns\HasCatalogItemValidationRules;
 
 class ProductComponent extends Component
 {
-    use WithPagination, WithFileUploads;
+    use WithPagination, WithFileUploads, HasCatalogItemValidationRules;
 
     protected string $paginationTheme = 'bootstrap';
 
@@ -61,34 +62,28 @@ class ProductComponent extends Component
     }
 
     // ── Validation ────────────────────────────────────────
+    // DRY FIX: shared name/description/price/image/sort_order rules now
+    // live in HasCatalogItemValidationRules (also used by Vendor\MenuItemComponent)
+    // instead of being hand-copied in both places.
     protected function rules(): array
     {
-        return [
+        return array_merge($this->catalogItemRules(), [
             'category_id'   => 'nullable|integer|exists:categories,id',
-            'name'          => 'required|string|max:120',
-            'description'   => 'nullable|string|max:500',
-            'price'         => 'required|integer|min:1|max:100000',
             'compare_price' => 'nullable|integer|min:1|max:100000|gt:price',
-            'image'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'section'       => ['required', Rule::in(Product::SECTIONS)],
-            'sort_order'    => 'required|integer|min:0',
             'is_active'     => 'boolean',
-        ];
+        ]);
     }
 
     protected function messages(): array
     {
-        return [
-            'category_id.exists'     => 'Please select a valid category.',
-            'name.required'          => 'Please enter a product name.',
-            'name.max'               => 'Name must not exceed 120 characters.',
-            'price.required'         => 'Please enter a price.',
-            'price.min'              => 'Price must be at least ৳1.',
-            'compare_price.gt'       => 'Compare price must be greater than the selling price.',
-            'image.max'              => 'Image must not exceed 2 MB.',
-            'section.required'       => 'Please select a homepage section.',
-            'section.in'             => 'Please select a valid homepage section.',
-        ];
+        return array_merge($this->catalogItemMessages(), [
+            'category_id.exists' => 'Please select a valid category.',
+            'name.required'      => 'Please enter a product name.',
+            'compare_price.gt'   => 'Compare price must be greater than the selling price.',
+            'section.required'   => 'Please select a homepage section.',
+            'section.in'         => 'Please select a valid homepage section.',
+        ]);
     }
 
     // ── Watchers ─────────────────────────────────────────

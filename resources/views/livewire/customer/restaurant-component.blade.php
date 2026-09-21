@@ -38,7 +38,7 @@
     {{-- Restaurant grid --}}
     <div class="row g-3" wire:loading.remove>
         @forelse($filteredRestaurants as $restaurant)
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-4 col-sm-6" wire:key="restaurant-{{ $restaurant->id }}">
             <x-restaurant-card :restaurant="$restaurant" />
         </div>
         @empty

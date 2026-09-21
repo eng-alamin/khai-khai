@@ -7,6 +7,7 @@ use App\Models\Restaurant;
 use App\Models\User;
 use App\Models\MenuCategory;
 use App\Mail\NewVendorRegisteredMail;
+use App\Livewire\Concerns\HasAccountRegistrationValidation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -17,6 +18,7 @@ use Livewire\WithFileUploads;
 class VendorRegistrationWizard extends Component
 {
     use WithFileUploads;
+    use HasAccountRegistrationValidation;
 
     // ── Wizard state ────────────────────────────────────────────────
     public int $currentStep = 1;
@@ -67,13 +69,10 @@ class VendorRegistrationWizard extends Component
     protected function rulesForStep(int $step): array
     {
         return match ($step) {
-            1 => [
-                'name'                  => 'required|string|min:3|max:100',
-                'email'                 => 'required|email|max:150|unique:users,email',
-                'phone'                 => 'nullable|string|regex:/^01[3-9]\d{8}$/|unique:users,phone',
-                'password'              => 'required|string|min:8|confirmed',
-                'password_confirmation' => 'required',
-            ],
+            // FIX (Medium Bug #6): step-1 account rules now come from the
+            // shared HasAccountRegistrationValidation trait instead of
+            // being duplicated across Customer/Vendor/Rider registration.
+            1 => $this->accountRegistrationRules(),
             2 => [
                 'restaurant_name'   => 'required|string|min:3|max:120',
                 'category'          => 'required|string',
@@ -93,15 +92,7 @@ class VendorRegistrationWizard extends Component
     protected function messagesForStep(int $step): array
     {
         return match ($step) {
-            1 => [
-                'email.required'  => 'Email address is required.',
-                'email.email'     => 'Please enter a valid email address.',
-                'email.unique'    => 'This email is already registered.',
-                'phone.regex'     => 'Please enter a valid Bangladeshi mobile number (01XXXXXXXXX).',
-                'phone.unique'    => 'This mobile number is already registered.',
-                'password.min'    => 'Password must be at least 8 characters.',
-                'password.confirmed' => 'Passwords do not match.',
-            ],
+            1 => $this->accountRegistrationMessages(),
             2 => [
                 'restaurant_phone.regex' => 'Please enter a valid Bangladeshi mobile number.',
                 'address.min'            => 'Please enter a complete address (at least 10 characters).',

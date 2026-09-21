@@ -121,17 +121,21 @@ class CouponComponent extends Component
     public function openEdit(int $id): void
     {
         $coupon = Coupon::findOrFail($id);
+        $this->authorize('update', $coupon);
 
         $this->editId           = $id;
         $this->code             = $coupon->code;
         $this->description      = $coupon->description;
         $this->type             = $coupon->type;
         $this->value            = (string) $coupon->value;
-        // Stored in paisa; show as taka in the form (see save() for the reverse).
-        $this->min_order_amount = $coupon->min_order_amount
-            ? (string) ($coupon->min_order_amount / 100) : '';
-        $this->max_discount     = $coupon->max_discount
-            ? (string) ($coupon->max_discount / 100) : '';
+        // BUG FIX: coupons.min_order_amount and coupons.max_discount are
+        // decimal(12,2) BDT columns in the migration — they were never
+        // paisa. The old code divided by 100 here (and multiplied by 100
+        // in save() below), silently corrupting these values by 100x on
+        // every edit. Both fields are now used as plain BDT, matching the
+        // actual schema.
+        $this->min_order_amount = $coupon->min_order_amount ? (string) $coupon->min_order_amount : '';
+        $this->max_discount     = $coupon->max_discount ? (string) $coupon->max_discount : '';
         $this->usage_limit      = (string) ($coupon->usage_limit ?? '');
         $this->per_user_limit   = (string) ($coupon->per_user_limit ?? '');
         $this->valid_from       = $coupon->valid_from?->format('Y-m-d\TH:i') ?? '';
@@ -152,17 +156,24 @@ class CouponComponent extends Component
             'description'      => $this->description,
             'type'             => $this->type,
             'value'            => $this->value,
-            // টাকা → paisa (×100)
-            'min_order_amount' => $this->min_order_amount
-                ? (int) round((float) $this->min_order_amount * 100) : null,
+            // BUG FIX: min_order_amount/max_discount are decimal(12,2) BDT
+            // columns — stored as plain Taka, not paisa. No *100 conversion.
+            'min_order_amount' => $this->min_order_amount !== ''
+                ? round((float) $this->min_order_amount, 2) : null,
             'max_discount'     => ($this->type === 'percentage' && $this->max_discount !== '')
-                ? (int) round((float) $this->max_discount * 100) : null,
+                ? round((float) $this->max_discount, 2) : null,
             'usage_limit'      => $this->usage_limit ?: null,
             'per_user_limit'   => $this->per_user_limit ?: null,
             'valid_from'       => $this->valid_from ?: null,
             'valid_until'      => $this->valid_until ?: null,
             'is_active'        => $this->is_active,
         ];
+
+        if ($this->editId) {
+            $this->authorize('update', Coupon::findOrFail($this->editId));
+        } else {
+            $this->authorize('create', Coupon::class);
+        }
 
         DB::transaction(function () use ($data) {
             if ($this->editId) {
@@ -200,6 +211,7 @@ class CouponComponent extends Component
     public function toggleActive(int $id): void
     {
         $coupon = Coupon::findOrFail($id);
+        $this->authorize('toggle', $coupon);
         $coupon->update(['is_active' => ! $coupon->is_active]);
 
         activity()
@@ -225,6 +237,7 @@ class CouponComponent extends Component
     public function deleteRecord(): void
     {
         $coupon = Coupon::findOrFail($this->deleteId);
+        $this->authorize('delete', $coupon);
         $couponCode = $coupon->code;
         $couponId   = $coupon->id;
 

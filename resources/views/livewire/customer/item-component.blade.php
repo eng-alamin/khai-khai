@@ -37,7 +37,7 @@
     {{-- Food grid --}}
     <div class="row g-3" wire:loading.remove>
         @forelse($filteredItems as $item)
-        <div class="col-md-3 col-6">
+        <div class="col-md-3 col-6" wire:key="item-{{ $item->id }}">
             <x-food-card :item="$item" />
         </div>
         @empty

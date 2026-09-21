@@ -10,10 +10,11 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Storage;
+use App\Livewire\Concerns\HasCatalogItemValidationRules;
 
 class MenuItemComponent extends Component
 {
-    use WithPagination, WithFileUploads;
+    use WithPagination, WithFileUploads, HasCatalogItemValidationRules;
 
     protected string $paginationTheme = 'bootstrap';
 
@@ -66,31 +67,25 @@ class MenuItemComponent extends Component
     }
 
     // ── Validation ────────────────────────────────────────
+    // DRY FIX: shared name/description/price/image/sort_order rules now
+    // live in HasCatalogItemValidationRules (also used by Admin\ProductComponent)
+    // instead of being hand-copied in both places.
     protected function rules(): array
     {
-        return [
+        return array_merge($this->catalogItemRules(), [
             'category_id'  => 'required|integer|min:1',
-            'name'         => 'required|string|max:120',
-            'description'  => 'nullable|string|max:500',
-            'price'        => 'required|integer|min:1|max:100000',
             'emoji'        => 'nullable|string|max:10',
-            'image'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'sort_order'   => 'required|integer|min:0',
             'is_available' => 'boolean',
-        ];
+        ]);
     }
 
     protected function messages(): array
     {
-        return [
+        return array_merge($this->catalogItemMessages(), [
             'category_id.required' => 'Please select a category.',
             'category_id.min'      => 'Please select a category.',
             'name.required'        => 'Please enter an item name.',
-            'name.max'             => 'Name must not exceed 120 characters.',
-            'price.required'       => 'Please enter a price.',
-            'price.min'            => 'Price must be at least ৳1.',
-            'image.max'            => 'Image must not exceed 2 MB.',
-        ];
+        ]);
     }
 
     // ── Watchers ─────────────────────────────────────────
@@ -122,6 +117,10 @@ class MenuItemComponent extends Component
     {
         $record = MenuItem::where('restaurant_id', $this->restaurantId())
             ->findOrFail($id);
+
+        // FIX (Medium Bug #7): framework-enforced authorization backstop,
+        // in addition to the where('restaurant_id', ...) scoping above.
+        $this->authorize('view', $record);
 
         $this->editId        = $id;
         $this->category_id   = $record->category_id ?? 0;
@@ -167,6 +166,10 @@ class MenuItemComponent extends Component
             if ($this->editId) {
                 $item = MenuItem::where('restaurant_id', $this->restaurantId())
                     ->findOrFail($this->editId);
+
+                // FIX (Medium Bug #7): framework-enforced authorization backstop.
+                $this->authorize('update', $item);
+
                 $item->update($data);
 
                 activity()
@@ -177,6 +180,9 @@ class MenuItemComponent extends Component
 
                 session()->flash('success', 'Menu item updated successfully!');
             } else {
+                // FIX (Medium Bug #7): framework-enforced authorization backstop.
+                $this->authorize('create', [MenuItem::class, $data['restaurant_id']]);
+
                 $item = MenuItem::create($data);
 
                 activity()
@@ -197,6 +203,10 @@ class MenuItemComponent extends Component
     public function toggleAvailability(int $id): void
     {
         $item = MenuItem::where('restaurant_id', $this->restaurantId())->findOrFail($id);
+
+        // FIX (Medium Bug #7): framework-enforced authorization backstop.
+        $this->authorize('update', $item);
+
         $item->update(['is_available' => ! $item->is_available]);
 
         activity()
@@ -219,6 +229,9 @@ class MenuItemComponent extends Component
     {
         $record = MenuItem::where('restaurant_id', $this->restaurantId())
             ->findOrFail($this->deleteId);
+
+        // FIX (Medium Bug #7): framework-enforced authorization backstop.
+        $this->authorize('delete', $record);
 
         DB::transaction(function () use ($record) {
             if ($record->image_url && str_starts_with($record->image_url, '/storage/')) {

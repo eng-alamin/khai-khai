@@ -36,14 +36,12 @@ class ForgotPassword extends Component
 
         $this->validate();
 
-        $status = Password::sendResetLink(['email' => $this->email]);
+        // Always attempt — but never reveal whether the account exists.
+        Password::sendResetLink(['email' => $this->email]);
 
-        if ($status === Password::RESET_LINK_SENT) {
-            $this->statusMsg = 'A password reset link has been sent to your email address.';
-            $this->reset('email');
-        } else {
-            $this->errorMsg = 'We could not find an account with that email address.';
-        }
+        // Same message regardless of outcome (prevents email enumeration).
+        $this->statusMsg = 'If an account exists with that email address, a password reset link has been sent.';
+        $this->reset('email');
     }
 
     public function render()

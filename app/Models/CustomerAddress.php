@@ -6,7 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class CustomerAddress extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'customer_id',
+        'label',
+        'full_address',
+        'city',
+        'area',
+        'postal_code',
+        'latitude',
+        'longitude',
+        'is_default',
+    ];
 
     protected $casts = [
         'is_default' => 'boolean',

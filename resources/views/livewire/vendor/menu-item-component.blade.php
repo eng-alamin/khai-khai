@@ -72,7 +72,7 @@
                 $statusLabel = $item->is_available ? 'Available' : 'Unavailable';
             @endphp
 
-            <div class="item-card">
+            <div class="item-card" wire:key="menu-item-{{ $item->id }}">
                 {{-- Top Row --}}
                 <div class="item-card-top">
                     <div class="item-card-thumb">

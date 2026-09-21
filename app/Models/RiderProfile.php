@@ -7,7 +7,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RiderProfile extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'vehicle_type',
+        'vehicle_plate',
+        'license_number',
+        'nid_number',
+        'zone',
+        'is_online',
+        'is_approved',
+        'total_deliveries',
+    ];
 
     protected $casts = [
         'is_online' => 'boolean',

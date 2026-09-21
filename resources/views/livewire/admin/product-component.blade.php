@@ -72,7 +72,7 @@
                 $statusLabel = $product->is_active ? 'Active' : 'Inactive';
             @endphp
 
-            <div class="aprod-card">
+            <div class="aprod-card" wire:key="product-{{ $product->id }}">
                 {{-- Top Row --}}
                 <div class="aprod-card-top">
                     <div class="aprod-card-thumb">

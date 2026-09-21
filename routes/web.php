@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 
 
 // Guest
-Route::middleware('guest')->group(function () {
+// Route::middleware('guest')->group(function () {
     Route::get('vendor/register', App\Livewire\VendorRegistrationWizard::class)->name('vendor.register');
     Route::get('/vendor/registration/success/{restaurant}', App\Livewire\VendorRegistrationSuccess::class)->name('vendor.registration.success');
     Route::get('/rider/register', App\Livewire\RiderRegistrationWizard::class)->name('rider.register');
@@ -14,14 +14,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', App\Livewire\Login::class)->name('login');
     Route::get('/forgot-password', App\Livewire\ForgotPassword::class)->name('password.request');
     Route::get('/reset-password/{token}', App\Livewire\ResetPassword::class)->name('password.reset');
-
-    
-    Route::get('logout', function () {
-        Auth::logout();
-        return redirect()->route('login');
-    })->name('logout');
-    Route::get('password/request', App\Livewire\Login::class)->name('password.request');
-});
+// });
 
 // Authentication required routes
 Route::middleware('auth')->group(function () {
@@ -78,10 +71,12 @@ Route::middleware(['auth', 'role:rider'])->group(function () {
 // Admin
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard', App\Livewire\Admin\DashboardComponent::class)->name('admin.dashboard');
+    Route::get('/admin/notifications', App\Livewire\Admin\NotificationComponent::class)->name('admin.notifications');
     Route::get('/admin/orders', App\Livewire\Admin\OrderComponent::class)->name('admin.orders');
 
     Route::get('/admin/products', App\Livewire\Admin\ProductComponent::class)->name('admin.products');
     Route::get('/admin/categories', App\Livewire\Admin\CategoryComponent::class)->name('admin.categories');
+    Route::get('admin/sliders', App\Livewire\Admin\SliderComponent::class)->name('admin.sliders');
 
     Route::get('/admin/vendors', App\Livewire\Admin\VendorComponent::class)->name('admin.vendors');
     Route::get('/admin/riders', App\Livewire\Admin\RiderComponent::class)->name('admin.riders');

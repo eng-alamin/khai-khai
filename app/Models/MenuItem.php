@@ -6,7 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class MenuItem extends Model
 {
-    protected $guarded = [];
+    // is_featured is admin/promo-controlled and excluded from mass assignment.
+    protected $fillable = [
+        'restaurant_id',
+        'category_id',
+        'name',
+        'description',
+        'price',
+        'compare_price',
+        'emoji',
+        'image_url',
+        'is_available',
+        'sort_order',
+    ];
 
     /**
      * MenuItem → MenuCategory (Many to 1)

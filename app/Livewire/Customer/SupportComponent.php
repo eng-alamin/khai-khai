@@ -51,10 +51,16 @@ class SupportComponent extends Component
         $user = Auth::user();
 
         // Optional order reference — only linked if it genuinely belongs to this customer.
+        // BUG FIX: previously used LIKE '%term%' (wildcard on both sides), which
+        // could match the wrong order whenever one order number was a substring
+        // of another (e.g. searching "2602" could match "KK260212" instead of
+        // "KK2602"). Order numbers are exact, system-generated identifiers, so
+        // this is now an exact match (case-insensitive, '#' prefix stripped).
         $order = null;
-        if (trim($this->orderNumber) !== '') {
+        $cleanNumber = ltrim(trim($this->orderNumber), '#');
+        if ($cleanNumber !== '') {
             $order = Order::where('customer_id', $user->id)
-                ->where('order_number', 'like', '%' . ltrim(trim($this->orderNumber), '#') . '%')
+                ->whereRaw('UPPER(order_number) = ?', [strtoupper($cleanNumber)])
                 ->first();
         }
 

@@ -58,6 +58,61 @@ class CartComponent extends Component
         $this->doAddItem($menuItem);
     }
 
+    /**
+     * FEATURE: implements the previously-stubbed "Reorder" button on the
+     * customer order list. OrderListComponent::reorder() dispatches this
+     * with [{id, qty}, ...] from the old order — we deliberately only take
+     * the menu_item_id + quantity from that payload and re-fetch each item
+     * fresh here, so price/availability/restaurant status is always
+     * current, never trusted from the old order snapshot.
+     */
+    #[On('reorder-items')]
+    public function mergeReorderedItems(array $items): void
+    {
+        $ids = array_column($items, 'id');
+
+        $menuItems = MenuItem::whereIn('id', $ids)
+            ->where('is_available', true)
+            ->whereHas('restaurant', fn ($q) => $q->where('is_active', true)->where('is_approved', true))
+            ->get()
+            ->keyBy('id');
+
+        if ($menuItems->isEmpty()) {
+            $this->dispatch('show-toast', message: 'These items are no longer available.', type: 'error');
+            return;
+        }
+
+        $restaurantId = $menuItems->first()->restaurant_id;
+
+        // Same single-restaurant-per-cart rule as addItem(): if the cart
+        // already holds items from a different restaurant, replace it
+        // rather than silently mixing two restaurants' items together.
+        if (! empty($this->items) && collect($this->items)->first()['restaurant_id'] !== $restaurantId) {
+            $this->items = [];
+        }
+
+        $skipped = 0;
+
+        foreach ($items as $row) {
+            $menuItem = $menuItems->get($row['id']);
+
+            if (! $menuItem || $menuItem->restaurant_id !== $restaurantId) {
+                $skipped++;
+                continue;
+            }
+
+            $this->doAddItem($menuItem, max(1, (int) $row['qty']));
+        }
+
+        $this->open = true;
+
+        if ($skipped > 0) {
+            $this->dispatch('show-toast', message: "Some items were unavailable and skipped ({$skipped}).", type: 'info');
+        } else {
+            $this->dispatch('show-toast', message: '🛒 Items added to cart!', type: 'success');
+        }
+    }
+
     public function confirmClearAndAdd(): void
     {
         $this->items        = [];
@@ -79,12 +134,17 @@ class CartComponent extends Component
         $this->pendingItem  = [];
     }
 
-    private function doAddItem(MenuItem $menuItem): void
+    private function doAddItem(MenuItem $menuItem, int $qty = 1): void
     {
+        if (isset($this->items[$menuItem->id])) {
+            $this->items[$menuItem->id]['qty'] += $qty;
+            return;
+        }
+
         $this->items[$menuItem->id] = [
             'name'          => $menuItem->name,
             'price'         => $menuItem->price,
-            'qty'           => 1,
+            'qty'           => $qty,
             'image_url'     => $menuItem->image_url,
             'emoji'         => $menuItem->emoji ?? null,
             'restaurant_id' => $menuItem->restaurant_id,

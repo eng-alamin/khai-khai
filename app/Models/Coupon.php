@@ -8,17 +8,36 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Coupon extends Model
 {
-    protected $guarded = [];
+    // used_count is incremented by redemption logic, not user input.
+    protected $fillable = [
+        'code',
+        'description',
+        'type',
+        'value',
+        'min_order_amount',
+        'max_discount',
+        'usage_limit',
+        'per_user_limit',
+        'valid_from',
+        'valid_until',
+        'is_active',
+        'created_by',
+    ];
 
+    // FIX: value/min_order_amount/max_discount are decimal(10,2) and
+    // decimal(12,2) taka in the DB (see coupons migration), not integer
+    // paisa. The previous 'integer' casts truncated the cents on every
+    // read/write.
     protected $casts = [
-        'valid_from'    => 'datetime',
-        'valid_until'   => 'datetime',
-        'is_active'     => 'boolean',
-        'usage_limit'   => 'integer',
-        'used_count'    => 'integer',
-        'per_user_limit'=> 'integer',
-        'min_order_amount' => 'integer',   // paisa
-        'max_discount'     => 'integer',   // paisa
+        'valid_from'        => 'datetime',
+        'valid_until'       => 'datetime',
+        'is_active'         => 'boolean',
+        'usage_limit'       => 'integer',
+        'used_count'        => 'integer',
+        'per_user_limit'    => 'integer',
+        'value'             => 'decimal:2',
+        'min_order_amount'  => 'decimal:2',
+        'max_discount'      => 'decimal:2',
     ];
 
     // ── Relations ─────────────────────────────────────────
@@ -35,25 +54,21 @@ class Coupon extends Model
 
     // ── Computed Attributes ───────────────────────────────
 
-    /** Coupon valid_until পার হয়ে গেছে কিনা */
     public function getIsExpiredAttribute(): bool
     {
         return $this->valid_until && $this->valid_until->isPast();
     }
 
-    /** Coupon এখনো শুরু হয়নি */
     public function getIsUpcomingAttribute(): bool
     {
         return $this->valid_from && $this->valid_from->isFuture();
     }
 
-    /** Usage limit শেষ হয়ে গেছে কিনা */
     public function getIsExhaustedAttribute(): bool
     {
         return $this->usage_limit !== null && $this->used_count >= $this->usage_limit;
     }
 
-    /** বর্তমানে ব্যবহারযোগ্য কিনা */
     public function getIsUsableAttribute(): bool
     {
         return $this->is_active
@@ -62,19 +77,19 @@ class Coupon extends Model
             && ! $this->is_exhausted;
     }
 
-    /** min_order_amount টাকায় (paisa → taka) */
+    // FIX: no /100 division — min_order_amount is already stored in taka.
     public function getMinOrderTakaAttribute(): ?string
     {
-        return $this->min_order_amount
-            ? number_format($this->min_order_amount / 100, 0)
+        return $this->min_order_amount !== null
+            ? number_format((float) $this->min_order_amount, 0)
             : null;
     }
 
-    /** max_discount টাকায় */
+    // FIX: no /100 division — max_discount is already stored in taka.
     public function getMaxDiscountTakaAttribute(): ?string
     {
-        return $this->max_discount
-            ? number_format($this->max_discount / 100, 0)
+        return $this->max_discount !== null
+            ? number_format((float) $this->max_discount, 0)
             : null;
     }
 

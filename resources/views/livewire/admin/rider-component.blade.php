@@ -116,7 +116,7 @@
                 $today = $todayCounts[$rider->id] ?? 0;
             @endphp
 
-            <div class="rider-card">
+            <div class="rider-card" wire:key="rider-{{ $rider->id }}">
                 {{-- Top Row --}}
                 <div class="rider-card-top">
                     <div class="rider-card-thumb">

@@ -9,14 +9,19 @@ class VendorRegistrationSuccess extends Component
 {
     public ?Restaurant $restaurant = null;
 
-    /**
-     * Laravel resolves {restaurant} via route-model-binding and injects
-     * the Restaurant model directly. We re-load it here with the
-     * 'owner' relation eager-loaded to avoid an extra query in the view.
-     */
     public function mount(Restaurant $restaurant): void
     {
+        $expectedId = session('just_registered_restaurant_id');
+
+        abort_unless(
+            $expectedId !== null && (int) $expectedId === (int) $restaurant->id,
+            403
+        );
+
         $this->restaurant = $restaurant->loadMissing('owner');
+
+        // one-time view: prevent re-access via back button / bookmark / link sharing
+        session()->forget('just_registered_restaurant_id');
     }
 
     public function render()

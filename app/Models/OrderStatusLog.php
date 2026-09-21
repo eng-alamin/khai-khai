@@ -7,7 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderStatusLog extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'order_id',
+        'from_status',
+        'to_status',
+        'changed_by',
+        'note',
+        'reason',
+        'changed_type',
+    ];
 
     public function order(): BelongsTo
     {

@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Order;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderComponent extends Component
 {
@@ -25,9 +26,47 @@ class OrderComponent extends Component
     public function updatingStatusFilter(): void { $this->resetPage(); }
 
     // ── Export ───────────────────────────────────────────────
-    public function export(): void
+    public function export(): StreamedResponse
     {
-        session()->flash('success', 'Export started.');
+        $orders = $this->filteredOrdersQuery()
+            ->with(['customer', 'restaurant', 'rider'])
+            ->get();
+
+        $filename = 'orders-' . now()->format('Y-m-d_His') . '.csv';
+
+        return response()->streamDownload(function () use ($orders) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Order ID',
+                'Order Number',
+                'Customer',
+                'Restaurant',
+                'Rider',
+                'Status',
+                'Payment Status',
+                'Total Amount (BDT)',
+                'Placed At',
+            ]);
+
+            foreach ($orders as $order) {
+                fputcsv($handle, [
+                    $order->id,
+                    $order->order_number,
+                    $order->customer?->name,
+                    $order->restaurant?->name,
+                    $order->rider?->name,
+                    $order->status,
+                    $order->payment_status,
+                    $order->total_amount,
+                    $order->created_at?->format('Y-m-d H:i:s'),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     // ── View Order ───────────────────────────────────────────
@@ -41,22 +80,28 @@ class OrderComponent extends Component
         $this->selectedOrder = null;
     }
 
+    // ── Shared filtered query (used by both render() and export()) ──
+    protected function filteredOrdersQuery()
+    {
+        return Order::query()
+            ->when($this->search, fn ($q) =>
+                $q->where(fn ($q2) =>
+                    $q2->where('id', 'like', "%{$this->search}%")
+                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$this->search}%"))
+                        ->orWhereHas('restaurant', fn ($r) => $r->where('name', 'like', "%{$this->search}%"))
+                )
+            )
+            ->when($this->statusFilter, fn ($q) =>
+                $q->where('status', $this->statusFilter)
+            )
+            ->latest();
+    }
+
     // ── Render ────────────────────────────────────────────────
     public function render()
     {
-        $orders = Order::query()
+        $orders = $this->filteredOrdersQuery()
             ->with(['customer', 'restaurant', 'rider'])
-            ->when($this->search, fn($q) =>
-                $q->where(fn($q2) =>
-                    $q2->where('id', 'like', "%{$this->search}%")
-                        ->orWhereHas('customer', fn($c) => $c->where('name', 'like', "%{$this->search}%"))
-                        ->orWhereHas('restaurant', fn($r) => $r->where('name', 'like', "%{$this->search}%"))
-                )
-            )
-            ->when($this->statusFilter, fn($q) =>
-                $q->where('status', $this->statusFilter)
-            )
-            ->latest()
             ->paginate($this->perPage);
 
         return view('livewire.admin.order-component', [

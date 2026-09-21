@@ -67,11 +67,25 @@ class OrderListComponent extends Component
     /* ── Reorder ── */
     public function reorder(int $orderId): void
     {
-        $order = Order::where('customer_id', Auth::id())->findOrFail($orderId);
+        $order = Order::where('customer_id', Auth::id())
+            ->with('items')
+            ->findOrFail($orderId);
 
-        // TODO: app(CartService::class)->fillFromOrder($order);
-        $this->dispatch('show-toast', message: '🛒 Items added to cart!', type: 'success');
-        $this->dispatch('toggle-cart');
+        // Reorder by menu_item_id + quantity only — CartComponent re-verifies
+        // live price/availability itself (same as it does at checkout), so we
+        // never trust the old order's snapshot price here.
+        $requested = $order->items
+            ->whereNotNull('menu_item_id')
+            ->map(fn ($item) => ['id' => $item->menu_item_id, 'qty' => $item->quantity])
+            ->values()
+            ->all();
+
+        if (empty($requested)) {
+            $this->dispatch('show-toast', message: 'This order has no items to reorder.', type: 'error');
+            return;
+        }
+
+        $this->dispatch('reorder-items', items: $requested);
     }
 
     /* ── Cancel order ── */
