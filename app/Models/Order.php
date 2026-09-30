@@ -17,6 +17,7 @@ class Order extends Model
     // server-calculated and must never be mass-assigned from request input.
     protected $fillable = [
         'order_number',
+        'order_type',
         'restaurant_id',
         'customer_id',
         'rider_id',
@@ -34,6 +35,10 @@ class Order extends Model
         'order_source',
     ];
 
+    /** order_type column er value */
+    public const TYPE_VENDOR = 'vendor';
+    public const TYPE_ADMIN  = 'admin';
+
     // ─────────────────────────────────────────
     // CASTS
     // ─────────────────────────────────────────
@@ -42,6 +47,7 @@ class Order extends Model
         'delivery_address_snapshot' => 'array',
 
         // Enum columns
+        'order_type'     => 'string',
         'status'         => 'string',
         'payment_method' => 'string',
         'payment_status' => 'string',
@@ -175,6 +181,28 @@ class Order extends Model
     public function isDelivered(): bool
     {
         return $this->status === 'delivered';
+    }
+
+    /** Ei order ta vendor (restaurant/food) er kina */
+    public function isVendorOrder(): bool
+    {
+        return $this->order_type === self::TYPE_VENDOR;
+    }
+
+    /** Ei order ta admin (product) er kina — restaurant_id null thakbe */
+    public function isAdminOrder(): bool
+    {
+        return $this->order_type === self::TYPE_ADMIN;
+    }
+
+    public function scopeVendorOrders($query)
+    {
+        return $query->where('order_type', self::TYPE_VENDOR);
+    }
+
+    public function scopeAdminOrders($query)
+    {
+        return $query->where('order_type', self::TYPE_ADMIN);
     }
 
     public function getSubtotalInTakaAttribute(): string

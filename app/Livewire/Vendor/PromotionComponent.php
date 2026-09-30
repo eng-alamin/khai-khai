@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Vendor;
 
-use App\Models\MenuCategory;
-use App\Models\MenuItem;
+use App\Models\Category;
+use App\Models\Food;
 use App\Models\Promotion;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -58,15 +58,16 @@ class PromotionComponent extends Component
     // ── Dropdowns ────────────────────────────────────────
     public function getCategories()
     {
-        return MenuCategory::where('restaurant_id', $this->restaurantId())
+        // Category ekhon global — shudhu type='food' + active diye filter hoy.
+        return Category::where('type', Category::TYPE_FOOD)
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get(['id', 'name', 'emoji']);
     }
 
-    public function getMenuItems()
+    public function getFoodItems()
     {
-        return MenuItem::where('restaurant_id', $this->restaurantId())
+        return Food::where('restaurant_id', $this->restaurantId())
             ->where('is_available', true)
             ->orderBy('name')
             ->get(['id', 'name', 'emoji', 'price']);
@@ -80,11 +81,13 @@ class PromotionComponent extends Component
             'description'    => 'nullable|string|max:500',
             'type'           => 'required|in:item_discount,buy_x_get_y,flash_deal',
             'discount_value' => 'required|numeric|min:0.01|max:99999',
-            'applies_to'     => 'required|in:all_items,category,specific_item',
+            // Vendor shudhu nijer food item target korte parbe, product na
+            // (product admin er, tai 'specific_product' vendor UI theke bad).
+            'applies_to'     => 'required|in:all_items,category,specific_food',
             'target_id'      => [
                 'nullable',
                 'required_if:applies_to,category',
-                'required_if:applies_to,specific_item',
+                'required_if:applies_to,specific_food',
                 'integer',
                 'min:1',
             ],
@@ -287,7 +290,7 @@ class PromotionComponent extends Component
         return match ($applies_to) {
             'all_items'     => 'সব আইটেম',
             'category'      => 'ক্যাটাগরি',
-            'specific_item' => 'নির্দিষ্ট আইটেম',
+            'specific_food' => 'নির্দিষ্ট আইটেম',
             default         => $applies_to,
         };
     }
@@ -301,7 +304,7 @@ class PromotionComponent extends Component
             ->where('restaurant_id', $this->restaurantId())
             ->with([
                 'category:id,name,emoji',
-                'menuItem:id,name,emoji,price',
+                'food:id,name,emoji,price',
             ])
             ->when($this->search, fn ($q) =>
                 $q->where('title', 'like', "%{$this->search}%")
@@ -329,7 +332,7 @@ class PromotionComponent extends Component
         return view('livewire.vendor.promotion-component', [
             'promotions' => $promotions,
             'categories' => $this->getCategories(),
-            'menuItems'  => $this->getMenuItems(),
+            'foodItems'  => $this->getFoodItems(),
         ])->layout('layouts.vendor', [
             'title'           => 'Promotions | KhaiKhai',
             'breadcrumbTitle' => 'Promotions',

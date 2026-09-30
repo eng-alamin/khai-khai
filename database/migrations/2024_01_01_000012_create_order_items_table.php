@@ -11,7 +11,12 @@ return new class extends Migration
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
-            $table->foreignId('menu_item_id')->nullable()->constrained('menu_items')->nullOnDelete();
+
+            // Polymorphic: vendor er order hole 'App\Models\Food', admin er
+            // order hole 'App\Models\Product'. No FK constraint (cross-table),
+            // item delete hoye gele o snapshot column gulo diye order history thake.
+            $table->nullableMorphs('orderable');
+
             $table->string('item_image')->nullable();
             $table->string('item_name', 120)->comment('Snapshot: name at order time');
             $table->decimal('item_price', 15, 2)->comment('Snapshot: unit price at order time');

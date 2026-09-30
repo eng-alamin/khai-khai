@@ -1,4 +1,5 @@
 {{-- resources/views/livewire/rider/location-tracker.blade.php --}}
+{{-- Styles: resources/css/blade.css (shared classes, Bootstrap 5 required) --}}
 <div wire:ignore
      x-data="{
          watchId: null,

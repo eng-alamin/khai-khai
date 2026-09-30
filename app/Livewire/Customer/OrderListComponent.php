@@ -71,12 +71,14 @@ class OrderListComponent extends Component
             ->with('items')
             ->findOrFail($orderId);
 
-        // Reorder by menu_item_id + quantity only — CartComponent re-verifies
-        // live price/availability itself (same as it does at checkout), so we
-        // never trust the old order's snapshot price here.
+        // Reorder by orderable_id + quantity only (Food items — vendor orders
+        // only) — CartComponent re-verifies live price/availability itself
+        // (same as it does at checkout), so we never trust the old order's
+        // snapshot price here.
         $requested = $order->items
-            ->whereNotNull('menu_item_id')
-            ->map(fn ($item) => ['id' => $item->menu_item_id, 'qty' => $item->quantity])
+            ->where('orderable_type', \App\Models\Food::class)
+            ->whereNotNull('orderable_id')
+            ->map(fn ($item) => ['id' => $item->orderable_id, 'qty' => $item->quantity])
             ->values()
             ->all();
 

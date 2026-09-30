@@ -1,3 +1,5 @@
+{{-- resources/views/livewire/rider/delivery-ongoing-component.blade.php --}}
+{{-- Styles: resources/css/blade.css (shared classes, Bootstrap 5 required) --}}
 <div>
 
     {{-- ══════════════════════════════════════════════
@@ -8,7 +10,7 @@
 
             {{-- Today's earnings --}}
             <div>
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);margin-bottom:4px;">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">
                     Today's Earnings
                 </div>
                 <div class="d-flex align-items-center gap-2">
@@ -29,7 +31,7 @@
                 style="background:none;border:none;cursor:pointer;padding:8px 14px;border-radius:999px;border:1.5px solid {{ $isOnline ? '#16a34a' : '#d1d5db' }};transition:all .2s;"
             >
                 <span style="width:9px;height:9px;border-radius:50%;background:{{ $isOnline ? 'var(--success)' : '#9ca3af' }};display:inline-block;"></span>
-                <span style="font-size:13px;color:{{ $isOnline ? 'var(--success)' : 'var(--text-3)' }};font-weight:700;">
+                <span style="font-size:13px;color:{{ $isOnline ? 'var(--success)' : 'var(--muted)' }};font-weight:700;">
                     {{ $isOnline ? 'Online' : 'Offline' }}
                 </span>
             </button>
@@ -39,7 +41,7 @@
     {{-- ══════════════════════════════════════════════
          ONGOING — My active deliveries
          ══════════════════════════════════════════════ --}}
-    <div class="mb-2" style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);">
+    <div class="mb-2" style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);">
         🛵 Ongoing Deliveries
     </div>
 
@@ -82,15 +84,15 @@
                 {{-- Address --}}
                 <div class="info-row mb-3">
                     <span class="info-icon">📍</span>
-                    <span style="color:var(--text-2);">{{ $order['address'] }}</span>
+                    <span style="color:var(--muted);">{{ $order['address'] }}</span>
                 </div>
 
                 {{-- Items --}}
                 <div class="items-box mb-3">
-                    <span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;">
+                    <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">
                         Items
                     </span>
-                    <div style="font-size:13px;color:var(--text-2);margin-top:4px;">{{ $order['items'] }}</div>
+                    <div style="font-size:13px;color:var(--muted);margin-top:4px;">{{ $order['items'] }}</div>
                 </div>
 
                 {{-- Route Map (collapsible) --}}
@@ -119,7 +121,7 @@
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div style="font-size:20px;font-weight:900;">{{ $order['total'] }}</div>
-                        <div style="font-size:11px;color:var(--text-3);">
+                        <div style="font-size:11px;color:var(--muted);">
                             Your earning: <strong style="color:var(--success);">{{ $order['delivery_fee'] }}</strong>
                         </div>
                     </div>
@@ -156,9 +158,9 @@
 
             </div>
         @empty
-            <div class="card text-center py-4" style="color:var(--text-3);">
+            <div class="card text-center py-4" style="color:var(--muted);">
                 <div style="font-size:48px;" class="mb-2">🛵</div>
-                <div style="font-weight:700;color:var(--text-2);">No ongoing deliveries right now</div>
+                <div style="font-weight:700;color:var(--muted);">No ongoing deliveries right now</div>
             </div>
         @endforelse
     </div>
@@ -167,11 +169,11 @@
          AVAILABLE — Orders waiting for pickup
          ══════════════════════════════════════════════ --}}
     <div class="d-flex align-items-center gap-2 mb-2">
-        <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text-3);">
+        <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);">
             📦 New Orders
         </span>
         @if(!$isOnline)
-            <span class="badge-kk" style="background:#f3f4f6;color:var(--text-3);font-size:11px;">
+            <span class="badge-kk" style="background:#f3f4f6;color:var(--muted);font-size:11px;">
                 Visible when you're online
             </span>
         @endif
@@ -187,7 +189,7 @@
                         #{{ $order['order_number'] }}
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <span style="font-size:12px;color:var(--text-3);">
+                        <span style="font-size:12px;color:var(--muted);">
                             ⏱ {{ $order['time_label'] }}
                         </span>
                         <span class="badge-kk" style="background:#fef3c7;color:#92400e;">
@@ -205,22 +207,22 @@
                 {{-- Delivery address --}}
                 <div class="info-row mb-3">
                     <span class="info-icon">📍</span>
-                    <span style="color:var(--text-2);">{{ $order['address'] }}</span>
+                    <span style="color:var(--muted);">{{ $order['address'] }}</span>
                 </div>
 
                 {{-- Items summary --}}
                 <div class="items-box mb-3">
-                    <span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;">
+                    <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">
                         Items
                     </span>
-                    <div style="font-size:13px;color:var(--text-2);margin-top:4px;">{{ $order['items'] }}</div>
+                    <div style="font-size:13px;color:var(--muted);margin-top:4px;">{{ $order['items'] }}</div>
                 </div>
 
                 {{-- Footer --}}
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div style="font-size:20px;font-weight:900;">{{ $order['total'] }}</div>
-                        <div style="font-size:11px;color:var(--text-3);">
+                        <div style="font-size:11px;color:var(--muted);">
                             Delivery earning: <strong style="color:var(--success);">{{ $order['delivery_fee'] }}</strong>
                         </div>
                     </div>
@@ -244,15 +246,15 @@
             </div>
         @empty
             @if($isOnline)
-                <div class="card text-center py-4" style="color:var(--text-3);">
+                <div class="card text-center py-4" style="color:var(--muted);">
                     <div style="font-size:48px;" class="mb-2">🎉</div>
-                    <div style="font-weight:700;color:var(--text-2);">No orders waiting right now</div>
+                    <div style="font-weight:700;color:var(--muted);">No orders waiting right now</div>
                     <div style="font-size:13px;margin-top:4px;">New orders will show up here as they arrive.</div>
                 </div>
             @else
-                <div class="card text-center py-4" style="color:var(--text-3);">
+                <div class="card text-center py-4" style="color:var(--muted);">
                     <div style="font-size:48px;" class="mb-2">😴</div>
-                    <div style="font-weight:700;color:var(--text-2);">You're currently offline</div>
+                    <div style="font-weight:700;color:var(--muted);">You're currently offline</div>
                     <div style="font-size:13px;margin-top:4px;">Tap the online button above to start receiving orders.</div>
                 </div>
             @endif
@@ -260,95 +262,3 @@
     </div>
 
 </div>
-
-@push('styles')
-<style>
-    :root {
-        --success: #16a34a;
-        --warning: #f59e0b;
-        --danger: #ef4444;
-        --text-1: #1f2937;
-        --text-2: #4b5563;
-        --text-3: #9ca3af;
-        --border: #e5e7eb;
-        --radius: 14px;
-        --shadow: 0 2px 10px rgba(0,0,0,.06);
-    }
-
-    .card {
-        background: #fff;
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-        padding: 18px 20px;
-        width: 100%;
-    }
-
-    .badge-kk {
-        display: inline-flex; align-items: center;
-        padding: 5px 12px; border-radius: 999px;
-        font-size: 12px; font-weight: 700; white-space: nowrap;
-    }
-
-    .btn-kk {
-        display: inline-flex; align-items: center; justify-content: center;
-        gap: 6px; padding: 9px 16px; border-radius: 10px;
-        font-size: 13px; font-weight: 700; border: none;
-        cursor: pointer; white-space: nowrap;
-        transition: opacity .15s, transform .1s; text-decoration: none;
-    }
-    .btn-kk:hover   { opacity: .88; }
-    .btn-kk:active  { transform: scale(.97); }
-    .btn-kk:disabled { opacity: .5; cursor: not-allowed; }
-
-    /* info row */
-    .info-row {
-        display: flex; align-items: flex-start; gap: 8px;
-        font-size: 13px; color: var(--text-2);
-    }
-    .info-icon { flex-shrink: 0; font-size: 14px; margin-top: 1px; }
-
-    /* call button */
-    .call-btn {
-        display: inline-flex; align-items: center; gap: 4px;
-        padding: 3px 10px; border-radius: 999px;
-        background: #eff6ff; color: #1d4ed8;
-        font-size: 11px; font-weight: 700; text-decoration: none;
-        white-space: nowrap; flex-shrink: 0;
-        transition: background .15s;
-    }
-    .call-btn:hover { background: #dbeafe; }
-
-    /* items box */
-    .items-box {
-        background: #f9fafb; border: 1px solid var(--border);
-        border-radius: 10px; padding: 10px 14px;
-    }
-
-    /* spinner */
-    .spinner {
-        display: inline-block;
-        width: 14px; height: 14px;
-        border: 2px solid rgba(255,255,255,.4);
-        border-top-color: #fff;
-        border-radius: 50%;
-        animation: spin .6s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    [x-cloak] { display: none !important; }
-
-    /* utils */
-    .d-flex { display: flex; }
-    .flex-column { flex-direction: column; }
-    .align-items-center { align-items: center; }
-    .align-items-start { align-items: flex-start; }
-    .justify-content-between { justify-content: space-between; }
-    .text-center { text-align: center; }
-    .ms-auto { margin-left: auto; }
-    .gap-2 { gap: 8px; } .gap-3 { gap: 12px; }
-    .mb-1 { margin-bottom: 4px; } .mb-2 { margin-bottom: 8px; }
-    .mb-3 { margin-bottom: 12px; } .mb-4 { margin-bottom: 16px; }
-    .py-4 { padding-top: 24px; padding-bottom: 24px; }
-</style>
-@endpush

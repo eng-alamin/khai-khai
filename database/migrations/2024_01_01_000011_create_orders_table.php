@@ -11,9 +11,13 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             
-            $table->string('order_number', 20);
+            $table->string('order_number', 20)->unique();
 
-            $table->foreignId('restaurant_id')->constrained('restaurants');
+            // Kono restaurant/vendor er order kina seta bole. Admin er product
+            // order hole restaurant_id null thakbe (admin nijei seller).
+            $table->enum('order_type', ['vendor', 'admin'])->default('vendor');
+
+            $table->foreignId('restaurant_id')->nullable()->constrained('restaurants')->nullOnDelete();
             $table->foreignId('customer_id')->constrained('users');
             $table->foreignId('rider_id')->nullable()->constrained('users')->nullOnDelete();
             
@@ -77,10 +81,10 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index(['restaurant_id', 'status', 'created_at']);
+            $table->index(['order_type', 'status', 'created_at']);
             $table->index(['customer_id','created_at']);
             $table->index(['rider_id','status']);
             $table->index(['payment_status','status']);
-            $table->unique(['restaurant_id', 'order_number']);
         });
     }
 

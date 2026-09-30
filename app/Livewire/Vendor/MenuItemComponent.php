@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Vendor;
 
-use App\Models\MenuItem;
-use App\Models\MenuCategory;
+use App\Models\Food;
+use App\Models\Category;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -60,7 +60,9 @@ class MenuItemComponent extends Component
     // ── Categories for dropdown ───────────────────────────
     public function getCategories()
     {
-        return MenuCategory::where('restaurant_id', $this->restaurantId())
+        // Category ekhon global (product o food duitatei share hoy), tai
+        // restaurant_id diye filter hoy na — shudhu type='food' + active.
+        return Category::where('type', Category::TYPE_FOOD)
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get(['id', 'name', 'emoji']);
@@ -115,7 +117,7 @@ class MenuItemComponent extends Component
     // ── Open edit modal ───────────────────────────────────
     public function openEdit(int $id): void
     {
-        $record = MenuItem::where('restaurant_id', $this->restaurantId())
+        $record = Food::where('restaurant_id', $this->restaurantId())
             ->findOrFail($id);
 
         // FIX (Medium Bug #7): framework-enforced authorization backstop,
@@ -146,7 +148,7 @@ class MenuItemComponent extends Component
                     str_replace('/storage/', '', $this->existingImage)
                 );
             }
-            $stored    = $this->image->store('menu-items', 'public');
+            $stored    = $this->image->store('foods', 'public');
             $imagePath = Storage::url($stored);
         }
 
@@ -164,7 +166,7 @@ class MenuItemComponent extends Component
 
         DB::transaction(function () use ($data) {
             if ($this->editId) {
-                $item = MenuItem::where('restaurant_id', $this->restaurantId())
+                $item = Food::where('restaurant_id', $this->restaurantId())
                     ->findOrFail($this->editId);
 
                 // FIX (Medium Bug #7): framework-enforced authorization backstop.
@@ -181,9 +183,9 @@ class MenuItemComponent extends Component
                 session()->flash('success', 'Menu item updated successfully!');
             } else {
                 // FIX (Medium Bug #7): framework-enforced authorization backstop.
-                $this->authorize('create', [MenuItem::class, $data['restaurant_id']]);
+                $this->authorize('create', [Food::class, $data['restaurant_id']]);
 
-                $item = MenuItem::create($data);
+                $item = Food::create($data);
 
                 activity()
                     ->causedBy(Auth::user())
@@ -202,7 +204,7 @@ class MenuItemComponent extends Component
     // ── Quick toggle availability ─────────────────────────
     public function toggleAvailability(int $id): void
     {
-        $item = MenuItem::where('restaurant_id', $this->restaurantId())->findOrFail($id);
+        $item = Food::where('restaurant_id', $this->restaurantId())->findOrFail($id);
 
         // FIX (Medium Bug #7): framework-enforced authorization backstop.
         $this->authorize('update', $item);
@@ -227,7 +229,7 @@ class MenuItemComponent extends Component
 
     public function deleteRecord(): void
     {
-        $record = MenuItem::where('restaurant_id', $this->restaurantId())
+        $record = Food::where('restaurant_id', $this->restaurantId())
             ->findOrFail($this->deleteId);
 
         // FIX (Medium Bug #7): framework-enforced authorization backstop.
@@ -270,7 +272,7 @@ class MenuItemComponent extends Component
     // ── Render ────────────────────────────────────────────
     public function render()
     {
-        $items = MenuItem::query()
+        $items = Food::query()
             ->where('restaurant_id', $this->restaurantId())
             ->with('category')
             ->when($this->search, fn ($q) =>

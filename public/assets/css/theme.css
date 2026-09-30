@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════
    KhaiKhai Food Delivery — Theme CSS
-   Bootstrap 5 + Pink Primary
+   Bootstrap 5
 ═══════════════════════════════════════════════ */
 
 @import url("https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap");
@@ -1633,7 +1633,7 @@ img {
 /* ═══════════════════════════════════════════
    MODALS
 ═══════════════════════════════════════════ */
-.modal-content {
+/* .modal-content {
     border: none;
     border-radius: var(--radius);
     box-shadow: 0 16px 50px rgba(0, 0, 0, 0.18);
@@ -1659,7 +1659,7 @@ img {
     object-fit: cover;
     border-radius: 10px;
     margin-bottom: 16px;
-}
+} */
 
 /* ─── Form controls ─── */
 .form-label {
@@ -1819,7 +1819,7 @@ img {
     margin: 0;
 }
 
-.modal-header {
+/* .modal-header {
     border-bottom: 1px solid var(--border);
 }
 .modal-footer {
@@ -1828,7 +1828,7 @@ img {
 .modal-title {
     font-weight: 600;
     font-size: 1rem;
-}
+} */
 
 .form-label {
     font-size: 0.8rem;
@@ -2891,7 +2891,7 @@ table.mat-table {
 }
 
 /* ── Import Modal ── */
-.modal-content {
+/* .modal-content {
     border: none;
     border-radius: 16px;
     box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
@@ -2907,7 +2907,7 @@ table.mat-table {
 .modal-footer {
     border-top: 1px solid rgba(0, 0, 0, 0.07);
     padding: 16px 24px;
-}
+} */
 
 .drop-zone {
     border: 2px dashed rgba(0, 0, 0, 0.15);
@@ -3145,12 +3145,12 @@ footer a {
         flex-direction: column;
         align-items: center;
     }
-    .modal-header,
+    /* .modal-header,
     .modal-body,
     .modal-footer {
         padding-left: 16px;
         padding-right: 16px;
-    }
+    } */
 }
 
 /* sidebar overlay */
@@ -3559,14 +3559,14 @@ body.dark-mode .user-dropdown a {
 body.dark-mode .user-dropdown a:hover {
     background: rgba(255, 255, 255, 0.07);
 }
-body.dark-mode .modal-content {
+/* body.dark-mode .modal-content {
     background: #1a1d27;
     color: #e2e8f0;
 }
 body.dark-mode .modal-header,
 body.dark-mode .modal-footer {
     border-color: rgba(255, 255, 255, 0.08);
-}
+} */
 body.dark-mode .form-control,
 body.dark-mode .form-select {
     background: #222535;
@@ -4348,3 +4348,476 @@ body.dark-mode .item-hover:hover {
     cursor: not-allowed;
 }
 /* END PAGINATION  */
+
+/* ═══════════════════════════════════════════════════════════════
+   KhaiKhai — UNIFIED DESIGN SYSTEM LAYER
+   Append this ENTIRE block to the END of assets/css/theme.css
+   (theme.css is the only file every layout — admin/vendor/rider —
+   loads, so tokens defined here are guaranteed global.)
+
+   Naming rule going forward:
+     - Any REUSABLE UI piece (button, badge, card, avatar block,
+       detail grid, modal, stat card, table, pagination, spinner,
+       empty state) → prefix "kk-"  → lives ONLY in theme.css.
+     - Anything page-specific and NOT reused elsewhere (a one-off
+       layout wrapper like ".dash-stats-row") can stay unprefixed
+       and local to that page — that is not the problem; the
+       problem was reusable pieces getting re-invented per page.
+═══════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────
+   1) DARK / LIGHT MODE TOKENS
+   Same variable names as :root in theme.css — only the VALUES
+   change under [data-theme="dark"]. Every existing rule that
+   already uses var(--dark), var(--bg), var(--card-bg), var(--border),
+   var(--muted) etc. becomes dark-mode-ready automatically —
+   no other CSS has to change.
+───────────────────────────────────────── */
+:root {
+    --kk-glass-bg: rgba(255, 255, 255, 0.55);
+    --kk-glass-border: rgba(255, 255, 255, 0.35);
+    --kk-glass-blur: 16px;
+}
+
+html[data-theme="dark"] {
+    --dark: #f1f1f8;
+    --dark2: #c9c8ff;
+    --soft-dark: #cfcfe0;
+    --muted: #9393ab;
+    --border: #2b2b3d;
+    --bg: #14141f;
+    --card: #1b1b29;
+    --card-bg: #1b1b29;
+    --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.35);
+    --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.35);
+    --shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.45);
+
+    --kk-glass-bg: rgba(27, 27, 41, 0.55);
+    --kk-glass-border: rgba(255, 255, 255, 0.08);
+}
+
+/* Smooth theme switch instead of a jarring flash */
+body,
+.card,
+.sidebar,
+.topnav,
+.kk-glass,
+.kk-glass-card {
+    transition:
+        background-color 0.25s ease,
+        color 0.25s ease,
+        border-color 0.25s ease;
+}
+
+/* Dark-mode adjustments for the existing dark sidebar so it doesn't
+   disappear into the dark page background */
+html[data-theme="dark"] .sidebar {
+    background: #10101a;
+    border-right: 1px solid #26263a;
+}
+html[data-theme="dark"] .topnav {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+}
+
+/* ─────────────────────────────────────────
+   2) THEME TOGGLE BUTTON (topnav)
+───────────────────────────────────────── */
+.kk-theme-toggle {
+    /* inherits .icon-btn's existing box/hover from theme.css */
+}
+.kk-theme-toggle .material-icons-round {
+    font-size: 20px;
+}
+
+/* ─────────────────────────────────────────
+   3) GLASSMORPHISM UTILITIES
+   Use ON TOP OF existing .card / .stat-card etc. by adding the
+   class, e.g. class="card kk-glass"
+───────────────────────────────────────── */
+.kk-glass {
+    background: var(--kk-glass-bg) !important;
+    backdrop-filter: blur(var(--kk-glass-blur));
+    -webkit-backdrop-filter: blur(var(--kk-glass-blur));
+    border: 1px solid var(--kk-glass-border) !important;
+}
+
+.kk-glass-card {
+    background: var(--kk-glass-bg);
+    backdrop-filter: blur(var(--kk-glass-blur));
+    -webkit-backdrop-filter: blur(var(--kk-glass-blur));
+    border: 1px solid var(--kk-glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+}
+
+.kk-glass-nav {
+    background: var(--kk-glass-bg);
+    backdrop-filter: blur(var(--kk-glass-blur));
+    -webkit-backdrop-filter: blur(var(--kk-glass-blur));
+    border-bottom: 1px solid var(--kk-glass-border);
+}
+
+/* ─────────────────────────────────────────
+   4) UNIFIED COMPONENTS
+   These replace the duplicated-but-differently-named blocks found
+   in admin / vendor / rider (see chat for the full audit). Adopt
+   these class names in the blade files during migration; do not
+   invent a new name per page again.
+───────────────────────────────────────── */
+
+/* -- 4a. Detail grid (was: detail-grid/detail-item/detail-label/
+   detail-value in admin+vendor, prof-detail-grid/prof-detail-item/
+   prof-detail-label/prof-detail-value in rider — identical shape) */
+.kk-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.kk-detail-item {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+}
+.kk-detail-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 3px;
+}
+.kk-detail-value {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--dark);
+}
+@media (max-width: 480px) {
+    .kk-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* -- 4b. Avatar block (was: avatar/avatar-edit/avatar-actions in
+   admin+vendor, prof-avatar/prof-avatar-edit/avatar-img/
+   avatar-fallback in rider) */
+.kk-avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+.kk-avatar,
+.kk-avatar-fallback {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 2px solid var(--pink-light, var(--border));
+}
+.kk-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.kk-avatar-fallback {
+    background: linear-gradient(135deg, var(--pink), var(--dark2));
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+.kk-avatar-edit {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--pink);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 2px solid var(--card-bg);
+    transition: var(--transition);
+}
+.kk-avatar-edit:hover {
+    background: var(--pink-dark);
+}
+.kk-avatar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+/* -- 4c. Stat card (was: stat-card (theme.css, generic) vs
+   dash-stat-card (admin) vs setting-stat-card (rider) — three
+   versions of the same widget) */
+.kk-stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+}
+.kk-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.kk-stat-body {
+    flex: 1;
+    z-index: 1;
+}
+.kk-stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--dark);
+}
+.kk-stat-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 600;
+}
+.kk-stat-trend {
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.kk-stat-trend.up {
+    color: var(--success);
+}
+.kk-stat-trend.down {
+    color: var(--danger);
+}
+.kk-stat-trend.neutral {
+    color: var(--muted);
+}
+
+/* -- 4d. Confirm-delete modal (was: dialog/dialog-backdrop in admin,
+   btn-cancel/btn-confirm-delete duplicated verbatim in all 3 roles) */
+.kk-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 30, 0.55);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.kk-modal {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    max-width: 360px;
+    width: calc(100% - 32px);
+    padding: 26px 20px 20px;
+    text-align: center;
+}
+.kk-modal-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #fff0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+    font-size: 1.6rem;
+}
+.kk-modal h6 {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin: 0 0 6px;
+}
+.kk-modal p {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin: 0 0 20px;
+    line-height: 1.5;
+}
+.kk-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.kk-btn-cancel {
+    padding: 9px 20px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--soft-dark);
+    cursor: pointer;
+    transition: var(--transition);
+}
+.kk-btn-cancel:hover {
+    background: var(--border);
+}
+.kk-btn-confirm-delete {
+    padding: 9px 20px;
+    background: var(--danger);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.kk-btn-confirm-delete:hover {
+    filter: brightness(0.92);
+}
+
+/* -- 4e. Spinner (was: spinner (rider dashboard) / spinner-sm
+   (rider profile) — same animation, two names) */
+.kk-spinner,
+.kk-spinner-sm {
+    display: inline-block;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    animation: kk-spin 0.6s linear infinite;
+}
+.kk-spinner {
+    width: 14px;
+    height: 14px;
+}
+.kk-spinner-sm {
+    width: 14px;
+    height: 14px;
+}
+@keyframes kk-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* -- 4f. Buttons (was: btn-kk/btn-primary-kk/btn-ghost-kk/btn-sm-kk
+   in rider, btn-new-adm in admin — one shared button family instead) */
+.kk-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+    font-family: var(--font);
+    transition:
+        opacity 0.15s,
+        transform 0.1s;
+}
+.kk-btn:hover {
+    opacity: 0.88;
+}
+.kk-btn:active {
+    transform: scale(0.97);
+}
+.kk-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.kk-btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+.kk-btn-primary {
+    background: linear-gradient(135deg, var(--pink), var(--pink-mid));
+    color: #fff;
+}
+.kk-btn-ghost {
+    background: #f3f4f6;
+    color: var(--muted);
+}
+.kk-btn-secondary {
+    background: var(--bg);
+    color: var(--dark);
+    border: 1.5px solid var(--border) !important;
+}
+
+/* -- 4g. Badge family (was: badge-kk, cat-pill, count-badge,
+   area-badge, account-badge, chart-pill — all "colored pill text",
+   just named per page) */
+.kk-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.kk-badge-pink {
+    background: var(--pink-light);
+    color: var(--pink);
+}
+.kk-badge-green {
+    background: #d1fae5;
+    color: #065f46;
+}
+.kk-badge-orange {
+    background: #fef3c7;
+    color: #ca8a04;
+}
+.kk-badge-blue {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+.kk-badge-red {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* -- 4h. Empty state (was: dh-empty, bi-inbox pattern repeated
+   ad hoc per table) */
+.kk-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+}
+.kk-empty .material-icons-round,
+.kk-empty i {
+    font-size: 40px;
+    opacity: 0.4;
+    margin-bottom: 10px;
+    display: block;
+}

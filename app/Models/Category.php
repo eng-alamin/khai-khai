@@ -25,6 +25,7 @@ class Category extends Model
         'type',
         'name',
         'slug',
+        'emoji',
         'image_url',
         'sort_order',
         'is_active',

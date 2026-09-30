@@ -83,6 +83,9 @@ class NotificationComponent extends Component
         return view('livewire.admin.notification-component', [
             'notifications' => $notifications,
             'unreadCount'   => $unreadCount,
+        ])->layout('layouts.admin', [
+            'title'           => 'Notifications | KhaiKhai',
+            'breadcrumbTitle' => 'Notifications',
         ]);
     }
 }

@@ -5,7 +5,7 @@ namespace App\Livewire\Customer;
 use Livewire\Component;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Session;
-use App\Models\MenuItem;
+use App\Models\Food;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusLog;
@@ -36,7 +36,7 @@ class CartComponent extends Component
             return;
         }
 
-        $menuItem = MenuItem::find($id);
+        $menuItem = Food::find($id);
         if (! $menuItem) return;
 
         if (! empty($this->items)) {
@@ -71,7 +71,7 @@ class CartComponent extends Component
     {
         $ids = array_column($items, 'id');
 
-        $menuItems = MenuItem::whereIn('id', $ids)
+        $menuItems = Food::whereIn('id', $ids)
             ->where('is_available', true)
             ->whereHas('restaurant', fn ($q) => $q->where('is_active', true)->where('is_approved', true))
             ->get()
@@ -120,7 +120,7 @@ class CartComponent extends Component
         $this->showConflict = false;
 
         if (! empty($this->pendingItem)) {
-            $menuItem = MenuItem::find($this->pendingItem['id']);
+            $menuItem = Food::find($this->pendingItem['id']);
             if ($menuItem) {
                 $this->doAddItem($menuItem);
             }
@@ -134,7 +134,7 @@ class CartComponent extends Component
         $this->pendingItem  = [];
     }
 
-    private function doAddItem(MenuItem $menuItem, int $qty = 1): void
+    private function doAddItem(Food $menuItem, int $qty = 1): void
     {
         if (isset($this->items[$menuItem->id])) {
             $this->items[$menuItem->id]['qty'] += $qty;
@@ -260,7 +260,7 @@ class CartComponent extends Component
 
         // ── Re-verify cart against the DB — never trust stale session prices/availability ──
         $cartItemIds = array_keys($this->items);
-        $freshItems  = MenuItem::whereIn('id', $cartItemIds)->get()->keyBy('id');
+        $freshItems  = Food::whereIn('id', $cartItemIds)->get()->keyBy('id');
 
         $missingOrUnavailable = [];
         foreach ($this->items as $id => $cartItem) {
@@ -324,20 +324,26 @@ class CartComponent extends Component
                    ?? $user->addresses()->latest()->first();
 
         $firstItemId  = array_key_first($items);
-        $restaurantId = MenuItem::find($firstItemId)?->restaurant_id;
+        $restaurantId = Food::find($firstItemId)?->restaurant_id;
 
         try {
             $order = DB::transaction(function () use (
                 $user, $items, $subtotal, $deliveryFee, $deliveryKm, $total,
                 $orderNumber, $address, $restaurantId
             ) {
+                // NOTE: Order's $fillable does not include status, subtotal,
+                // delivery_fee, discount_amount, total_amount, payment_status
+                // or estimated_delivery_at (they're server-calculated columns
+                // per the model's own comment), so those are set via
+                // forceFill() below rather than passed into create().
                 $order = Order::create([
-                    'order_number'              => $orderNumber,
-                    'customer_id'               => $user->id,
-                    'restaurant_id'             => $restaurantId,
-                    'rider_id'                  => null,
-                    'delivery_address_id'       => $address?->id,
-                    'delivery_address_snapshot' => $address ? [
+                    'order_number'               => $orderNumber,
+                    'order_type'                 => Order::TYPE_VENDOR,
+                    'customer_id'                => $user->id,
+                    'restaurant_id'              => $restaurantId,
+                    'rider_id'                   => null,
+                    'delivery_address_id'        => $address?->id,
+                    'delivery_address_snapshot'  => $address ? [
                         'label'        => $address->label,
                         'full_address' => $address->full_address,
                         'city'         => $address->city,
@@ -345,29 +351,39 @@ class CartComponent extends Component
                         'latitude'     => $address->latitude,
                         'longitude'    => $address->longitude,
                     ] : null,
-                    'delivery_distance_km'  => $deliveryKm,
+                    'delivery_distance_km'       => $deliveryKm,
+                    'coupon_id'                  => null,
+                    'payment_method'             => 'cash_on_delivery',
+                    'special_instructions'       => null,
+                    'estimated_delivery_minutes' => 45,
+                    'order_source'               => 'web',
+                ]);
+
+                $order->forceFill([
                     'status'                => 'pending',
                     'subtotal'              => $subtotal,
                     'delivery_fee'          => $deliveryFee,
                     'discount_amount'       => 0,
                     'total_amount'          => $total,
-                    'coupon_id'             => null,
-                    'payment_method'        => 'cash_on_delivery',
                     'payment_status'        => 'pending',
-                    'special_instructions'  => null,
                     'estimated_delivery_at' => now()->addMinutes(45),
-                ]);
+                ])->save();
 
                 $orderItems = [];
                 foreach ($items as $id => $item) {
                     $orderItems[] = [
-                        'order_id'     => $order->id,
-                        'menu_item_id' => $id,
-                        'item_name'    => $item['name'],
-                        'item_price'   => $item['price'],
-                        'quantity'     => $item['qty'],
-                        'line_total'   => $item['price'] * $item['qty'],
-                        'emoji'        => $item['emoji'] ?? null,
+                        'order_id'        => $order->id,
+                        'orderable_type'  => Food::class,
+                        'orderable_id'    => $id,
+                        'item_image'      => $item['image_url'] ?? null,
+                        'item_name'       => $item['name'],
+                        'item_price'      => $item['price'],
+                        'quantity'        => $item['qty'],
+                        'discount_amount' => 0,
+                        'line_total'      => $item['price'] * $item['qty'],
+                        'emoji'           => $item['emoji'] ?? null,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
                     ];
                 }
 

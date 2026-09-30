@@ -37,35 +37,38 @@ class Promotion extends Model
         return $this->belongsTo(Restaurant::class);
     }
 
-    // ── Dynamic target (Category or MenuItem) ─────────────
+    // ── Dynamic target (Category, Food or Product) ────────
     /**
-     * Returns the related MenuCategory or MenuItem
-     * depending on the value of `applies_to`.
+     * Returns the related Category, Food or Product depending on
+     * the value of `applies_to`.
      *
-     * Usage:  $promotion->target   (auto-resolved via __get)
-     *         $promotion->loadTarget()
+     * Usage:  $promotion->target()
      */
-    public function target(): MenuCategory|MenuItem|null
+    public function target(): Category|Food|Product|null
     {
         return match ($this->applies_to) {
-            'category'      => $this->category,
-            'specific_item' => $this->menuItem,
-            default         => null,
+            'category'          => $this->category,
+            'specific_food'     => $this->food,
+            'specific_product'  => $this->product,
+            default             => null,
         };
     }
 
     public function category()
     {
         // promotions table only has a generic `target_id` column
-        // (no `category_id`), so both relations key off it.
-        return $this->belongsTo(MenuCategory::class, 'target_id');
+        // (no `category_id`), so all target relations key off it.
+        return $this->belongsTo(Category::class, 'target_id');
     }
 
-    public function menuItem()
+    public function food()
     {
-        // promotions table only has a generic `target_id` column
-        // (no `item_id`), so both relations key off it.
-        return $this->belongsTo(MenuItem::class, 'target_id');
+        return $this->belongsTo(Food::class, 'target_id');
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class, 'target_id');
     }
 
     // ── Scopes ────────────────────────────────────────────

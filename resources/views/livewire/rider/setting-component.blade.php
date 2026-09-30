@@ -1,3 +1,5 @@
+{{-- resources/views/livewire/rider/setting-component.blade.php --}}
+{{-- Styles: resources/css/blade.css (shared classes, Bootstrap 5 required) --}}
 @once
   @push('styles')
     <link
@@ -195,17 +197,17 @@
       <div class="d-flex flex-column gap-3">
 
         {{-- Stat Cards --}}
-        <div class="stat-card sc-pink">
-          <div class="stat-icon"><i class="fa fa-box"></i></div>
-          <div class="stat-info">
+        <div class="setting-stat-card sc-pink">
+          <div class="setting-stat-icon"><i class="fa fa-box"></i></div>
+          <div class="setting-stat-info">
             <div class="num">{{ $totalDeliveries }}</div>
             <div class="label">Total Deliveries</div>
           </div>
         </div>
 
-        <div class="stat-card sc-green">
-          <div class="stat-icon"><i class="fa fa-star"></i></div>
-          <div class="stat-info">
+        <div class="setting-stat-card sc-green">
+          <div class="setting-stat-icon"><i class="fa fa-star"></i></div>
+          <div class="setting-stat-info">
             <div class="num">
               {{ $avgRating ? number_format($avgRating, 1) . '★' : 'N/A' }}
             </div>
@@ -213,9 +215,9 @@
           </div>
         </div>
 
-        <div class="stat-card sc-orange">
-          <div class="stat-icon"><i class="fa fa-map-marker-alt"></i></div>
-          <div class="stat-info">
+        <div class="setting-stat-card sc-orange">
+          <div class="setting-stat-icon"><i class="fa fa-map-marker-alt"></i></div>
+          <div class="setting-stat-info">
             <div class="num">{{ $zone ?: 'N/A' }}</div>
             <div class="label">Delivery Zone</div>
           </div>
@@ -227,291 +229,6 @@
   </div>
 </div>
 
-@push('styles')
-<style>
-  :root {
-    --pink: #e91e8c;
-    --pink-dark: #c0167a;
-    --pink-light: #ff4dab;
-    --pink-soft: #fde8f4;
-    --pink-mid: #f9c5e3;
-    --accent: #ff6b35;
-    --success: #16a34a;
-    --danger: #ef4444;
-    --border: #e5e7eb;
-    --text-1: #1f2937;
-    --text-2: #4b5563;
-    --text-3: #9ca3af;
-    --radius: 14px;
-    --shadow: 0 2px 10px rgba(0,0,0,.06);
-    --shadow-lg: 0 12px 30px rgba(233,30,140,.14);
-  }
-
-  .rider-setting .card {
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    background: #fff;
-    overflow: hidden;
-  }
-
-  /* ── Setting hero header ── */
-  .setting-hero {
-    position: relative;
-    text-align: center;
-    padding: 30px 20px 22px;
-    overflow: hidden;
-  }
-  .setting-hero-bg {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(160deg, var(--pink-soft) 0%, #fff 65%);
-    z-index: 0;
-  }
-  .setting-hero > * { position: relative; z-index: 1; }
-
-
-  .avatar-img,
-  .avatar-fallback {
-    width: 92px;
-    height: 92px;
-    border-radius: 50%;
-    object-fit: cover;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: var(--shadow-lg);
-    border: 3px solid #fff;
-  }
-  .avatar-fallback {
-    background: linear-gradient(135deg, var(--pink), var(--accent));
-    color: #fff;
-    font-size: 34px;
-    font-weight: 800;
-  }
-  .avatar-status-dot {
-    position: absolute;
-    right: 3px;
-    bottom: 3px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 3px solid #fff;
-  }
-  .avatar-status-dot.is-online  { background: var(--success); }
-  .avatar-status-dot.is-offline { background: #9ca3af; }
-
-  .setting-name {
-    font-size: 21px;
-    font-weight: 800;
-    color: var(--text-1);
-    letter-spacing: -.2px;
-  }
-  .setting-role {
-    color: var(--text-3);
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    margin-top: 2px;
-  }
-
-  .online-toggle-btn {
-    padding: 10px 24px !important;
-    border-radius: 999px !important;
-    font-weight: 700 !important;
-    box-shadow: 0 6px 16px rgba(233,30,140,.25);
-    transition: transform .15s ease, box-shadow .15s ease;
-  }
-  .online-toggle-btn:hover { transform: translateY(-1px); }
-
-  /* ── Form ── */
-  .setting-form {
-    border-top: 1px solid var(--border);
-    padding: 22px 22px 24px;
-  }
-
-  .form-section-label {
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .7px;
-    color: var(--pink);
-    margin: 18px 0 10px;
-  }
-  .form-section-label:first-child { margin-top: 0; }
-
-  .form-label-kk {
-    display: block;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-2);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: .4px;
-  }
-
-  .form-control-kk {
-    width: 100%;
-    padding: 11px 14px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    font-size: 14px;
-    color: var(--text-1);
-    background: #fafafa;
-    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
-  }
-  .form-control-kk:focus {
-    outline: none;
-    border-color: var(--pink);
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(233,30,140,.1);
-  }
-
-  .input-icon-wrap { position: relative; }
-  .input-icon {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-3);
-    font-size: 13px;
-    pointer-events: none;
-  }
-  .form-control-kk.has-icon { padding-left: 38px; }
-
-  .form-group { margin-bottom: 16px; }
-
-  /* ── Buttons ── */
-  .btn-kk {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 9px 16px;
-    border-radius: 10px;
-    border: none;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: opacity .15s, transform .1s;
-  }
-  .btn-kk:hover  { opacity: .9; }
-  .btn-kk:active { transform: scale(.97); }
-  .btn-kk:disabled { opacity: .5; cursor: not-allowed; }
-
-  .btn-primary-kk {
-    background: linear-gradient(135deg, var(--pink), var(--pink-light));
-    color: #fff;
-  }
-  .btn-ghost-kk {
-    background: #f3f4f6;
-    color: var(--text-2);
-  }
-  .btn-sm-kk { padding: 6px 12px; font-size: 12px; }
-
-  .save-btn {
-    width: 100%;
-    justify-content: center;
-    padding: 13px !important;
-    font-size: 14px !important;
-    border-radius: 12px !important;
-    margin-top: 6px;
-    box-shadow: 0 8px 20px rgba(233,30,140,.22);
-  }
-
-  /* ── Badges ── */
-  .badge-kk {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 13px;
-    border-radius: 999px;
-    font-size: 11.5px;
-    font-weight: 700;
-  }
-  .badge-green { background: #d1fae5; color: #065f46; }
-
-  /* ── Map ── */
-  .map-frame {
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    overflow: hidden;
-    box-shadow: var(--shadow);
-  }
-  #riderLocationMap {
-    height: 220px;
-    width: 100%;
-  }
-  .location-hint {
-    font-size: 12px;
-    color: var(--text-2);
-    margin-top: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .location-hint i { color: var(--pink); }
-
-  /* ── Stat cards ── */
-  .stat-card {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    position: relative;
-    overflow: hidden;
-    transition: transform .15s ease, box-shadow .15s ease;
-  }
-  .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(0,0,0,.08);
-  }
-  .stat-card::after {
-    content: "";
-    position: absolute;
-    right: -14px;
-    bottom: -14px;
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: currentColor;
-    opacity: .06;
-  }
-  .stat-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-  }
-  .stat-info .num {
-    font-size: 25px;
-    font-weight: 800;
-    line-height: 1;
-  }
-  .stat-info .label {
-    font-size: 12px;
-    color: var(--text-3);
-    margin-top: 6px;
-    font-weight: 600;
-  }
-
-  .sc-pink   .stat-icon { background: var(--pink-soft); color: var(--pink); }
-  .sc-pink   .num        { color: var(--pink); }
-  .sc-green  .stat-icon { background: #d1fae5; color: var(--success); }
-  .sc-green  .num        { color: var(--success); }
-  .sc-orange .stat-icon { background: #fef3c7; color: #ca8a04; }
-  .sc-orange .num        { color: #ca8a04; }
-</style>
-@endpush
 
 @once
   @push('scripts')

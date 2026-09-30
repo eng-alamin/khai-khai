@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class OrderItem extends Model
 {
@@ -11,7 +12,8 @@ class OrderItem extends Model
     // role/price-privilege columns here, but kept explicit for consistency.
     protected $fillable = [
         'order_id',
-        'menu_item_id',
+        'orderable_type',
+        'orderable_id',
         'item_image',
         'item_name',
         'item_price',
@@ -44,9 +46,15 @@ class OrderItem extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function menuItem(): BelongsTo
+    /**
+     * Original catalog item this line was ordered from.
+     * Vendor order hole App\Models\Food, admin order hole App\Models\Product।
+     * Item delete/deactivate hoye gele o eta null hobe — kintu item_name,
+     * item_price, item_image snapshot column gulo taka thake, order history bhange na.
+     */
+    public function orderable(): MorphTo
     {
-        return $this->belongsTo(MenuItem::class);
+        return $this->morphTo();
     }
 
     // ─────────────────────────────────────────

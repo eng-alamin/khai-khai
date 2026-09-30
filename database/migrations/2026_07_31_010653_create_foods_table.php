@@ -34,6 +34,7 @@ return new class extends Migration
                 ->nullable()
                 ->comment('Original price before discount');
 
+            $table->string('emoji', 10)->nullable();
             $table->string('image_url')->nullable();
 
             $table->boolean('is_featured')->default(false);

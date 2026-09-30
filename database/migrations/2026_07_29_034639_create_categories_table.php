@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('type', 20)->default('food')->comment('food, product');
             $table->string('name', 100);
             $table->string('slug', 120)->unique();
+            $table->string('emoji', 10)->nullable();
             $table->string('image_url')->nullable();
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);

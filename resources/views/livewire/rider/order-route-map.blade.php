@@ -1,4 +1,5 @@
 {{-- resources/views/livewire/rider/order-route-map.blade.php --}}
+{{-- Styles: resources/css/blade.css (shared classes, Bootstrap 5 required) --}}
 <div wire:poll.8s>
     <div id="rider-route-map" style="height: 400px; width: 100%; border-radius: var(--radius-lg);" wire:ignore></div>
 
@@ -27,26 +28,6 @@
 @push('scripts')
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<style>
-    .kk-map-pin {
-        display: flex; align-items: center; justify-content: center;
-        width: 34px; height: 34px; border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
-        box-shadow: 0 2px 6px rgba(0,0,0,.35);
-        border: 2px solid #fff;
-    }
-    .kk-map-pin span {
-        transform: rotate(45deg);
-        font-size: 16px; line-height: 1;
-    }
-    .kk-pin-restaurant { background: #f97316; } /* কমলা — Restaurant */
-    .kk-pin-destination { background: #2563eb; } /* নীল — Delivery Address */
-    .kk-pin-rider {
-        background: transparent; box-shadow: none; border: none;
-        transform: none; display: flex; align-items: center; justify-content: center;
-    }
-    .kk-pin-rider span { transform: none; font-size: 24px; }
-</style>
 <script>
 document.addEventListener('livewire:init', () => {
     let map, restaurantMarker, destMarker, myMarker;

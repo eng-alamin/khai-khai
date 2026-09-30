@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Vendor;
 
-use App\Models\MenuItem;
+use App\Models\Food;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusLog;
@@ -96,19 +96,20 @@ class DashboardComponent extends Component
         $this->todayOrdersCount    = $todayCount;
         $this->ordersChangePercent = $this->percentChange($todayCount, $yesterdayCount);
 
-        // Sales (paisa stored, displayed in taka)
-        $todaySalesPaisa     = Order::where('restaurant_id', $restaurantId)
+        // FIX: total_amount decimal(15,2) column e taka-e store hoy, paisa-te
+        // na — tai /100 division bad dilam, age eta sales 100x kom dekhachhilo.
+        $todaySalesTaka     = Order::where('restaurant_id', $restaurantId)
             ->where('payment_status', 'paid')
             ->whereDate('created_at', $today)
             ->sum('total_amount');
 
-        $yesterdaySalesPaisa = Order::where('restaurant_id', $restaurantId)
+        $yesterdaySalesTaka = Order::where('restaurant_id', $restaurantId)
             ->where('payment_status', 'paid')
             ->whereDate('created_at', $yesterday)
             ->sum('total_amount');
 
-        $this->todaySales         = round($todaySalesPaisa / 100);
-        $this->salesChangePercent = $this->percentChange($todaySalesPaisa, $yesterdaySalesPaisa);
+        $this->todaySales         = round($todaySalesTaka);
+        $this->salesChangePercent = $this->percentChange($todaySalesTaka, $yesterdaySalesTaka);
 
         // Average preparation time: confirmed -> picked_up, for today's orders
         $logs = OrderStatusLog::whereHas('order', function ($q) use ($restaurantId) {
@@ -159,13 +160,13 @@ class DashboardComponent extends Component
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::today()->subDays($i);
 
-            $daySalesPaisa = Order::where('restaurant_id', $restaurantId)
+            $daySalesTaka = Order::where('restaurant_id', $restaurantId)
                 ->where('payment_status', 'paid')
                 ->whereDate('created_at', $date)
                 ->sum('total_amount');
 
             $labels[] = $date->translatedFormat('D');
-            $sales[]  = round($daySalesPaisa / 100);
+            $sales[]  = round($daySalesTaka);
         }
 
         $this->weekLabels = $labels;
@@ -195,7 +196,7 @@ class DashboardComponent extends Component
                 'number'     => $order->order_number,
                 'customer'   => $customerName,
                 'summary'    => $order->items_summary,
-                'total'      => number_format($order->total_amount / 100),
+                'total'      => number_format($order->total_amount),
                 'status'     => $order->status,
                 'statusText' => ucwords(str_replace('_', ' ', $order->status)),
                 'timeAgo'    => $order->created_at->diffForHumans(),
@@ -203,28 +204,31 @@ class DashboardComponent extends Component
         })->toArray();
     }
 
-    // ── TOP SELLING MENU ITEMS (last 30 days, read-only) ─
+    // ── TOP SELLING FOOD ITEMS (last 30 days, read-only) ─
     private function loadTopItems(): void
     {
         $restaurantId = $this->restaurantId();
 
-        $rows = OrderItem::select('menu_item_id', DB::raw('SUM(quantity) as total_sold'))
+        // order_items ekhon polymorphic (orderable_type/orderable_id) —
+        // vendor er dashboard e shudhu Food type item gulo dekhabo.
+        $rows = OrderItem::select('orderable_id', DB::raw('SUM(quantity) as total_sold'))
+            ->where('orderable_type', Food::class)
             ->whereHas('order', function ($q) use ($restaurantId) {
                 $q->where('restaurant_id', $restaurantId)
                     ->where('created_at', '>=', Carbon::now()->subDays(30));
             })
-            ->whereNotNull('menu_item_id')
-            ->groupBy('menu_item_id')
+            ->whereNotNull('orderable_id')
+            ->groupBy('orderable_id')
             ->orderByDesc('total_sold')
-            ->with('menuItem')
+            ->with('orderable')
             ->limit(6)
             ->get()
-            ->filter(fn ($row) => $row->menuItem !== null);
+            ->filter(fn ($row) => $row->orderable !== null);
 
         $maxSold = $rows->max('total_sold') ?: 1;
 
         $this->topItems = $rows->map(function ($row) use ($maxSold) {
-            $item = $row->menuItem;
+            $item = $row->orderable;
 
             return [
                 'name'     => $item->name,
@@ -241,8 +245,8 @@ class DashboardComponent extends Component
     {
         $restaurantId = $this->restaurantId();
 
-        $this->totalMenuItems    = MenuItem::where('restaurant_id', $restaurantId)->count();
-        $this->activeMenuItems   = MenuItem::where('restaurant_id', $restaurantId)->where('is_available', true)->count();
+        $this->totalMenuItems    = Food::where('restaurant_id', $restaurantId)->count();
+        $this->activeMenuItems   = Food::where('restaurant_id', $restaurantId)->where('is_available', true)->count();
         $this->inactiveMenuItems = $this->totalMenuItems - $this->activeMenuItems;
     }
 

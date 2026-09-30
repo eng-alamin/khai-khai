@@ -68,15 +68,19 @@ class SupportComponent extends Component
             $ticketNumber = 'TK' . now()->format('ymd') . strtoupper(Str::random(4));
         } while (SupportTicket::where('ticket_number', $ticketNumber)->exists());
 
-        $ticket = SupportTicket::create([
-            'ticket_number' => $ticketNumber,
-            'customer_id'   => $user->id,
-            'order_id'      => $order?->id,
-            'category'      => $this->category,
-            'subject'       => $this->subject,
-            'message'       => $this->message,
-            'status'        => 'open',
+        // NOTE: ticket_number and status are not in SupportTicket's
+        // $fillable (status defaults to 'open' in the migration and is
+        // otherwise support-agent controlled), so they're set directly on
+        // the model instead of via mass assignment.
+        $ticket = new SupportTicket([
+            'customer_id' => $user->id,
+            'order_id'    => $order?->id,
+            'category'    => $this->category,
+            'subject'     => $this->subject,
+            'message'     => $this->message,
         ]);
+        $ticket->ticket_number = $ticketNumber;
+        $ticket->save();
 
         activity()
             ->causedBy($user)

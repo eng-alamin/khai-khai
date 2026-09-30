@@ -72,10 +72,11 @@
             <div class="col-md-3 col-12">
                 <div class="stat-card {{ $colors[$index % 4] }} product-card">
                     <div class="stat-icon product-icon">
-                        <img
-                            src="{{ $product->image_url ?? 'https://via.placeholder.com/80?text=' . urlencode($product->emoji ?? '🛍') }}"
-                            alt="{{ $product->name }}"
-                        >
+                        @if($product->image_url)
+                            <img src="{{ $product->image_url }}" alt="{{ $product->name }}">
+                        @else
+                            <i class="fa fa-shopping-bag"></i>
+                        @endif
                     </div>
                     <div class="stat-info">
                         <div class="num">৳{{ number_format($product->price, 0) }}</div>

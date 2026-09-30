@@ -34,11 +34,13 @@ return new class extends Migration
         $table->enum('applies_to', [
             'all_items',
             'category',
-            'specific_item',
+            'specific_food',
+            'specific_product',
         ]);
 
         $table->unsignedBigInteger('target_id')
-            ->nullable();
+            ->nullable()
+            ->comment('categories.id / foods.id / products.id depending on applies_to');
 
         $table->decimal('minimum_order_amount',15,2)
             ->default(0);

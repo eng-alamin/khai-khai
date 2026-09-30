@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Restaurant extends Model
 {
@@ -57,5 +58,23 @@ class Restaurant extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    /** Approve howar jonno upload kora KYC document gulo (trade license, NID, ...) */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(VendorDocument::class);
+    }
+
+    /** Kon kon customer ei restaurant ta favorite/save rekheche */
+    public function favoritedBy(): MorphMany
+    {
+        return $this->morphMany(Favorite::class, 'favoritable');
+    }
+
+    /** Sob document approved kina — eta check kore full KYC complete kina bola jay */
+    public function hasApprovedDocuments(): bool
+    {
+        return $this->documents()->approved()->exists();
     }
 }

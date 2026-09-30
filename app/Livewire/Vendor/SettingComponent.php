@@ -179,7 +179,10 @@ class SettingComponent extends Component
         $this->resetErrorBag('longitude');
     }
 
-    // ── min_order_amount: paisa ↔ taka ─────────────────────────────
+    // ── min_order_amount: plain taka, display helper only ────────────
+    // vendor_settings.min_order_amount decimal(12,2) column e already
+    // taka-e store hoy, kono paisa conversion nai — eta shudhu comma-
+    // formatted display value bananor jonno.
     public function getMinOrderTakaProperty(): string
     {
         return $this->min_order_amount !== null

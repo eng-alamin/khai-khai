@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 
 class Product extends Model
@@ -88,6 +89,24 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    /** Ei product customer order korle je order_items row gulo toiri hoy */
+    public function orderItems(): MorphMany
+    {
+        return $this->morphMany(OrderItem::class, 'orderable');
+    }
+
+    /** Size/variant, addon er moto option group gulo */
+    public function optionGroups(): MorphMany
+    {
+        return $this->morphMany(ItemOptionGroup::class, 'optionable');
+    }
+
+    /** Kon kon customer ei product ta favorite/save rekheche */
+    public function favoritedBy(): MorphMany
+    {
+        return $this->morphMany(Favorite::class, 'favoritable');
     }
 
     /*

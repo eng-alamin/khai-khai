@@ -1,3 +1,5 @@
+{{-- resources/views/livewire/rider/finance-component.blade.php --}}
+{{-- Styles: resources/css/blade.css (shared classes, Bootstrap 5 required) --}}
 <div>
 
     {{-- ══════════════════════════════════════════════
@@ -46,7 +48,7 @@
     <div class="card" style="padding:0;overflow:hidden;">
 
         <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);">
-            <span style="font-size:14px;font-weight:800;color:var(--text-1);">Payment History</span>
+            <span style="font-size:14px;font-weight:800;color:var(--dark);">Payment History</span>
         </div>
 
         @forelse($rows as $row)
@@ -55,10 +57,10 @@
                 wire:key="payout-{{ $row['id'] }}"
             >
                 <div class="payout-left">
-                    <div style="font-size:14px;font-weight:700;color:var(--text-1);">
+                    <div style="font-size:14px;font-weight:700;color:var(--dark);">
                         {{ $row['date_label'] }}
                     </div>
-                    <div style="font-size:12px;color:var(--text-3);margin-top:2px;">
+                    <div style="font-size:12px;color:var(--muted);margin-top:2px;">
                         {{ $row['method'] }}
                     </div>
                 </div>
@@ -92,14 +94,14 @@
                             <span class="badge-kk" style="background:#fee2e2;color:#991b1b;">Failed</span>
                             @break
                         @default
-                            <span class="badge-kk" style="background:#f3f4f6;color:var(--text-3);">Pending</span>
+                            <span class="badge-kk" style="background:#f3f4f6;color:var(--muted);">Pending</span>
                     @endswitch
                 </div>
             </div>
         @empty
-            <div class="text-center py-4" style="color:var(--text-3);">
+            <div class="text-center py-4" style="color:var(--muted);">
                 <div style="font-size:48px;" class="mb-2">💸</div>
-                <div style="font-weight:700;color:var(--text-2);">No payments yet</div>
+                <div style="font-weight:700;color:var(--muted);">No payments yet</div>
                 <div style="font-size:13px;margin-top:4px;">Payments will show up here once processed.</div>
             </div>
         @endforelse
@@ -114,103 +116,3 @@
     @endif
 
 </div>
-
-@push('styles')
-<style>
-    :root {
-        --success: #16a34a;
-        --warning: #f59e0b;
-        --danger:  #ef4444;
-        --text-1:  #1f2937;
-        --text-2:  #4b5563;
-        --text-3:  #9ca3af;
-        --border:  #e5e7eb;
-        --radius:  14px;
-        --shadow:  0 2px 10px rgba(0,0,0,.06);
-    }
-
-    /* ── Card ── */
-    .card {
-        background: #fff;
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-    }
-
-    /* ── Stats row ── */
-    .stats-row {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-    }
-
-    @media (max-width: 600px) {
-        .stats-row { grid-template-columns: 1fr; }
-    }
-
-    .stat-card {
-        background: #fff;
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-        padding: 16px 18px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-    }
-
-    .stat-icon-wrap {
-        width: 48px; height: 48px;
-        border-radius: 12px;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .stat-icon { font-size: 22px; }
-
-    .stat-label {
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .5px;
-        color: var(--text-3);
-        margin-bottom: 4px;
-    }
-
-    .stat-value {
-        font-size: 22px;
-        font-weight: 900;
-        line-height: 1;
-    }
-
-    /* ── Payout rows ── */
-    .payout-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 14px 20px;
-        border-bottom: 1px solid var(--border);
-    }
-    .payout-row:last-child { border-bottom: none; }
-
-    .payout-left  { display: flex; flex-direction: column; }
-    .payout-right { display: flex; align-items: center; gap: 10px; }
-
-    /* ── Badge ── */
-    .badge-kk {
-        display: inline-flex; align-items: center;
-        padding: 4px 11px; border-radius: 999px;
-        font-size: 12px; font-weight: 700; white-space: nowrap;
-    }
-
-    /* ── Utilities ── */
-    .d-flex               { display: flex; }
-    .align-items-center   { align-items: center; }
-    .justify-content-center { justify-content: center; }
-    .text-center          { text-align: center; }
-    .mb-2 { margin-bottom: 8px; }
-    .mb-4 { margin-bottom: 16px; }
-    .mt-3 { margin-top: 12px; }
-    .py-4 { padding-top: 24px; padding-bottom: 24px; }
-</style>
-@endpush

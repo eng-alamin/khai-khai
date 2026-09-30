@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
+  <script>
+    (function () {
+      var t = localStorage.getItem('kk-theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{{ $title ?? config('app.name') }}</title>
@@ -12,6 +19,7 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="{{asset('assets/css/theme.css')}}"/>
+  <link rel="stylesheet" href="{{asset('assets/css/blade.css')}}"/>
   @stack('styles')
   @livewireStyles
 </head>
@@ -68,6 +76,9 @@
       <div class="breadcrumb-title">{{ $breadcrumbTitle ?? config('app.name') }}</div>
     </div>
     <div class="topnav-right d-flex align-items-center gap-1 ms-auto">
+      <button class="icon-btn kk-theme-toggle" onclick="toggleTheme()" title="Theme পরিবর্তন করুন">
+        <span class="material-icons-round" id="themeIcon">dark_mode</span>
+      </button>
       @php
         $__headerNotifications = \App\Models\Notification::query()
             ->where(function ($q) {
@@ -212,9 +223,21 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function toggleTheme() {
+    var html = document.documentElement;
+    var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('kk-theme', next);
+    var icon = document.getElementById('themeIcon');
+    if (icon) icon.textContent = next === 'dark' ? 'light_mode' : 'dark_mode';
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    var icon = document.getElementById('themeIcon');
+    if (icon) icon.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light_mode' : 'dark_mode';
+  });
 
-  <script>
-      function toggleSidebar() {
+  function toggleSidebar() {
         document.getElementById('mainSidebar').classList.toggle('open');
         document.getElementById('sidebarOverlay').classList.toggle('show');
       }

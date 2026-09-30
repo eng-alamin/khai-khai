@@ -4,8 +4,8 @@ namespace App\Livewire\Customer;
 
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
-use App\Models\MenuCategory;
-use App\Models\MenuItem;
+use App\Models\Category;
+use App\Models\Food;
 use App\Models\Restaurant;
 use App\Models\Product;
 use App\Models\Slider;
@@ -52,7 +52,7 @@ class HomeComponent extends Component
                 'tag', 'is_open',
             ]);
 
-        $menuItems = MenuItem::query()
+        $menuItems = Food::query()
             ->where('is_available', true)
             ->whereHas('restaurant', fn ($q) =>
                 $q->where('is_active', true)->where('is_approved', true)
@@ -71,7 +71,8 @@ class HomeComponent extends Component
                 'compare_price', 'emoji', 'image_url', 'section', 'sort_order',
             ]);
 
-        $categories = MenuCategory::query()
+        $categories = Category::query()
+            ->where('type', Category::TYPE_FOOD)
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get(['id', 'name', 'emoji']);

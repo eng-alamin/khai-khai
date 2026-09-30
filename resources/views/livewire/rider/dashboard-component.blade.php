@@ -1,3 +1,5 @@
+{{-- resources/views/livewire/rider/dashboard-component.blade.php --}}
+{{-- Styles: resources/css/blade.css (shared classes, Bootstrap 5 required) --}}
 <div>
 
     {{-- ══════════════════════════════════════════════
@@ -67,7 +69,7 @@
         <div class="card" style="padding:20px 22px;">
 
             <div class="d-flex align-items-center justify-content-between mb-3">
-                <span style="font-size:16px;font-weight:900;color:var(--text-1);">Ongoing Deliveries</span>
+                <span style="font-size:16px;font-weight:900;color:var(--dark);">Ongoing Deliveries</span>
                 <span class="count-badge">{{ count($ongoingOrders) }}</span>
             </div>
 
@@ -90,7 +92,7 @@
                         {{-- Address --}}
                         <div class="info-row mb-3">
                             <span class="info-icon">📍</span>
-                            <span style="font-size:13px;color:var(--text-2);">{{ $order['address'] }}</span>
+                            <span style="font-size:13px;color:var(--muted);">{{ $order['address'] }}</span>
                         </div>
 
                         {{-- Action buttons --}}
@@ -115,7 +117,7 @@
                                 <a
                                     href="tel:{{ $order['customer_phone'] }}"
                                     class="btn-kk"
-                                    style="background:#f3f4f6;color:var(--text-1);"
+                                    style="background:#f3f4f6;color:var(--dark);"
                                 >
                                     📞 Call
                                 </a>
@@ -124,9 +126,9 @@
 
                     </div>
                 @empty
-                    <div class="text-center py-4" style="color:var(--text-3);">
+                    <div class="text-center py-4" style="color:var(--muted);">
                         <div style="font-size:40px;" class="mb-2">🛵</div>
-                        <div style="font-weight:700;color:var(--text-2);">No ongoing deliveries</div>
+                        <div style="font-weight:700;color:var(--muted);">No ongoing deliveries</div>
                     </div>
                 @endforelse
             </div>
@@ -137,7 +139,7 @@
         <div class="card" style="padding:20px 22px;">
 
             <div class="mb-3">
-                <span style="font-size:16px;font-weight:900;color:var(--text-1);">This Week's Earnings</span>
+                <span style="font-size:16px;font-weight:900;color:var(--dark);">This Week's Earnings</span>
             </div>
 
             <div class="d-flex flex-column gap-3">
@@ -163,210 +165,3 @@
     </div>
 
 </div>
-
-@push('styles')
-<style>
-    :root {
-        --success: #16a34a;
-        --warning: #f59e0b;
-        --danger:  #ef4444;
-        --text-1:  #1f2937;
-        --text-2:  #4b5563;
-        --text-3:  #9ca3af;
-        --border:  #e5e7eb;
-        --radius:  14px;
-        --shadow:  0 2px 10px rgba(0,0,0,.06);
-    }
-
-    /* ── Stat Cards ── */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
-    }
-    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
-
-    .stat-card {
-        background: #fff;
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-        padding: 18px 18px 16px;
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-icon-wrap {
-        width: 46px; height: 46px;
-        border-radius: 12px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 20px;
-        flex-shrink: 0;
-    }
-
-    .stat-body { flex: 1; z-index: 1; }
-
-    .stat-value {
-        font-size: 24px;
-        font-weight: 900;
-        line-height: 1.1;
-        margin-bottom: 4px;
-    }
-
-    .stat-label {
-        font-size: 12px;
-        color: var(--text-3);
-        font-weight: 600;
-    }
-
-    .best-badge {
-        margin-top: 5px;
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--success);
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .stat-bg-circle {
-        position: absolute;
-        right: -18px; bottom: -18px;
-        width: 70px; height: 70px;
-        border-radius: 50%;
-        background: rgba(0,0,0,.04);
-    }
-
-    /* ── Main Grid ── */
-    .main-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-    }
-    @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } }
-
-    /* ── Card ── */
-    .card {
-        background: #fff;
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-    }
-
-    /* ── Count badge ── */
-    .count-badge {
-        background: #fce7f3;
-        color: #db2777;
-        font-size: 12px;
-        font-weight: 800;
-        padding: 4px 11px;
-        border-radius: 999px;
-    }
-
-    /* ── Ongoing delivery sub-card ── */
-    .ongoing-card {
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 14px 16px;
-    }
-
-    .order-num {
-        font-size: 15px;
-        font-weight: 900;
-        color: #7c3aed;
-    }
-
-    /* ── Info row ── */
-    .info-row {
-        display: flex; align-items: flex-start; gap: 7px;
-        color: var(--text-2);
-    }
-    .info-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
-
-    /* ── Buttons ── */
-    .btn-kk {
-        display: inline-flex; align-items: center; justify-content: center;
-        gap: 5px; padding: 9px 14px; border-radius: 10px;
-        font-size: 13px; font-weight: 700; border: none;
-        cursor: pointer; white-space: nowrap; text-decoration: none;
-        transition: opacity .15s, transform .1s;
-    }
-    .btn-kk:hover  { opacity: .87; }
-    .btn-kk:active { transform: scale(.97); }
-    .btn-kk:disabled { opacity: .5; cursor: not-allowed; }
-
-    /* ── Badge ── */
-    .badge-kk {
-        display: inline-flex; align-items: center;
-        padding: 4px 11px; border-radius: 999px;
-        font-size: 12px; font-weight: 700; white-space: nowrap;
-    }
-
-    /* ── Weekly bar chart ── */
-    .bar-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .bar-label {
-        width: 30px;
-        font-size: 13px;
-        font-weight: 700;
-        color: var(--text-2);
-        flex-shrink: 0;
-        text-align: right;
-    }
-
-    .bar-track {
-        flex: 1;
-        height: 10px;
-        background: #f0f0f5;
-        border-radius: 999px;
-        overflow: hidden;
-    }
-
-    .bar-fill {
-        height: 100%;
-        border-radius: 999px;
-        background: linear-gradient(90deg, #f472b6, #ec4899);
-        transition: width .4s ease;
-        min-width: 4px;
-    }
-
-    .bar-amount {
-        width: 54px;
-        font-size: 13px;
-        font-weight: 700;
-        color: var(--text-1);
-        text-align: right;
-        flex-shrink: 0;
-    }
-
-    /* ── Spinner ── */
-    .spinner {
-        display: inline-block;
-        width: 14px; height: 14px;
-        border: 2px solid rgba(255,255,255,.4);
-        border-top-color: #fff;
-        border-radius: 50%;
-        animation: spin .6s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Utilities ── */
-    .d-flex               { display: flex; }
-    .flex-column          { flex-direction: column; }
-    .align-items-center   { align-items: center; }
-    .justify-content-between { justify-content: space-between; }
-    .text-center          { text-align: center; }
-    .gap-2 { gap: 8px; } .gap-3 { gap: 12px; }
-    .mb-1 { margin-bottom: 4px; } .mb-2 { margin-bottom: 8px; }
-    .mb-3 { margin-bottom: 12px; } .mb-4 { margin-bottom: 16px; }
-    .py-4 { padding-top: 24px; padding-bottom: 24px; }
-</style>
-@endpush
