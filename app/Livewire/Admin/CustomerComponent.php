@@ -57,7 +57,7 @@ class CustomerComponent extends Component
             'total'           => number_format($total),
             'new_this_month'  => number_format($newThisMonth),
             'repeat_rate'     => $repeatRate,
-            'avg_order_value' => intdiv((int) $avgOrderValue, 100),
+            'avg_order_value' => (int) round((float) $avgOrderValue),
         ];
     }
 

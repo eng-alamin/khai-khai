@@ -18,6 +18,11 @@
                         <div style="font-size:13px;color:var(--text-2);margin-top:4px;">
                             {{ $coupon['description'] }} — {{ $coupon['discount_label'] }}
                         </div>
+                        @if ($coupon['restaurant'])
+                            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">
+                                <i class="fa fa-store"></i> শুধু {{ $coupon['restaurant'] }}-এ প্রযোজ্য
+                            </div>
+                        @endif
                         @if ($coupon['min_order_taka'])
                             <div style="font-size:11px;color:var(--text-3);margin-top:2px;">
                                 <i class="fa fa-bag-shopping"></i> সর্বনিম্ন অর্ডার ৳{{ $coupon['min_order_taka'] }}

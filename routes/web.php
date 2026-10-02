@@ -1,20 +1,21 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 
-
-// Guest
-// Route::middleware('guest')->group(function () {
+// Guest only (a logged-in user is redirected to their own dashboard)
+Route::middleware('guest')->group(function () {
     Route::get('vendor/register', App\Livewire\VendorRegistrationWizard::class)->name('vendor.register');
     Route::get('/vendor/registration/success/{restaurant}', App\Livewire\VendorRegistrationSuccess::class)->name('vendor.registration.success');
     Route::get('/rider/register', App\Livewire\RiderRegistrationWizard::class)->name('rider.register');
     Route::get('/rider/registration/success/{riderProfile}', App\Livewire\RiderRegistrationSuccess::class)->name('rider.registration.success');
     Route::get('/registration/success/{user}', App\Livewire\CustomerRegistrationSuccess::class)->name('customer.registration.success');
+    Route::get('/register', App\Livewire\CustomerRegistrationComponent::class)->name('customer.register');
 
     Route::get('/login', App\Livewire\Login::class)->name('login');
     Route::get('/forgot-password', App\Livewire\ForgotPassword::class)->name('password.request');
     Route::get('/reset-password/{token}', App\Livewire\ResetPassword::class)->name('password.reset');
-// });
+});
 
 // Authentication required routes
 Route::middleware('auth')->group(function () {
@@ -32,7 +33,7 @@ Route::get('/', App\Livewire\Customer\HomeComponent::class)->name('customer.home
 Route::get('restaurants', App\Livewire\Customer\RestaurantComponent::class)->name('customer.restaurants');
 Route::get('restaurants/{slug}', App\Livewire\Customer\RestaurantComponent::class)->name('customer.restaurant');
 Route::get('items', App\Livewire\Customer\ItemComponent::class)->name('customer.items');
-Route::get('/register', App\Livewire\CustomerRegistrationComponent::class)->name('customer.register');
+Route::get('products/{slug}', App\Livewire\Customer\ProductDetailComponent::class)->name('customer.product');
 
 // Customer
 Route::middleware(['auth'])->group(function () {
@@ -42,6 +43,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('addresses', App\Livewire\Customer\AddressComponent::class)->name('customer.addresses');   
     Route::get('offers', App\Livewire\Customer\OfferComponent::class)->name('customer.offers');   
     Route::get('support', App\Livewire\Customer\SupportComponent::class)->name('customer.support');   
+    Route::get('notifications', App\Livewire\NotificationListComponent::class)->name('customer.notifications');
 });
 
 // Vendor
@@ -56,16 +58,24 @@ Route::middleware(['auth', 'role:vendor'])->group(function () {
     Route::get('reviews', App\Livewire\Vendor\ReviewComponent::class)->name('vendor.reviews');
     Route::get('settings', App\Livewire\Vendor\SettingComponent::class)->name('vendor.settings');
     Route::get('vendor/profile', App\Livewire\Vendor\ProfileComponent::class)->name('vendor.profile');
+    Route::get('vendor/notifications', App\Livewire\NotificationListComponent::class)->name('vendor.notifications');
 });
 
 // Rider 
 Route::middleware(['auth', 'role:rider'])->group(function () {
-    Route::get('/rider/dashboard', App\Livewire\Rider\DashboardComponent::class)->name('rider.dashboard');
-    Route::get('/rider/delivery/ongoing', App\Livewire\Rider\DeliveryOngoingComponent::class)->name('rider.delivery.ongoing');
-    Route::get('/rider/delivery/history', App\Livewire\Rider\DeliveryHistoryComponent::class)->name('rider.delivery.history');
-    Route::get('/rider/finance', App\Livewire\Rider\FinanceComponent::class)->name('rider.finance');
+    // Open to every rider, even before admin approval, so a new rider can
+    // see the "Pending Approval" status and edit their own details.
     Route::get('/rider/settings', App\Livewire\Rider\SettingComponent::class)->name('rider.settings');
     Route::get('/rider/profile', App\Livewire\Rider\ProfileComponent::class)->name('rider.profile');
+    Route::get('/rider/notifications', App\Livewire\NotificationListComponent::class)->name('rider.notifications');
+
+    // Order data (customer name, phone, address) and earnings: approved riders only.
+    Route::middleware('rider.approved')->group(function () {
+        Route::get('/rider/dashboard', App\Livewire\Rider\DashboardComponent::class)->name('rider.dashboard');
+        Route::get('/rider/delivery/ongoing', App\Livewire\Rider\DeliveryOngoingComponent::class)->name('rider.delivery.ongoing');
+        Route::get('/rider/delivery/history', App\Livewire\Rider\DeliveryHistoryComponent::class)->name('rider.delivery.history');
+        Route::get('/rider/finance', App\Livewire\Rider\FinanceComponent::class)->name('rider.finance');
+    });
 });
 
 // Admin
@@ -86,3 +96,18 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/settings', App\Livewire\Admin\SettingComponent::class)->name('admin.settings');
     Route::get('/admin/profile', App\Livewire\Admin\ProfileComponent::class)->name('admin.profile');
 });
+
+
+if (app()->environment('local')) {
+    Route::get('/run-migrations', function () {
+        Artisan::call('migrate', [
+            '--force' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Database migrations completed.',
+            'output' => Artisan::output(),
+        ]);
+    })->middleware('auth');
+}

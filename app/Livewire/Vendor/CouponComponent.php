@@ -94,6 +94,11 @@ class CouponComponent extends Component
     // ── Sorting ───────────────────────────────────────────
     public function sortBy(string $field): void
     {
+        // Only allow real, sortable columns (the field comes from the browser).
+        if (! in_array($field, ['code', 'type', 'value', 'valid_until', 'used_count', 'created_at'], true)) {
+            return;
+        }
+
         if ($this->sortField === $field) {
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
@@ -241,6 +246,23 @@ class CouponComponent extends Component
         $couponCode = $coupon->code;
         $couponId   = $coupon->id;
 
+        // A coupon that customers already used cannot be deleted (order history
+        // points to it). Deactivate it instead of crashing on the foreign key.
+        if ($coupon->usages()->exists()) {
+            $coupon->update(['is_active' => false]);
+
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($coupon)
+                ->withProperties(['coupon_id' => $couponId, 'code' => $couponCode])
+                ->log('Vendor deactivated used coupon instead of deleting');
+
+            $this->confirmDelete = false;
+            $this->deleteId      = null;
+            $this->dispatch('show-toast', message: 'এই কুপন ব্যবহার হয়ে গেছে, তাই মোছা যায়নি — নিষ্ক্রিয় করা হয়েছে।', type: 'info');
+            return;
+        }
+
         $coupon->delete();
 
         activity()
@@ -293,9 +315,14 @@ class CouponComponent extends Component
     {
         $coupons = Coupon::query()
             ->with('createdBy:id,name')
+            // Vendors only see (and can manage) their own coupons.
+            ->where('created_by', Auth::id())
+            // Search is grouped; before, its orWhere escaped the other filters.
             ->when($this->search, fn ($q) =>
-                $q->where('code', 'like', "%{$this->search}%")
-                  ->orWhere('description', 'like', "%{$this->search}%")
+                $q->where(fn ($s) =>
+                    $s->where('code', 'like', "%{$this->search}%")
+                      ->orWhere('description', 'like', "%{$this->search}%")
+                )
             )
             ->when($this->filterType, fn ($q) =>
                 $q->where('type', $this->filterType)

@@ -17,6 +17,9 @@
                     </h3>
                     <div style="font-size:12px; color:var(--text-3);">
                         {{ $this->count }} টি আইটেম
+                        @if($kind === 'product' && count($items) > 0)
+                            · 🛍️ প্রোডাক্ট অর্ডার
+                        @endif
                     </div>
                 </div>
                 <button class="cart-close" wire:click="toggleCart">
@@ -70,17 +73,64 @@
             {{-- Footer --}}
             @if(count($items) > 0)
             <div class="cart-footer">
+
+                {{-- Coupon (restaurant cart only) --}}
+                @if($kind !== 'product')
+                <div style="margin-bottom:12px;">
+                    @if($couponCode !== '')
+                        <div class="cart-total-row" style="align-items:center; margin-bottom:4px;">
+                            <span>
+                                <i class="fa fa-tag" style="color:var(--pink)"></i>
+                                <strong>{{ $couponCode }}</strong>
+                            </span>
+                            <button wire:click="removeCoupon"
+                                    style="background:none; border:none; color:var(--danger); font-size:12px; cursor:pointer;">
+                                সরান
+                            </button>
+                        </div>
+                        @if($pricing['coupon_error'])
+                            <div style="font-size:12px; color:var(--danger);">{{ $pricing['coupon_error'] }}</div>
+                        @endif
+                    @else
+                        <div style="display:flex; gap:6px;">
+                            <input type="text"
+                                   wire:model="couponInput"
+                                   wire:keydown.enter="applyCoupon"
+                                   maxlength="20"
+                                   placeholder="কুপন কোড"
+                                   autocomplete="off"
+                                   style="flex:1; min-width:0; border:1.5px solid var(--border); border-radius:8px; padding:8px 10px; font-size:13px; text-transform:uppercase;">
+                            <button wire:click="applyCoupon"
+                                    wire:loading.attr="disabled"
+                                    wire:target="applyCoupon"
+                                    style="background:var(--pink); color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer;">
+                                প্রয়োগ
+                            </button>
+                        </div>
+                        @if($couponError !== '')
+                            <div style="font-size:12px; color:var(--danger); margin-top:4px;">{{ $couponError }}</div>
+                        @endif
+                    @endif
+                </div>
+                @endif
+
                 <div class="cart-total-row">
                     <span>সাবটোটাল</span>
-                    <span>৳{{ number_format($this->subtotal) }}</span>
+                    <span>৳{{ number_format($pricing['subtotal']) }}</span>
                 </div>
                 <div class="cart-total-row">
                     <span>ডেলিভারি চার্জ</span>
-                    <span>৳{{ number_format($this->deliveryFee) }}</span>
+                    <span>৳{{ number_format($pricing['delivery_fee']) }}</span>
                 </div>
+                @if($pricing['discount'] > 0)
+                <div class="cart-total-row" style="color:var(--success);">
+                    <span>কুপন ছাড়</span>
+                    <span>−৳{{ number_format($pricing['discount']) }}</span>
+                </div>
+                @endif
                 <div class="cart-grand">
                     <span>মোট</span>
-                    <span>৳{{ number_format($this->total) }}</span>
+                    <span>৳{{ number_format($pricing['total']) }}</span>
                 </div>
 
                 <button
@@ -156,10 +206,10 @@
 
             {{-- Text --}}
             <h5 style="font-size:16px; font-weight:800; margin-bottom:8px; color:var(--text);">
-                ভিন্ন রেস্তোরাঁর আইটেম
+                {{ $conflictMixed ? 'ভিন্ন ধরনের আইটেম' : 'ভিন্ন রেস্তোরাঁর আইটেম' }}
             </h5>
             <p style="font-size:13px; color:var(--text-2); margin-bottom:20px; line-height:1.6;">
-                কার্টে অন্য রেস্তোরাঁর আইটেম আছে।<br>
+                {{ $conflictMixed ? 'কার্টে অন্য ধরনের আইটেম আছে।' : 'কার্টে অন্য রেস্তোরাঁর আইটেম আছে।' }}<br>
                 কার্ট <strong>খালি করে</strong> নতুন আইটেম যোগ করবেন?
             </p>
 
@@ -176,7 +226,7 @@
                 gap: 10px;
                 text-align: left;
             ">
-                <span style="font-size:24px;">{{ $pendingItem['emoji'] ?? '🍽️' }}</span>
+                <span style="font-size:24px;">{{ $pendingItem['emoji'] ?? (($pendingItem['kind'] ?? 'food') === 'product' ? '🛍️' : '🍽️') }}</span>
                 <div>
                     <div style="font-size:13px; font-weight:700; color:var(--text);">
                         {{ $pendingItem['name'] }}

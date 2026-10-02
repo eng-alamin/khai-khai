@@ -94,6 +94,14 @@
                     @error('includedKmInMinimum') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label">Product Order Delivery Fee (৳, flat)</label>
+                    <input type="number" step="0.01" min="0"
+                           class="form-control @error('productDeliveryFee') is-invalid @enderror"
+                           wire:model.defer="productDeliveryFee">
+                    @error('productDeliveryFee') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
                 <button type="submit" class="save-btn" wire:loading.attr="disabled" wire:target="saveDeliverySettings">
                     <span wire:loading wire:target="saveDeliverySettings" class="spinner-sm"></span>
                     <span class="material-icons-round" wire:loading.remove wire:target="saveDeliverySettings">save</span>

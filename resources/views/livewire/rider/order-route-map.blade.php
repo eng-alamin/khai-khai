@@ -4,8 +4,8 @@
     <div id="rider-route-map" style="height: 400px; width: 100%; border-radius: var(--radius-lg);" wire:ignore></div>
 
     <div id="rider-map-data"
-         data-restaurant-lat="{{ $restaurant->latitude }}"
-         data-restaurant-lng="{{ $restaurant->longitude }}"
+         data-restaurant-lat="{{ $restaurant?->latitude }}"
+         data-restaurant-lng="{{ $restaurant?->longitude }}"
          data-dest-lat="{{ $destLat }}"
          data-dest-lng="{{ $destLng }}"
          data-my-lat="{{ $this->myLocation['lat'] ?? '' }}"

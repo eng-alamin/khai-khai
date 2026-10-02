@@ -28,7 +28,7 @@ class LiveOrderCount extends Component
     private function getCount(): int
     {
         return Order::where('restaurant_id', Auth::user()->restaurant->id)
-            ->whereIn('status', ['pending', 'confirmed', 'preparing'])
+            ->whereIn('status', ['pending', 'confirmed', 'preparing', 'ready'])
             ->count();
     }
 }

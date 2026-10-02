@@ -123,7 +123,7 @@
                             <span class="order-badge">{{ $customer->total_orders ?? 0 }}</span>
                         </td>
                         <td class="text-right spent">
-                            ৳{{ number_format(intdiv((int)($customer->total_spent ?? 0), 100)) }}
+                            ৳{{ number_format((float) ($customer->total_spent ?? 0)) }}
                         </td>
                         <td class="text-right joined">
                             {{ $customer->created_at->format('j M Y') }}

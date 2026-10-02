@@ -90,7 +90,7 @@ class DeliveryHistoryComponent extends Component
                 'id'           => $order->id,
                 'order_number' => $order->order_number,
                 'customer'     => $order->customer->name ?? 'Customer',
-                'restaurant'   => $order->restaurant->name ?? 'Restaurant',
+                'restaurant'   => $order->isAdminOrder() ? 'KhaiKhai Store' : ($order->restaurant->name ?? 'Restaurant'),
                 'date_label'   => $this->dateLabel($order->delivered_at ?? $order->updated_at),
                 'earning'      => $earning !== null ? 'Tk ' . $earning : '-',
                 'rating'       => $ratings->get($order->id),

@@ -322,10 +322,7 @@
       <span class="dot"></span>
     </a>
 
-    <a href="{{ route('customer.support') }}" class="topbar-btn position-relative">
-      <i class="fa fa-bell"></i>
-      <span class="dot"></span>
-    </a>
+    @livewire('notification-bell')
     
     <a class="top-avatar text-decoration-none" href="{{route('customer.profile')}}">{{ mb_substr(auth()->user()->name ?? 'C', 0, 1) }}</a>
   </div>
@@ -360,7 +357,7 @@
   </div>
 </main>
 
-{{-- Cart component --}}
+{{-- One cart for restaurant food AND admin products --}}
 <livewire:customer.cart-component />
 {{-- Address component --}}
 <livewire:customer.quick-address-component />
@@ -387,6 +384,12 @@
   document.addEventListener('livewire:initialized', () => {
     Livewire.on('order-placed', () => {
       showToast('✅ অর্ডার সফলভাবে দেওয়া হয়েছে!', 'success');
+    });
+
+    // Cart + product detail: $this->dispatch('notify', type: ..., message: ...)
+    Livewire.on('notify', (e) => {
+      const d = Array.isArray(e) ? e[0] : e;
+      if (d && d.message) showToast(d.message, d.type === 'error' ? 'error' : (d.type || ''));
     });
   });
 </script>

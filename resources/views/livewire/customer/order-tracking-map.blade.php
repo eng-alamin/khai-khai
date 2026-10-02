@@ -3,8 +3,8 @@
     <div id="order-tracking-map" style="height: 400px; border-radius: var(--radius-lg);" wire:ignore></div>
 
     <div id="map-data"
-         data-restaurant-lat="{{ $restaurant->latitude }}"
-         data-restaurant-lng="{{ $restaurant->longitude }}"
+         data-restaurant-lat="{{ $restaurant?->latitude }}"
+         data-restaurant-lng="{{ $restaurant?->longitude }}"
          data-dest-lat="{{ $destLat }}"
          data-dest-lng="{{ $destLng }}"
          data-rider-lat="{{ $this->riderLocation['lat'] ?? '' }}"

@@ -69,11 +69,16 @@
     <div class="row g-3 mb-4">
         @php $colors = ['sc-pink', 'sc-green', 'sc-orange', 'sc-blue']; @endphp
         @forelse($products as $index => $product)
-            <div class="col-md-3 col-12">
-                <div class="stat-card {{ $colors[$index % 4] }} product-card">
+            <div class="col-md-3 col-12" wire:key="featured-{{ $product->id }}">
+                {{-- Whole card opens the detail page. Add to cart lives there. --}}
+                <a href="{{ route('customer.product', $product->slug) }}"
+                   class="stat-card {{ $colors[$index % 4] }} product-card"
+                   style="text-decoration:none; color:inherit; cursor:pointer;">
                     <div class="stat-icon product-icon">
                         @if($product->image_url)
                             <img src="{{ $product->image_url }}" alt="{{ $product->name }}">
+                        @elseif($product->emoji)
+                            <span style="font-size:26px;">{{ $product->emoji }}</span>
                         @else
                             <i class="fa fa-shopping-bag"></i>
                         @endif
@@ -89,7 +94,7 @@
                             </div>
                         @endif
                     </div>
-                </div>
+                </a>
             </div>
         @empty
             <div class="col-12 text-center text-muted py-4">No products available right now.</div>

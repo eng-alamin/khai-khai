@@ -3,8 +3,8 @@
 namespace App\Livewire\Customer;
 
 use App\Models\Order;
-use App\Models\OrderStatusLog;
 use App\Models\Review;
+use App\Services\OrderTransitionService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -44,7 +44,7 @@ class OrderListComponent extends Component
         return Order::query()
             ->where('customer_id', Auth::id())
             ->with(['restaurant', 'items', 'review'])
-            ->when($this->activeFilter !== 'all', fn ($q) => $q->where('status', $this->activeFilter))
+            ->when($this->activeFilter !== 'all', fn ($q) => $q->whereIn('status', $this->activeFilter === 'preparing' ? ['preparing', 'ready'] : [$this->activeFilter]))
             ->when(trim($this->searchQuery) !== '', function ($q) {
                 $term = trim($this->searchQuery);
                 $q->where(function ($q) use ($term) {
@@ -71,50 +71,52 @@ class OrderListComponent extends Component
             ->with('items')
             ->findOrFail($orderId);
 
-        // Reorder by orderable_id + quantity only (Food items — vendor orders
-        // only) — CartComponent re-verifies live price/availability itself
-        // (same as it does at checkout), so we never trust the old order's
-        // snapshot price here.
-        $requested = $order->items
-            ->where('orderable_type', \App\Models\Food::class)
+        // Reorder by orderable_id + quantity only. Each cart re-verifies live
+        // price/availability itself (same as at checkout), so we never trust
+        // the old order's snapshot price here.
+        // Food (vendor) -> CartComponent, Product (admin) -> ProductCartComponent.
+        $toPayload = fn (string $type) => $order->items
+            ->where('orderable_type', $type)
             ->whereNotNull('orderable_id')
             ->map(fn ($item) => ['id' => $item->orderable_id, 'qty' => $item->quantity])
             ->values()
             ->all();
 
-        if (empty($requested)) {
+        $foods    = $toPayload(\App\Models\Food::class);
+        $products = $toPayload(\App\Models\Product::class);
+
+        if (empty($foods) && empty($products)) {
             $this->dispatch('show-toast', message: 'This order has no items to reorder.', type: 'error');
             return;
         }
 
-        $this->dispatch('reorder-items', items: $requested);
+        if (! empty($foods)) {
+            $this->dispatch('reorder-items', items: $foods);
+        }
+
+        if (! empty($products)) {
+            $this->dispatch('reorder-products', items: $products);
+        }
     }
 
     /* ── Cancel order ── */
     public function cancelOrder(int $orderId): void
     {
-        $order = Order::where('customer_id', Auth::id())->findOrFail($orderId);
+        // Ownership + status are checked again under a row lock inside the service.
+        $cancelled = app(OrderTransitionService::class)->cancel(
+            orderId: $orderId,
+            scope: ['customer_id' => Auth::id()],
+            allowedFrom: Order::CANCELLABLE_STATUSES,
+            actor: Auth::user(),
+            reason: 'Cancelled by customer',
+            logNote: 'Cancelled by customer from order list',
+            activityText: 'Customer cancelled order'
+        );
 
-        if (! in_array($order->status, Order::CANCELLABLE_STATUSES, true)) {
+        if (! $cancelled) {
             $this->dispatch('show-toast', message: 'This order can no longer be cancelled.', type: 'error');
             return;
         }
-
-        $previousStatus = $order->status;
-
-        $order->update([
-            'status'        => 'cancelled',
-            'cancelled_at'  => now(),
-            'cancel_reason' => 'Cancelled by customer',
-        ]);
-
-        OrderStatusLog::create([
-            'order_id'    => $order->id,
-            'from_status' => $previousStatus,
-            'to_status'   => 'cancelled',
-            'changed_by'  => Auth::id(),
-            'note'        => 'Cancelled by customer from order list',
-        ]);
 
         $this->dispatch('show-toast', message: 'Order has been cancelled.', type: 'info');
     }

@@ -3,9 +3,8 @@
 namespace App\Livewire\Vendor;
 
 use App\Models\Order;
-use App\Models\OrderStatusLog;
+use App\Services\OrderTransitionService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -16,7 +15,7 @@ class OrderListComponent extends Component
     protected string $paginationTheme = 'bootstrap';
 
     /** Forward-only workflow. */
-    private const STATUS_FLOW = ['pending', 'confirmed', 'preparing', 'picked_up', 'delivered'];
+    private const STATUS_FLOW = ['pending', 'confirmed', 'preparing', 'ready'];
 
     // ── List / Filter ─────────────────────────────────────
     public string $search        = '';
@@ -57,6 +56,7 @@ class OrderListComponent extends Component
             'pending'   => ['label' => 'Pending',   'emoji' => '🕐', 'class' => 'pending'],
             'confirmed' => ['label' => 'Confirmed', 'emoji' => '✅', 'class' => 'confirmed'],
             'preparing' => ['label' => 'Preparing', 'emoji' => '👨‍🍳', 'class' => 'preparing'],
+            'ready'     => ['label' => 'Ready for Pickup', 'emoji' => '✅', 'class' => 'preparing'],
             'picked_up' => ['label' => 'Picked Up', 'emoji' => '🛵', 'class' => 'picked-up'],
             'delivered' => ['label' => 'Delivered', 'emoji' => '📦', 'class' => 'delivered'],
             'cancelled' => ['label' => 'Cancelled', 'emoji' => '❌', 'class' => 'cancelled'],
@@ -101,15 +101,14 @@ class OrderListComponent extends Component
         return match ($this->nextStatus($current)) {
             'confirmed' => 'Confirm Order',
             'preparing' => 'Start Preparing',
-            'picked_up' => 'Mark Picked Up',
-            'delivered' => 'Mark Delivered',
+            'ready'     => 'Mark Ready',
             default     => null,
         };
     }
 
     public function isCancellable(string $status): bool
     {
-        return in_array($status, ['pending', 'confirmed', 'preparing'], true);
+        return in_array($status, ['pending', 'confirmed', 'preparing', 'ready'], true);
     }
 
     // ── Watchers ─────────────────────────────────────────
@@ -159,36 +158,25 @@ class OrderListComponent extends Component
     public function advanceStatus(int $id): void
     {
         $order = Order::where('restaurant_id', $this->restaurantId())->findOrFail($id);
-        $next  = $this->nextStatus($order->status);
 
-        if (! $next) {
+        if (! $this->nextStatus($order->status)) {
             return;
         }
 
-        $from = $order->status;
+        $newStatus = app(OrderTransitionService::class)->advance(
+            orderId: $order->id,
+            scope: ['restaurant_id' => $this->restaurantId()],
+            expectedFrom: $order->status,
+            actor: Auth::user(),
+            activityText: 'Vendor advanced order status'
+        );
 
-        DB::transaction(function () use ($order, $from, $next) {
-            $order->status = $next;
-            if ($next === 'delivered') {
-                $order->delivered_at = now();
-            }
-            $order->save();
+        if ($newStatus === null) {
+            session()->flash('error', 'This order was already updated. Please refresh the list.');
+            return;
+        }
 
-            OrderStatusLog::create([
-                'order_id'    => $order->id,
-                'from_status' => $from,
-                'to_status'   => $next,
-                'changed_by'  => Auth::id(),
-            ]);
-
-            activity()
-                ->causedBy(Auth::user())
-                ->performedOn($order)
-                ->withProperties(['from' => $from, 'to' => $next])
-                ->log('Vendor advanced order status');
-        });
-
-        session()->flash('success', "Order #{$order->order_number} marked as {$this->statusMeta($next)['label']}.");
+        session()->flash('success', "Order #{$order->order_number} marked as {$this->statusMeta($newStatus)['label']}.");
     }
 
     // ── Cancel flow ─────────────────────────────────────────
@@ -213,35 +201,22 @@ class OrderListComponent extends Component
 
         $order = Order::where('restaurant_id', $this->restaurantId())->findOrFail($this->cancelId);
 
-        if (! $this->isCancellable($order->status)) {
+        $cancelled = app(OrderTransitionService::class)->cancel(
+            orderId: $order->id,
+            scope: ['restaurant_id' => $this->restaurantId()],
+            allowedFrom: ['pending', 'confirmed', 'preparing', 'ready'],
+            actor: Auth::user(),
+            reason: $this->cancel_reason,
+            logNote: $this->cancel_reason,
+            activityText: 'Vendor cancelled order'
+        );
+
+        if (! $cancelled) {
             $this->confirmCancel = false;
+            $this->cancelId      = null;
             session()->flash('error', 'This order can no longer be cancelled.');
             return;
         }
-
-        $from = $order->status;
-
-        DB::transaction(function () use ($order, $from) {
-            $order->update([
-                'status'        => 'cancelled',
-                'cancelled_at'  => now(),
-                'cancel_reason' => $this->cancel_reason,
-            ]);
-
-            OrderStatusLog::create([
-                'order_id'    => $order->id,
-                'from_status' => $from,
-                'to_status'   => 'cancelled',
-                'changed_by'  => Auth::id(),
-                'note'        => $this->cancel_reason,
-            ]);
-
-            activity()
-                ->causedBy(Auth::user())
-                ->performedOn($order)
-                ->withProperties(['from' => $from, 'to' => 'cancelled', 'reason' => $this->cancel_reason])
-                ->log('Vendor cancelled order');
-        });
 
         $this->confirmCancel = false;
         $this->cancelId      = null;

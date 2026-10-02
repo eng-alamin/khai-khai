@@ -1,15 +1,20 @@
 {{-- resources/views/livewire/admin/order-component.blade.php --}}
-{{-- Styles: resources/css/blade.css (shared "" classes, Bootstrap 5 required) --}}
+{{-- Styles: resources/css/blade.css (shared classes, Bootstrap 5 required) --}}
+@php
+    $statusMap = [
+        'pending'    => ['label' => 'Pending',    'class' => 'order-status-new'],
+        'confirmed'  => ['label' => 'Confirmed',  'class' => 'order-status-new'],
+        'preparing'  => ['label' => 'Preparing',  'class' => 'order-status-preparing'],
+        'ready'      => ['label' => 'Ready',      'class' => 'order-status-preparing'],
+        'picked_up'  => ['label' => 'On the Way', 'class' => 'order-status-delivering'],
+        'on_the_way' => ['label' => 'On the Way', 'class' => 'order-status-delivering'],
+        'delivered'  => ['label' => 'Delivered',  'class' => 'order-status-completed'],
+        'cancelled'  => ['label' => 'Cancelled',  'class' => 'order-status-default'],
+        'rejected'   => ['label' => 'Rejected',   'class' => 'order-status-default'],
+    ];
+    $statusOf = fn (string $s) => $statusMap[$s] ?? ['label' => ucwords(str_replace('_', ' ', $s)), 'class' => 'order-status-default'];
+@endphp
 <div>
-
-    {{-- ── Flash ── --}}
-    @if(session('success'))
-        <div class="alert alert-success">
-            <i class="material-icons-round">check_circle</i>
-            <span>{{ session('success') }}</span>
-            <button onclick="this.parentElement.remove()" class="alert-close">&times;</button>
-        </div>
-    @endif
 
     {{-- ── Top Bar ── --}}
     <div class="topbar">
@@ -17,12 +22,21 @@
             <div class="topbar-title">All Orders</div>
         </div>
         <div class="topbar-right">
+            <select class="select" wire:model.live="typeFilter">
+                <option value="">All Types</option>
+                <option value="vendor">Vendor (Food)</option>
+                <option value="admin">Admin (Product)</option>
+            </select>
             <select class="select" wire:model.live="statusFilter">
                 <option value="">All Status</option>
-                <option value="new">New</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
                 <option value="preparing">Preparing</option>
-                <option value="delivering">On the Way</option>
-                <option value="completed">Completed</option>
+                <option value="ready">Ready</option>
+                <option value="picked_up">On the Way</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="rejected">Rejected</option>
             </select>
             <button class="export-btn" wire:click="export">
                 <span class="material-icons-round">download</span>
@@ -34,52 +48,47 @@
     {{-- ── Table Card ── --}}
     <div class="table-card">
 
-        {{-- Toolbar --}}
         <div class="toolbar">
             <div class="search-wrap">
                 <span class="material-icons-round search-icon">search</span>
                 <input type="text"
                        class="search-input"
-                       placeholder="Search by order ID, customer or restaurant…"
+                       placeholder="Search by order number, customer or restaurant…"
                        wire:model.live.debounce.350ms="search">
             </div>
         </div>
 
-        {{-- Table --}}
         <div class="table-wrap">
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Order ID</th>
+                        <th>Order</th>
+                        <th>Type</th>
                         <th>Customer</th>
-                        <th>Restaurant</th>
+                        <th>Seller</th>
                         <th>Rider</th>
                         <th class="text-right">Total</th>
-                        <th class="text-right">Commission</th>
                         <th class="text-center">Status</th>
                         <th class="text-center">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($orders as $order)
-                    @php
-                        $statusMap = [
-                            'new'         => ['label' => 'New',        'class' => 'order-status-new'],
-                            'preparing'   => ['label' => 'Preparing',  'class' => 'order-status-preparing'],
-                            'delivering'  => ['label' => 'On the Way', 'class' => 'order-status-delivering'],
-                            'completed'   => ['label' => 'Completed',  'class' => 'order-status-completed'],
-                        ];
-                        $statusInfo = $statusMap[$order->status] ?? ['label' => ucwords(str_replace('_', ' ', $order->status)), 'class' => 'order-status-default'];
-                    @endphp
+                    @php $statusInfo = $statusOf($order->status); @endphp
                     <tr wire:key="order-{{ $order->id }}">
-                        <td class="order-id">#KK{{ $order->id }}</td>
+                        <td class="order-id">#{{ $order->order_number }}</td>
+                        <td>{{ $order->isAdminOrder() ? 'Product' : 'Food' }}</td>
                         <td class="order-customer">{{ $order->customer->name ?? '—' }}</td>
-                        <td class="order-restaurant">{{ $order->restaurant->name ?? '—' }}</td>
+                        <td class="order-restaurant">
+                            {{ $order->isAdminOrder() ? 'KhaiKhai Store' : ($order->restaurant->name ?? '—') }}
+                        </td>
                         <td class="order-rider">{{ $order->rider->name ?? '—' }}</td>
-                        <td class="text-right order-total">৳{{ number_format($order->total_amount) }}</td>
-                        <td class="text-right order-commission">৳{{ number_format($order->commission_amount) }}</td>
+                        <td class="text-right order-total">৳{{ number_format((float) $order->total_amount) }}</td>
                         <td class="text-center">
                             <span class="order-status-badge {{ $statusInfo['class'] }}">{{ $statusInfo['label'] }}</span>
+                            @if($order->status === 'picked_up' && $order->delivery_issue_at)
+                                <span class="order-status-badge" style="background:#fff7ed;color:#c2410c;" title="{{ $order->delivery_issue_reason }}">⚠ Issue</span>
+                            @endif
                         </td>
                         <td class="text-center">
                             <button class="icon-btn" wire:click="viewOrder({{ $order->id }})">
@@ -99,7 +108,6 @@
             </table>
         </div>
 
-        {{-- Pagination --}}
         @if($orders->hasPages())
             <div class="pagination">
                 <small>{{ $orders->firstItem() }}–{{ $orders->lastItem() }} / Total {{ number_format($orders->total()) }}</small>
@@ -111,20 +119,26 @@
 
     {{-- ── View Order Modal ── --}}
     @if($selectedOrder)
+    @php
+        $statusInfo = $statusOf($selectedOrder->status);
+        $snapshot   = is_array($selectedOrder->delivery_address_snapshot) ? $selectedOrder->delivery_address_snapshot : [];
+        $address    = trim(($snapshot['full_address'] ?? '') . ', ' . ($snapshot['city'] ?? ''), ', ');
+        $canAdvance = $selectedOrder->isAdminOrder()
+                      && isset($nextStatus[$selectedOrder->status])
+                      && $selectedOrder->rider_id === null;
+        $canUnassign = $selectedOrder->status === 'ready' && $selectedOrder->rider_id !== null;
+        // A picked-up order can no longer be cancelled normally; it can only be closed as a failed delivery.
+        $canFail    = $selectedOrder->status === 'picked_up';
+        $hasIssue   = $canFail && $selectedOrder->delivery_issue_at !== null;
+        // Cancel works for vendor AND product orders; a rider holding it must be unassigned first.
+        $canCancel  = in_array($selectedOrder->status, $cancellable, true)
+                      && $selectedOrder->rider_id === null;
+    @endphp
     <div class="dialog-backdrop" wire:click="closeModal">
         <div class="dialog" wire:click.stop>
-            @php
-                $statusMap = [
-                    'new'         => ['label' => 'New',        'class' => 'order-status-new'],
-                    'preparing'   => ['label' => 'Preparing',  'class' => 'order-status-preparing'],
-                    'delivering'  => ['label' => 'On the Way', 'class' => 'order-status-delivering'],
-                    'completed'   => ['label' => 'Completed',  'class' => 'order-status-completed'],
-                ];
-                $statusInfo = $statusMap[$selectedOrder->status] ?? ['label' => ucwords(str_replace('_', ' ', $selectedOrder->status)), 'class' => 'order-status-default'];
-            @endphp
 
             <div class="dialog-header">
-                <div class="dialog-title">Order #KK{{ $selectedOrder->id }}</div>
+                <div class="dialog-title">Order #{{ $selectedOrder->order_number }}</div>
                 <button class="dialog-close" wire:click="closeModal">
                     <span class="material-icons-round">close</span>
                 </button>
@@ -146,8 +160,10 @@
                     </div>
 
                     <div class="dialog-field">
-                        <div class="dialog-label">Restaurant</div>
-                        <div class="dialog-value">{{ $selectedOrder->restaurant->name ?? '—' }}</div>
+                        <div class="dialog-label">Seller</div>
+                        <div class="dialog-value">
+                            {{ $selectedOrder->isAdminOrder() ? 'KhaiKhai Store (Admin)' : ($selectedOrder->restaurant->name ?? '—') }}
+                        </div>
                     </div>
 
                     <div class="dialog-field">
@@ -164,21 +180,28 @@
                     </div>
                 </div>
 
-                @if($selectedOrder->delivery_address)
+                @if($address !== '')
                 <div class="dialog-field dialog-field-full">
                     <div class="dialog-label">Delivery Address</div>
-                    <div class="dialog-value">{{ $selectedOrder->delivery_address }}</div>
+                    <div class="dialog-value">{{ $address }}</div>
                 </div>
                 @endif
 
-                @if($selectedOrder->items && count($selectedOrder->items))
+                @if($selectedOrder->status === 'cancelled' && $selectedOrder->cancel_reason)
+                <div class="dialog-field dialog-field-full">
+                    <div class="dialog-label">Cancel Reason</div>
+                    <div class="dialog-value">{{ $selectedOrder->cancel_reason }}</div>
+                </div>
+                @endif
+
+                @if($selectedOrder->items->isNotEmpty())
                 <div class="dialog-items">
                     <div class="dialog-label">Items</div>
                     <div class="dialog-items-list">
                         @foreach($selectedOrder->items as $item)
                         <div class="dialog-item-row">
-                            <span>{{ $item->quantity ?? 1 }}x {{ $item->name ?? ($item->product->name ?? 'Item') }}</span>
-                            <span>৳{{ number_format($item->price ?? 0) }}</span>
+                            <span>{{ $item->quantity }}x {{ $item->item_name }}</span>
+                            <span>৳{{ number_format((float) $item->line_total) }}</span>
                         </div>
                         @endforeach
                     </div>
@@ -187,17 +210,78 @@
 
                 <div class="dialog-summary">
                     <div class="dialog-summary-row">
-                        <span>Total</span>
-                        <span class="dialog-summary-value">৳{{ number_format($selectedOrder->total_amount) }}</span>
+                        <span>Subtotal</span>
+                        <span class="dialog-summary-value">৳{{ number_format((float) $selectedOrder->subtotal) }}</span>
                     </div>
                     <div class="dialog-summary-row">
-                        <span>Commission</span>
-                        <span class="dialog-summary-value dialog-summary-pink">৳{{ number_format($selectedOrder->commission_amount) }}</span>
+                        <span>Delivery Fee</span>
+                        <span class="dialog-summary-value">৳{{ number_format((float) $selectedOrder->delivery_fee) }}</span>
+                    </div>
+                    <div class="dialog-summary-row">
+                        <span>Total</span>
+                        <span class="dialog-summary-value dialog-summary-pink">৳{{ number_format((float) $selectedOrder->total_amount) }}</span>
                     </div>
                 </div>
+
+                @if($hasIssue)
+                <div class="dialog-field dialog-field-full" style="margin-top:12px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:10px;padding:10px 12px;">
+                    <div class="dialog-label" style="color:#9a3412;">⚠ Delivery problem reported by rider</div>
+                    <div class="dialog-value">{{ $selectedOrder->delivery_issue_reason }}</div>
+                    <div style="font-size:12px;opacity:.8;">{{ $selectedOrder->delivery_issue_at->diffForHumans() }}</div>
+                </div>
+                @endif
+
+                @if($showCancelForm && ($canCancel || $canFail))
+                <div class="dialog-field dialog-field-full" style="margin-top:12px;">
+                    <div class="dialog-label">Cancel Reason</div>
+                    <input type="text" class="form-control" maxlength="255"
+                           placeholder="কেন বাতিল করছেন?"
+                           wire:model="cancelReason">
+                    @error('cancelReason')
+                        <div class="text-danger" style="font-size:12px;">{{ $message }}</div>
+                    @enderror
+                </div>
+                @endif
             </div>
 
-            <div class="dialog-footer">
+            <div class="dialog-footer" style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+                @if($showCancelForm && ($canCancel || $canFail))
+                    <button class="btn btn-danger btn-sm"
+                            wire:click="{{ $canFail ? 'failSelectedDelivery' : 'cancelSelectedOrder' }}"
+                            wire:loading.attr="disabled">
+                        {{ $canFail ? 'Confirm Delivery Failed' : 'Confirm Cancel' }}
+                    </button>
+                @else
+                    @if($canCancel)
+                        <button class="btn btn-outline-danger btn-sm" wire:click="openCancelForm">Cancel Order</button>
+                    @endif
+                    @if($canFail)
+                        <button class="btn btn-outline-danger btn-sm" wire:click="openCancelForm">Mark Delivery Failed</button>
+                    @endif
+                    @if($hasIssue)
+                        <button class="btn btn-outline-primary btn-sm"
+                                wire:click="retryDelivery({{ $selectedOrder->id }})"
+                                wire:confirm="Ask the rider to try the delivery again?"
+                                wire:loading.attr="disabled">
+                            Retry Delivery
+                        </button>
+                    @endif
+                    @if($canUnassign)
+                        <button class="btn btn-outline-warning btn-sm"
+                                wire:click="unassignRider({{ $selectedOrder->id }})"
+                                wire:confirm="Remove this rider? The order will go back to other riders."
+                                wire:loading.attr="disabled">
+                            Unassign Rider
+                        </button>
+                    @endif
+                    @if($canAdvance)
+                        <button class="btn btn-success btn-sm"
+                                wire:click="advanceStatus({{ $selectedOrder->id }})"
+                                wire:loading.attr="disabled">
+                            {{ match ($selectedOrder->status) { 'pending' => 'Confirm Order', 'confirmed' => 'Start Preparing', default => 'Mark Ready · Send to Riders' } }}
+                        </button>
+                    @endif
+                @endif
                 <button class="dialog-btn-close" wire:click="closeModal">Close</button>
             </div>
         </div>
@@ -205,4 +289,3 @@
     @endif
 
 </div>
-

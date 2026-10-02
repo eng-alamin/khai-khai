@@ -49,7 +49,8 @@ class OrderTrackComponent extends Component
     public function steps(): array
     {
         $logs = $this->order->statusLogs->keyBy('to_status');
-        $currentStatus = $this->order->status;
+        // The customer sees "ready" as part of "Preparing Food".
+        $currentStatus = $this->order->status === 'ready' ? 'preparing' : $this->order->status;
 
         // Order in which statuses become "done" once the current status is reached or passed.
         $order = array_keys(self::FLOW);

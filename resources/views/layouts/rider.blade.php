@@ -93,18 +93,7 @@
           <span class="material-icons-round">two_wheeler</span>
         </a>
       </div>
-      <div class="dropdown">
-        <button class="icon-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-          <span class="material-icons-round">notifications</span>
-          <span class="notif-badge">2</span>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end notif-dropdown-menu">
-          <li><div class="notif-header"><h6>Notifications</h6></div></li>
-          <li><a class="notif-item" href="{{ route('rider.delivery.ongoing') }}"><div class="notif-icon cart"><span class="material-icons-round">shopping_bag</span></div><div class="notif-text"><strong>New order assigned #KK2615</strong><span>Just now</span></div></a></li>
-          <li><a class="notif-item" href="{{ route('rider.finance') }}"><div class="notif-icon podcast"><span class="material-icons-round">payments</span></div><div class="notif-text"><strong>Payout of Tk 1,250 completed</strong><span>1 hour ago</span></div></a></li>
-          <li><div class="notif-footer"><a href="#">View all</a></div></li>
-        </ul>
-      </div>
+      @livewire('notification-bell')
       <div class="dropdown">
         <img src="{{ auth()->user()->avatar ?? 'https://i.pravatar.cc/80?img=12' }}" class="topnav-avatar" data-bs-toggle="dropdown" data-bs-auto-close="outside" alt="{{ auth()->user()->name ?? 'Rider' }}"/>
         <div class="dropdown-menu dropdown-menu-end user-dropdown-menu">

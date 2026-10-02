@@ -17,10 +17,17 @@ class SettingComponent extends Component
     public string $supportEmail  = '';
     public string $helpline      = '';
 
-    // ── Delivery Charge Fields (displayed in Taka, stored in Paisa) ──
+    // Declared (was assigned in mount() without a property → PHP 8.2 deprecation)
+    public bool $smsOtpEnabled = true;
+
+    // ── Delivery Charge Fields (stored AND displayed in Taka) ──
+    // BUG FIX: this page used to store Paisa (value x 100) while the seeder and
+    // DeliveryChargeService both read Taka, so saving "50" here made the real
+    // delivery fee Tk 5000. Everything is Taka now.
     public float $minimumDeliveryCharge = 40;
     public float $perKmDeliveryRate     = 10;
     public float $includedKmInMinimum   = 1;
+    public float $productDeliveryFee    = 49;   // flat fee for admin product orders
 
     // ── Commission Settings Fields ───────────────────────────
     public float  $defaultCommissionRate = 12;
@@ -37,6 +44,7 @@ class SettingComponent extends Component
         'minimumDeliveryCharge' => 'minimum_delivery_charge',
         'perKmDeliveryRate'     => 'per_km_delivery_rate',
         'includedKmInMinimum'   => 'included_km_in_minimum',
+        'productDeliveryFee'    => 'product_delivery_fee',
     ];
 
     private array $commissionKeyMap = [
@@ -60,10 +68,11 @@ class SettingComponent extends Component
         $this->helpline      = $settings->get('helpline', '09612-KHAI (5424)');
         $this->smsOtpEnabled = filter_var($settings->get('sms_otp_enabled', true), FILTER_VALIDATE_BOOLEAN);
 
-        // Paisa (stored) → Taka (displayed)
-        $this->minimumDeliveryCharge = ((int) $settings->get('minimum_delivery_charge', 4000)) / 100;
-        $this->perKmDeliveryRate     = ((int) $settings->get('per_km_delivery_rate', 1000)) / 100;
+        // Taka (stored) = Taka (displayed)
+        $this->minimumDeliveryCharge = (float) $settings->get('minimum_delivery_charge', 40);
+        $this->perKmDeliveryRate     = (float) $settings->get('per_km_delivery_rate', 10);
         $this->includedKmInMinimum   = (float) $settings->get('included_km_in_minimum', 1);
+        $this->productDeliveryFee    = (float) $settings->get('product_delivery_fee', 49);
 
         // Commission — stored as plain percentage numbers, no conversion needed
         $this->defaultCommissionRate = (float) $settings->get('default_commission_rate', 12);
@@ -87,6 +96,7 @@ class SettingComponent extends Component
             'minimumDeliveryCharge' => ['required', 'numeric', 'min:0', 'max:1000'],
             'perKmDeliveryRate'     => ['required', 'numeric', 'min:0', 'max:500'],
             'includedKmInMinimum'   => ['required', 'numeric', 'min:0', 'max:50'],
+            'productDeliveryFee'    => ['required', 'numeric', 'min:0', 'max:1000'],
         ];
     }
 
@@ -113,6 +123,8 @@ class SettingComponent extends Component
         'perKmDeliveryRate.numeric'      => 'Per-km delivery rate must be a number.',
         'includedKmInMinimum.required'   => 'Included distance is required.',
         'includedKmInMinimum.numeric'    => 'Included distance must be a number.',
+        'productDeliveryFee.required'    => 'Product delivery fee is required.',
+        'productDeliveryFee.numeric'     => 'Product delivery fee must be a number.',
     ];
 
     protected array $commissionMessages = [
@@ -171,32 +183,16 @@ class SettingComponent extends Component
         try {
             DB::beginTransaction();
 
-            AdminSetting::updateOrCreate(
-                ['key' => 'minimum_delivery_charge'],
-                [
-                    'value'      => (string) (int) round($validated['minimumDeliveryCharge'] * 100),
-                    'updated_by' => Auth::id(),
-                ]
-            );
-            Cache::forget('admin_setting:minimum_delivery_charge');
-
-            AdminSetting::updateOrCreate(
-                ['key' => 'per_km_delivery_rate'],
-                [
-                    'value'      => (string) (int) round($validated['perKmDeliveryRate'] * 100),
-                    'updated_by' => Auth::id(),
-                ]
-            );
-            Cache::forget('admin_setting:per_km_delivery_rate');
-
-            AdminSetting::updateOrCreate(
-                ['key' => 'included_km_in_minimum'],
-                [
-                    'value'      => (string) $validated['includedKmInMinimum'],
-                    'updated_by' => Auth::id(),
-                ]
-            );
-            Cache::forget('admin_setting:included_km_in_minimum');
+            foreach ($this->deliveryKeyMap as $property => $key) {
+                AdminSetting::updateOrCreate(
+                    ['key' => $key],
+                    [
+                        'value'      => (string) $validated[$property],
+                        'updated_by' => Auth::id(),
+                    ]
+                );
+                Cache::forget("admin_setting:{$key}");
+            }
 
             activity()
                 ->causedBy(Auth::user())
@@ -204,6 +200,7 @@ class SettingComponent extends Component
                     'minimum_delivery_charge' => $validated['minimumDeliveryCharge'],
                     'per_km_delivery_rate'    => $validated['perKmDeliveryRate'],
                     'included_km_in_minimum'  => $validated['includedKmInMinimum'],
+                    'product_delivery_fee'    => $validated['productDeliveryFee'],
                 ])
                 ->log('Delivery charge settings updated');
 

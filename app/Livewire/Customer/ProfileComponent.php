@@ -130,8 +130,7 @@ class ProfileComponent extends Component
 
     public function notifications(): void
     {
-        $this->dispatch('show-toast', message: 'Notification Settings', type: 'info');
-        // TODO: $this->redirect(route('customer.notifications'));
+        $this->redirect(route('customer.notifications'), navigate: true);
     }
 
     public function logout(): void

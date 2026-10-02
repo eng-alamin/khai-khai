@@ -16,16 +16,25 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    // FIX (Critical Bug #1): $fillable previously only allowed
-    // name/phone/email/password/avatar. Registration flows (Customer,
-    // Vendor, Rider) all pass 'uuid', 'role', 'is_verified', 'is_active',
-    // and 'points' to User::create(). Those fields were silently stripped
-    // by mass-assignment protection, and since `uuid` and `role` are
-    // NOT NULL columns with no DB default, every registration failed at
-    // the database level. Per project standard, $guarded = [] is used
-    // instead of an allow-list so this class of bug cannot recur when a
-    // new column is added later.
-    protected $guarded = [];
+    // Allow-list of mass-assignable columns. Every registration flow sets
+    // uuid, role, is_verified, is_active and points explicitly, so they must
+    // be listed here. Columns that are never set from a form (remember_token,
+    // last_seen_at, last_login_at, last_login_ip) are written with forceFill()
+    // and are intentionally NOT listed. When you add a new users column,
+    // add it here only if a form or flow needs to mass-assign it.
+    protected $fillable = [
+        'uuid',
+        'name',
+        'phone',
+        'email',
+        'email_verified_at',
+        'password',
+        'role',
+        'avatar',
+        'is_verified',
+        'is_active',
+        'points',
+    ];
 
     protected $hidden = [
         'password',
@@ -76,6 +85,23 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function isRider(): bool
+    {
+        return $this->role === 'rider';
+    }
+
+    /**
+     * A rider may see orders and take deliveries only while the account is
+     * active AND the admin has approved the rider profile. Single source of
+     * truth: the route middleware and the rider actions both call this.
+     */
+    public function canDeliver(): bool
+    {
+        return $this->isRider()
+            && (bool) $this->is_active
+            && (bool) $this->riderProfile?->is_approved;
     }
 
     public function hasRestaurant(): bool

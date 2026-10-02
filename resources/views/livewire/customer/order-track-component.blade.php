@@ -5,7 +5,7 @@
     <div class="card-header-kk">
       <div>
         <div class="card-title">Order Tracking</div>
-        <div class="card-sub">Order #{{ $order->order_number }} • {{ $order->restaurant->name }}</div>
+        <div class="card-sub">Order #{{ $order->order_number }} • {{ $order->isAdminOrder() ? 'KhaiKhai Store' : ($order->restaurant->name ?? '—') }}</div>
       </div>
       <span class="badge-kk badge-pink" style="font-size:13px;">
         {{ ucwords(str_replace('_', ' ', $order->status)) }}

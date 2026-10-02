@@ -10,6 +10,7 @@ class OfferComponent extends Component
     public function render()
     {
         $coupons = Coupon::active()
+            ->with('createdBy.restaurant:id,owner_id,name')
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (Coupon $coupon) => [
@@ -18,6 +19,10 @@ class OfferComponent extends Component
                 'discount_label'  => $this->discountLabel($coupon),
                 'min_order_taka'  => $coupon->min_order_taka,
                 'valid_until'     => $coupon->valid_until ? $this->toBanglaDate($coupon->valid_until) : null,
+                // Vendor coupons only work at that vendor's restaurant.
+                'restaurant'      => ($coupon->createdBy && $coupon->createdBy->isVendor())
+                    ? $coupon->createdBy->restaurant?->name
+                    : null,
             ]);
 
         return view('livewire.customer.offer-component', [

@@ -85,18 +85,7 @@
       <button class="icon-btn kk-theme-toggle" onclick="toggleTheme()" title="Theme পরিবর্তন করুন">
         <span class="material-icons-round" id="themeIcon">dark_mode</span>
       </button>
-      <div class="dropdown">
-        <button class="icon-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-          <span class="material-icons-round">notifications</span>
-          <span class="notif-badge">7</span>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end notif-dropdown-menu">
-          <li><div class="notif-header"><h6>নোটিফিকেশন</h6></div></li>
-          <li><a class="notif-item" href="#"><div class="notif-icon cart"><span class="material-icons-round">shopping_bag</span></div><div class="notif-text"><strong>নতুন অর্ডার #KK2615</strong><span>এইমাত্র</span></div></a></li>
-          <li><a class="notif-item" href="#"><div class="notif-icon podcast"><span class="material-icons-round">payments</span></div><div class="notif-text"><strong>পেমেন্ট ৳37,664 সম্পন্ন</strong><span>1 ঘন্টা আগে</span></div></a></li>
-          <li><div class="notif-footer"><a href="#">সব দেখুন</a></div></li>
-        </ul>
-      </div>
+      @livewire('notification-bell')
       <div class="dropdown">
         <img src="{{ auth()->user()->avatar ?? 'https://i.pravatar.cc/80?img=12' }}" class="topnav-avatar" data-bs-toggle="dropdown" data-bs-auto-close="outside" alt="{{ auth()->user()->name ?? 'Vendor' }}"/>
         <div class="dropdown-menu dropdown-menu-end user-dropdown-menu">

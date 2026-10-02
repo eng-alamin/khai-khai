@@ -11,6 +11,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class VendorComponent extends Component
 {
@@ -205,13 +206,15 @@ class VendorComponent extends Component
             } else {
                 // Create owner user
                 $owner = User::create([
-                    'name'     => $this->owner_name,
-                    'email'    => $this->owner_email,
-                    'password' => Hash::make($this->owner_password),
+                    'uuid'        => (string) Str::uuid(),
+                    'name'        => $this->owner_name,
+                    'email'       => $this->owner_email,
+                    'password'    => $this->owner_password,
+                    'role'        => 'vendor',
+                    'is_verified' => true,
+                    'is_active'   => true,
+                    'points'      => 0,
                 ]);
-
-                // Assign vendor role (Spatie)
-                $owner->assignRole('vendor');
 
                 // Create restaurant
                 $r = Restaurant::create([

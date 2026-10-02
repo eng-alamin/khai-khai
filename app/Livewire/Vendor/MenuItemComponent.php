@@ -10,6 +10,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use App\Livewire\Concerns\HasCatalogItemValidationRules;
 
 class MenuItemComponent extends Component
@@ -75,7 +76,14 @@ class MenuItemComponent extends Component
     protected function rules(): array
     {
         return array_merge($this->catalogItemRules(), [
-            'category_id'  => 'required|integer|min:1',
+            'category_id'  => [
+                'required',
+                'integer',
+                'min:1',
+                Rule::exists('categories', 'id')
+                    ->where('type', Category::TYPE_FOOD)
+                    ->whereNull('deleted_at'),
+            ],
             'emoji'        => 'nullable|string|max:10',
             'is_available' => 'boolean',
         ]);
@@ -86,6 +94,7 @@ class MenuItemComponent extends Component
         return array_merge($this->catalogItemMessages(), [
             'category_id.required' => 'Please select a category.',
             'category_id.min'      => 'Please select a category.',
+            'category_id.exists'   => 'Please select a valid category.',
             'name.required'        => 'Please enter an item name.',
         ]);
     }

@@ -47,7 +47,7 @@
 
     <div class="d-flex flex-column gap-3 mb-4">
         @forelse($ongoingOrders as $order)
-            <div class="card" wire:key="ongoing-{{ $order['id'] }}" style="padding:18px 20px;border-left:4px solid #3b82f6;" x-data="{ showMap: false }">
+            <div class="card" wire:key="ongoing-{{ $order['id'] }}" style="padding:18px 20px;border-left:4px solid {{ $order['stage'] === 'to_pickup' ? '#7c3aed' : '#3b82f6' }};" x-data="{ showMap: false, showIssue: false, reason: '', note: '' }">
 
                 {{-- Top row --}}
                 <div class="d-flex align-items-start justify-content-between mb-2">
@@ -58,6 +58,13 @@
                         {{ $order['status_label'] }}
                     </span>
                 </div>
+
+                @if($order['issue'])
+                    <div class="mb-2" style="background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:10px;padding:8px 12px;font-size:13px;">
+                        ⚠️ <strong>Problem reported:</strong> {{ $order['issue'] }}<br>
+                        <span style="opacity:.85;">Waiting for admin. You can still deliver the order if the customer shows up.</span>
+                    </div>
+                @endif
 
                 {{-- Restaurant info --}}
                 <div class="info-row mb-1">
@@ -138,23 +145,90 @@
                             </span>
                         @endif
 
-                        <button
-                            class="btn-kk"
-                            style="background:var(--success);color:#fff;"
-                            wire:click="completeDelivery({{ $order['id'] }})"
-                            wire:confirm="Confirm that this delivery has been completed?"
-                            wire:loading.attr="disabled"
-                            wire:target="completeDelivery({{ $order['id'] }})"
-                        >
-                            <span wire:loading.remove wire:target="completeDelivery({{ $order['id'] }})">
-                                ✅ Delivered
-                            </span>
-                            <span wire:loading wire:target="completeDelivery({{ $order['id'] }})">
-                                <span class="spinner"></span>
-                            </span>
-                        </button>
+                        @if($order['stage'] === 'to_pickup')
+                            <button
+                                class="btn-kk"
+                                style="background:#f3f4f6;color:#374151;"
+                                wire:click="releaseDelivery({{ $order['id'] }})"
+                                wire:confirm="Release this order so another rider can take it?"
+                                wire:loading.attr="disabled"
+                                wire:target="releaseDelivery({{ $order['id'] }})"
+                            >
+                                ↩️ Release
+                            </button>
+
+                            <button
+                                class="btn-kk"
+                                style="background:#7c3aed;color:#fff;"
+                                wire:click="pickupOrder({{ $order['id'] }})"
+                                wire:confirm="Confirm that you have collected this order from the restaurant?"
+                                wire:loading.attr="disabled"
+                                wire:target="pickupOrder({{ $order['id'] }})"
+                            >
+                                <span wire:loading.remove wire:target="pickupOrder({{ $order['id'] }})">
+                                    📦 Picked Up
+                                </span>
+                                <span wire:loading wire:target="pickupOrder({{ $order['id'] }})">
+                                    <span class="spinner"></span>
+                                </span>
+                            </button>
+                        @else
+                            @if(! $order['issue'])
+                                <button
+                                    type="button"
+                                    class="btn-kk"
+                                    style="background:#fff7ed;color:#c2410c;"
+                                    @click="showIssue = ! showIssue"
+                                >
+                                    ⚠️ Problem
+                                </button>
+                            @endif
+
+                            <button
+                                class="btn-kk"
+                                style="background:var(--success);color:#fff;"
+                                wire:click="completeDelivery({{ $order['id'] }})"
+                                wire:confirm="Confirm that this delivery has been completed?"
+                                wire:loading.attr="disabled"
+                                wire:target="completeDelivery({{ $order['id'] }})"
+                            >
+                                <span wire:loading.remove wire:target="completeDelivery({{ $order['id'] }})">
+                                    ✅ Delivered
+                                </span>
+                                <span wire:loading wire:target="completeDelivery({{ $order['id'] }})">
+                                    <span class="spinner"></span>
+                                </span>
+                            </button>
+                        @endif
                     </div>
                 </div>
+
+                @if($order['stage'] === 'delivering' && ! $order['issue'])
+                    <div x-show="showIssue" x-cloak class="mt-3" style="border-top:1px dashed #e5e7eb;padding-top:12px;">
+                        <div style="font-weight:700;font-size:13px;margin-bottom:6px;">Why can't you deliver?</div>
+
+                        <select x-model="reason" class="form-select form-select-sm mb-2">
+                            <option value="">— Select a reason —</option>
+                            @foreach(\App\Services\OrderTransitionService::DELIVERY_ISSUES as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+
+                        <input type="text" x-model="note" maxlength="150" class="form-control form-control-sm mb-2"
+                               placeholder="Optional note (max 150 characters)">
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn-kk" style="background:#f3f4f6;color:#374151;" @click="showIssue = false">
+                                Cancel
+                            </button>
+                            <button type="button" class="btn-kk" style="background:#c2410c;color:#fff;"
+                                    :disabled="! reason"
+                                    @click="$wire.reportDeliveryIssue({{ $order['id'] }}, reason, note); showIssue = false; reason = ''; note = ''">
+                                Report to Admin
+                            </button>
+                        </div>
+                    </div>
+                @endif
 
             </div>
         @empty

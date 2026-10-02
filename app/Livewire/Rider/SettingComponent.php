@@ -2,10 +2,10 @@
 
 namespace App\Livewire\Rider;
 
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
-use App\Models\RiderProfile;
 
 class SettingComponent extends Component
 {
@@ -17,6 +17,9 @@ class SettingComponent extends Component
     public string $phone  = '';
 
     // Rider profile fields (from rider_profiles table)
+    // Locked: set only by the server. If the browser could change this id,
+    // one rider could overwrite another rider's profile.
+    #[Locked]
     public ?int    $riderProfileId = null;
     public string  $vehicleType    = '';
     public ?string $vehiclePlate   = null;
@@ -31,7 +34,9 @@ class SettingComponent extends Component
     // Stats (read-only, shown on UI)
     public ?float $avgRating       = null;
     public int    $totalDeliveries = 0;
+    #[Locked]
     public bool   $isOnline        = false;
+    #[Locked]
     public bool   $isApproved      = false;
 
     protected function rules(): array
@@ -127,7 +132,8 @@ class SettingComponent extends Component
             ];
 
             if ($this->riderProfileId) {
-                RiderProfile::where('id', $this->riderProfileId)->update($data);
+                // Scoped to the logged-in rider's own profile.
+                $user->riderProfile()->update($data);
             } else {
                 $profile = $user->riderProfile()->create($data);
                 $this->riderProfileId = $profile->id;
@@ -141,21 +147,24 @@ class SettingComponent extends Component
 
     public function toggleOnlineStatus(): void
     {
-        if (! $this->riderProfileId) {
+        $user    = Auth::user();
+        $profile = $user->riderProfile;
+
+        if (! $profile) {
             $this->dispatch('show-toast', message: 'Profile not set up yet', type: 'warning');
             return;
         }
 
-        if (! $this->isApproved) {
+        // Decided from the database, never from values held in the page.
+        if (! $user->canDeliver()) {
             $this->dispatch('show-toast', message: 'Account not approved yet', type: 'warning');
             return;
         }
 
-        $this->isOnline = ! $this->isOnline;
+        $profile->update(['is_online' => ! $profile->is_online]);
 
-        RiderProfile::where('id', $this->riderProfileId)->update([
-            'is_online' => $this->isOnline,
-        ]);
+        $this->isOnline   = (bool) $profile->is_online;
+        $this->isApproved = true;
 
         $this->dispatch(
             'show-toast',

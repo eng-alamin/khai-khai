@@ -70,7 +70,7 @@ class DashboardComponent extends Component
                 return [
                     'id'               => $order->id,
                     'order_number'     => $order->order_number,
-                    'restaurant'       => optional($order->restaurant)->name ?? 'Restaurant',
+                    'restaurant'       => $order->isAdminOrder() ? 'KhaiKhai Store' : (optional($order->restaurant)->name ?? 'Restaurant'),
                     'restaurant_phone' => optional($order->restaurant)->phone,
                     'customer_phone'   => optional($order->customer)->phone,
                     'address'          => $address->full_address

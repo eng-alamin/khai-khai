@@ -38,7 +38,7 @@
             <div class="filterbar-selects">
                 <select class="select" wire:model.live="filterStatus">
                     <option value="">All Status</option>
-                    @foreach(['pending', 'confirmed', 'preparing', 'picked_up', 'delivered', 'cancelled'] as $st)
+                    @foreach(['pending', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered', 'cancelled'] as $st)
                         <option value="{{ $st }}">{{ $this->statusMeta($st)['emoji'] }} {{ $this->statusMeta($st)['label'] }}</option>
                     @endforeach
                 </select>

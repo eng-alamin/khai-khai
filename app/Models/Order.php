@@ -54,15 +54,19 @@ class Order extends Model
 
         // Timestamps
         'estimated_delivery_at' => 'datetime',
+        'assigned_at'           => 'datetime',
+        'accepted_at'           => 'datetime',
+        'picked_up_at'          => 'datetime',
         'delivered_at'          => 'datetime',
         'cancelled_at'          => 'datetime',
+        'delivery_issue_at'     => 'datetime',
     ];
 
     /** Customer can cancel the order while it's in one of these statuses */
     public const CANCELLABLE_STATUSES = ['pending']; // customer
 
     /** The "Track" button is shown while the order is in one of these statuses */
-    public const TRACKABLE_STATUSES = ['pending', 'confirmed', 'preparing', 'picked_up']; // customer
+    public const TRACKABLE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'picked_up']; // customer
 
     // ─────────────────────────────────────────
     // RELATIONS

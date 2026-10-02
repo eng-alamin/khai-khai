@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use Livewire\Component;
 use App\Models\Order;
+use App\Models\PlatformTransaction;
 
 class RevenueComponent extends Component
 {
@@ -17,9 +18,18 @@ class RevenueComponent extends Component
     ];
 
     // ── Helpers ──────────────────────────────────────────────
-    private function commissionRate(): float
+    /**
+     * Commission earned on orders created from $from onwards (delivered orders only).
+     * Read from platform_transactions, which store the restaurant's own rate.
+     */
+    private function commissionSince(\Illuminate\Support\Carbon $from): float
     {
-        return (float) \App\Models\AdminSetting::get('default_commission_rate', 0);
+        return (float) PlatformTransaction::query()
+            ->where('status', 'success')
+            ->whereHas('order', fn ($q) => $q
+                ->where('status', 'delivered')
+                ->where('created_at', '>=', $from))
+            ->sum('platform_commission');
     }
 
     private function toLakh(float $taka): float
@@ -42,10 +52,10 @@ class RevenueComponent extends Component
             ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
             ->sum('total_amount');
 
-        $thisMonthTaka = intdiv($thisMonthRevenue, 100);
-        $lastMonthTaka = intdiv($lastMonthRevenue, 100);
+        $thisMonthTaka = $thisMonthRevenue; // orders store Taka, not paisa
+        $lastMonthTaka = $lastMonthRevenue;
 
-        $commission = $thisMonthTaka * ($this->commissionRate() / 100);
+        $commission = $this->commissionSince($startOfThisMonth);
 
         $growth = $lastMonthTaka > 0
             ? round((($thisMonthTaka - $lastMonthTaka) / $lastMonthTaka) * 100)
@@ -73,7 +83,7 @@ class RevenueComponent extends Component
                 ->whereBetween('created_at', [$start, $end])
                 ->sum('total_amount');
 
-            $taka = intdiv($revenue, 100);
+            $taka = $revenue;
             $lakh = $this->toLakh($taka);
 
             $rows[] = [

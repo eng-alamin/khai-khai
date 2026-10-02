@@ -408,7 +408,7 @@
                             <div class="view-stat-label">Total Deliveries</div>
                         </div>
                         <div class="view-stat-item">
-                            <div class="view-stat-value" style="color:#6366f1">৳{{ number_format(($totalEarningsPaisa ?? 0) / 100, 2) }}</div>
+                            <div class="view-stat-value" style="color:#6366f1">৳{{ number_format((float) ($totalEarningsPaisa ?? 0), 2) }}</div>
                             <div class="view-stat-label">Total Earnings</div>
                         </div>
                         <div class="view-stat-item">

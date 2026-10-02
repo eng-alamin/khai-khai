@@ -3,20 +3,19 @@
 namespace App\Livewire\Vendor;
 
 use App\Models\Order;
-use App\Models\OrderStatusLog;
 use App\Models\Restaurant;
+use App\Services\OrderTransitionService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class OrderLiveComponent extends Component
 {
     /** এই স্ট্যাটাসগুলোকে "লাইভ" (এখনো চলমান) ধরা হবে */
-    private const LIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'picked_up'];
+    private const LIVE_STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'picked_up'];
 
     /** Forward-only workflow (OrderListComponent-এর সাথে সামঞ্জস্যপূর্ণ) */
-    private const STATUS_FLOW = ['pending', 'confirmed', 'preparing', 'picked_up', 'delivered'];
+    private const STATUS_FLOW = ['pending', 'confirmed', 'preparing', 'ready'];
 
     public bool $isOnline = true;
 
@@ -57,6 +56,7 @@ class OrderLiveComponent extends Component
             'pending'   => ['label' => 'Pending',    'emoji' => '🕐', 'class' => 'pending'],
             'confirmed' => ['label' => 'Confirmed',  'emoji' => '✅', 'class' => 'confirmed'],
             'preparing' => ['label' => 'Preparing',  'emoji' => '👨‍🍳', 'class' => 'preparing'],
+            'ready'     => ['label' => 'Ready for Pickup', 'emoji' => '✅', 'class' => 'preparing'],
             'picked_up' => ['label' => 'Picked Up',  'emoji' => '🛵', 'class' => 'picked-up'],
             'delivered' => ['label' => 'Delivered',  'emoji' => '📦', 'class' => 'delivered'],
             'cancelled' => ['label' => 'Cancelled',  'emoji' => '❌', 'class' => 'cancelled'],
@@ -101,8 +101,7 @@ class OrderLiveComponent extends Component
         return match ($this->nextStatus($current)) {
             'confirmed' => 'Confirm Order',
             'preparing' => 'Start Preparing',
-            'picked_up' => 'Mark Picked Up',
-            'delivered' => 'Mark Delivered',
+            'ready'     => 'Mark Ready',
             default     => null,
         };
     }
@@ -167,35 +166,29 @@ class OrderLiveComponent extends Component
             ->find($this->detailsId);
     }
 
-    /* ── Generic forward-advance (pending→confirmed, confirmed→preparing, preparing→picked_up, picked_up→delivered) ── */
+    /* ── Forward-advance (pending→confirmed→preparing→ready). Rider takes over after "ready". ── */
     public function advanceStatus(int $id): void
     {
         $order = Order::where('restaurant_id', $this->restaurantId())->findOrFail($id);
-        $next  = $this->nextStatus($order->status);
 
-        if (! $next) {
+        if (! $this->nextStatus($order->status)) {
             return;
         }
 
-        $from = $order->status;
+        $newStatus = app(OrderTransitionService::class)->advance(
+            orderId: $order->id,
+            scope: ['restaurant_id' => $this->restaurantId()],
+            expectedFrom: $order->status,
+            actor: Auth::user(),
+            activityText: 'Vendor advanced live order status'
+        );
 
-        DB::transaction(function () use ($order, $from, $next) {
-            $order->status = $next;
-            if ($next === 'delivered') {
-                $order->delivered_at = now();
-            }
-            $order->save();
+        if ($newStatus === null) {
+            session()->flash('error', 'This order was already updated. Please refresh the list.');
+            return;
+        }
 
-            $this->logStatus($order, $from, $next);
-
-            activity()
-                ->causedBy(Auth::user())
-                ->performedOn($order)
-                ->withProperties(['from' => $from, 'to' => $next])
-                ->log('Vendor advanced live order status');
-        });
-
-        session()->flash('success', "Order #{$order->order_number} marked as {$this->statusMeta($next)['label']}.");
+        session()->flash('success', "Order #{$order->order_number} marked as {$this->statusMeta($newStatus)['label']}.");
     }
 
     /* ── Reject flow (শুধু pending অর্ডারের জন্য) ── */
@@ -220,46 +213,28 @@ class OrderLiveComponent extends Component
 
         $order = Order::where('restaurant_id', $this->restaurantId())->findOrFail($this->rejectId);
 
-        if ($order->status !== 'pending') {
+        $cancelled = app(OrderTransitionService::class)->cancel(
+            orderId: $order->id,
+            scope: ['restaurant_id' => $this->restaurantId()],
+            allowedFrom: ['pending'],
+            actor: Auth::user(),
+            reason: $this->reject_reason,
+            logNote: $this->reject_reason,
+            activityText: 'Vendor rejected order'
+        );
+
+        if (! $cancelled) {
             $this->confirmReject = false;
+            $this->rejectId      = null;
             session()->flash('error', 'এই অর্ডারটি আর বাতিল করা যাবে না।');
             return;
         }
-
-        $from = $order->status;
-
-        DB::transaction(function () use ($order, $from) {
-            $order->update([
-                'status'        => 'cancelled',
-                'cancelled_at'  => now(),
-                'cancel_reason' => $this->reject_reason,
-            ]);
-
-            $this->logStatus($order, $from, 'cancelled', $this->reject_reason);
-
-            activity()
-                ->causedBy(Auth::user())
-                ->performedOn($order)
-                ->withProperties(['from' => $from, 'to' => 'cancelled', 'reason' => $this->reject_reason])
-                ->log('Vendor rejected order');
-        });
 
         $this->confirmReject = false;
         $this->rejectId      = null;
         $this->reject_reason = '';
 
         session()->flash('success', "Order #{$order->order_number} cancelled.");
-    }
-
-    private function logStatus(Order $order, string $from, string $to, ?string $note = null): void
-    {
-        OrderStatusLog::create([
-            'order_id'    => $order->id,
-            'from_status' => $from,
-            'to_status'   => $to,
-            'changed_by'  => Auth::id(),
-            'note'        => $note,
-        ]);
     }
 
     public function toBanglaNumber(int|string $number): string

@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Admin;
 
+use App\Models\Order;
+use App\Services\OrderTransitionService;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
-use App\Models\Order;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderComponent extends Component
@@ -13,17 +17,30 @@ class OrderComponent extends Component
 
     protected string $paginationTheme = 'bootstrap';
 
+    /** Real values of the orders.status enum. */
+    public const STATUSES = [
+        'pending', 'confirmed', 'preparing', 'ready', 'picked_up',
+        'on_the_way', 'delivered', 'cancelled', 'rejected',
+    ];
+
+    /** Statuses from which admin can still cancel, for vendor AND product orders (only while no rider holds it). */
+    private const CANCELLABLE_FROM = ['pending', 'confirmed', 'preparing', 'ready'];
+
     // ── Filters ──────────────────────────────────────────────
     public string $search       = '';
     public string $statusFilter = '';
+    public string $typeFilter   = '';
     public int    $perPage      = 15;
 
     // ── View Modal ───────────────────────────────────────────
-    public ?Order $selectedOrder = null;
+    public ?int   $selectedOrderId = null;
+    public bool   $showCancelForm  = false;
+    public string $cancelReason    = '';
 
     // ── Watchers ─────────────────────────────────────────────
-    public function updatingSearch(): void { $this->resetPage(); }
+    public function updatingSearch(): void       { $this->resetPage(); }
     public function updatingStatusFilter(): void { $this->resetPage(); }
+    public function updatingTypeFilter(): void   { $this->resetPage(); }
 
     // ── Export ───────────────────────────────────────────────
     public function export(): StreamedResponse
@@ -38,10 +55,10 @@ class OrderComponent extends Component
             $handle = fopen('php://output', 'w');
 
             fputcsv($handle, [
-                'Order ID',
                 'Order Number',
+                'Type',
                 'Customer',
-                'Restaurant',
+                'Seller',
                 'Rider',
                 'Status',
                 'Payment Status',
@@ -51,11 +68,11 @@ class OrderComponent extends Component
 
             foreach ($orders as $order) {
                 fputcsv($handle, [
-                    $order->id,
                     $order->order_number,
-                    $order->customer?->name,
-                    $order->restaurant?->name,
-                    $order->rider?->name,
+                    $order->order_type,
+                    $this->csvSafe($order->customer?->name),
+                    $this->csvSafe($order->isAdminOrder() ? 'KhaiKhai Store' : $order->restaurant?->name),
+                    $this->csvSafe($order->rider?->name),
                     $order->status,
                     $order->payment_status,
                     $order->total_amount,
@@ -69,30 +86,201 @@ class OrderComponent extends Component
         ]);
     }
 
+    /** Prevents CSV/Excel formula injection from user-controlled names. */
+    private function csvSafe(?string $value): string
+    {
+        $value = (string) $value;
+
+        return $value !== '' && in_array($value[0], ['=', '+', '-', '@'], true)
+            ? "'" . $value
+            : $value;
+    }
+
     // ── View Order ───────────────────────────────────────────
     public function viewOrder(int $id): void
     {
-        $this->selectedOrder = Order::with(['customer', 'restaurant', 'rider'])->findOrFail($id);
+        $this->selectedOrderId = Order::query()->findOrFail($id)->id;
+        $this->showCancelForm  = false;
+        $this->cancelReason    = '';
     }
 
     public function closeModal(): void
     {
-        $this->selectedOrder = null;
+        $this->selectedOrderId = null;
+        $this->showCancelForm  = false;
+        $this->cancelReason    = '';
+    }
+
+    // ── Admin actions (advance: product orders only; cancel: all orders) ──
+    public function advanceStatus(int $id): void
+    {
+        $order = Order::query()->adminOrders()->findOrFail($id);
+        $from  = $order->status;
+
+        if (! array_key_exists($from, OrderTransitionService::FORWARD_FLOW)) {
+            $this->dispatch('show-toast', message: 'এই অর্ডারের status আর বদলানো যাবে না।', type: 'error');
+            return;
+        }
+
+        // Row lock + status re-check + log + notification all live in the service.
+        $to = app(OrderTransitionService::class)->advance(
+            orderId: $order->id,
+            scope: ['order_type' => Order::TYPE_ADMIN],
+            expectedFrom: $from,
+            actor: Auth::user(),
+            activityText: 'Admin changed product order status'
+        );
+
+        if ($to === null) {
+            $this->dispatch('show-toast', message: 'অর্ডারটি ইতিমধ্যে আপডেট হয়েছে। পেজ রিফ্রেশ করুন।', type: 'error');
+            return;
+        }
+
+        $message = match ($to) {
+            'ready'  => "✅ #{$order->order_number} এখন online rider-দের কাছে দেখা যাবে।",
+            default  => "✅ #{$order->order_number} এখন {$to}।",
+        };
+
+        $this->dispatch('show-toast', message: $message, type: 'success');
+    }
+
+    public function openCancelForm(): void
+    {
+        $this->showCancelForm = true;
+        $this->cancelReason   = '';
+    }
+
+    public function cancelSelectedOrder(): void
+    {
+        $this->validate(
+            ['cancelReason' => 'required|string|max:255'],
+            ['cancelReason.required' => 'বাতিল করার কারণ লিখুন।']
+        );
+
+        if ($this->selectedOrderId === null) {
+            return;
+        }
+
+        // Works for vendor (food) AND admin (product) orders.
+        $order = Order::query()->findOrFail($this->selectedOrderId);
+
+        if (! in_array($order->status, self::CANCELLABLE_FROM, true)) {
+            $this->dispatch('show-toast', message: 'এই অর্ডার আর বাতিল করা যাবে না।', type: 'error');
+            return;
+        }
+
+        // Same race-safe path as customer/vendor cancel: row lock, status
+        // re-check, status log, coupon given back, customer + vendor notified.
+        // A rider who already holds the order blocks it: unassign first.
+        $cancelled = app(OrderTransitionService::class)->cancel(
+            orderId: $order->id,
+            scope: ['order_type' => $order->order_type],
+            allowedFrom: self::CANCELLABLE_FROM,
+            actor: Auth::user(),
+            reason: $this->cancelReason,
+            logNote: $this->cancelReason,
+            activityText: 'Admin cancelled order'
+        );
+
+        if (! $cancelled) {
+            $this->dispatch(
+                'show-toast',
+                message: 'অর্ডারটি বাতিল করা যায়নি (Rider অর্ডারটি নিয়েছে বা status বদলে গেছে)। Rider থাকলে আগে Unassign করুন।',
+                type: 'error'
+            );
+            return;
+        }
+
+        $this->showCancelForm = false;
+        $this->cancelReason   = '';
+        $this->dispatch('show-toast', message: "#{$order->order_number} বাতিল করা হয়েছে।", type: 'info');
+    }
+
+    /**
+     * Admin closes a picked-up order whose delivery did not happen (rider
+     * reported a problem, or the rider simply disappeared). The order becomes
+     * "cancelled". See OrderTransitionService::failDelivery for what is
+     * deliberately NOT done yet (coupon, earnings, vendor payout).
+     */
+    public function failSelectedDelivery(): void
+    {
+        $this->validate(
+            ['cancelReason' => 'required|string|max:255'],
+            ['cancelReason.required' => 'কারণ লিখুন।']
+        );
+
+        if ($this->selectedOrderId === null) {
+            return;
+        }
+
+        $order = Order::query()->findOrFail($this->selectedOrderId);
+
+        $failed = app(OrderTransitionService::class)->failDelivery(
+            $order->id,
+            Auth::user(),
+            $this->cancelReason
+        );
+
+        if (! $failed) {
+            $this->dispatch('show-toast', message: 'অর্ডারটি আর picked up অবস্থায় নেই। পেজ রিফ্রেশ করুন।', type: 'error');
+            return;
+        }
+
+        $this->showCancelForm = false;
+        $this->cancelReason   = '';
+        $this->dispatch('show-toast', message: "#{$order->order_number} ডেলিভারি ব্যর্থ হিসেবে বন্ধ করা হয়েছে।", type: 'info');
+    }
+
+    /** Admin tells the rider to try the delivery again. */
+    public function retryDelivery(int $id): void
+    {
+        $done = app(OrderTransitionService::class)->clearDeliveryIssue($id, Auth::user());
+
+        if (! $done) {
+            $this->dispatch('show-toast', message: 'এই অর্ডারে এখন আর কোনো ডেলিভারি সমস্যা চিহ্নিত নেই।', type: 'error');
+            return;
+        }
+
+        $this->dispatch('show-toast', message: 'Rider-কে আবার চেষ্টা করতে বলা হয়েছে।', type: 'success');
+    }
+
+    /**
+     * Take an order back from a rider who accepted it but has not collected
+     * the food (works for vendor AND admin orders). The order goes back to the
+     * pool of available orders.
+     */
+    public function unassignRider(int $id): void
+    {
+        $done = app(OrderTransitionService::class)->unassignRider($id, Auth::user(), 'Unassigned by admin');
+
+        if (! $done) {
+            $this->dispatch('show-toast', message: 'এই অর্ডার থেকে rider সরানো যাবে না (pickup হয়ে গেছে বা rider নেই)।', type: 'error');
+            return;
+        }
+
+        $this->dispatch('show-toast', message: 'Rider সরানো হয়েছে। অর্ডারটি আবার অন্য rider-দের কাছে দেখা যাবে।', type: 'success');
     }
 
     // ── Shared filtered query (used by both render() and export()) ──
     protected function filteredOrdersQuery()
     {
+        $term = trim($this->search);
+
         return Order::query()
-            ->when($this->search, fn ($q) =>
-                $q->where(fn ($q2) =>
-                    $q2->where('id', 'like', "%{$this->search}%")
-                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$this->search}%"))
-                        ->orWhereHas('restaurant', fn ($r) => $r->where('name', 'like', "%{$this->search}%"))
-                )
-            )
-            ->when($this->statusFilter, fn ($q) =>
+            ->when($term !== '', function ($q) use ($term) {
+                $like = '%' . addcslashes($term, '%_\\') . '%';
+
+                $q->where(function ($q2) use ($like) {
+                    $q2->where('order_number', 'like', $like)
+                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', $like))
+                        ->orWhereHas('restaurant', fn ($r) => $r->where('name', 'like', $like));
+                });
+            })
+            ->when(in_array($this->statusFilter, self::STATUSES, true), fn ($q) =>
                 $q->where('status', $this->statusFilter)
+            )
+            ->when(in_array($this->typeFilter, [Order::TYPE_VENDOR, Order::TYPE_ADMIN], true), fn ($q) =>
+                $q->where('order_type', $this->typeFilter)
             )
             ->latest();
     }
@@ -104,8 +292,15 @@ class OrderComponent extends Component
             ->with(['customer', 'restaurant', 'rider'])
             ->paginate($this->perPage);
 
+        $selectedOrder = $this->selectedOrderId
+            ? Order::with(['customer', 'restaurant', 'rider', 'items'])->find($this->selectedOrderId)
+            : null;
+
         return view('livewire.admin.order-component', [
-            'orders' => $orders,
+            'orders'        => $orders,
+            'selectedOrder' => $selectedOrder,
+            'nextStatus'    => OrderTransitionService::FORWARD_FLOW,
+            'cancellable'   => self::CANCELLABLE_FROM,
         ])->layout('layouts.admin', [
             'title'           => 'Order Management | KhaiKhai',
             'breadcrumbTitle' => 'Order Management',

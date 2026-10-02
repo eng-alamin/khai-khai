@@ -68,7 +68,13 @@ class ProductComponent extends Component
     protected function rules(): array
     {
         return array_merge($this->catalogItemRules(), [
-            'category_id'   => 'nullable|integer|exists:categories,id',
+            'category_id'   => [
+                'nullable',
+                'integer',
+                Rule::exists('categories', 'id')
+                    ->where('type', Category::TYPE_PRODUCT)
+                    ->whereNull('deleted_at'),
+            ],
             'compare_price' => 'nullable|integer|min:1|max:100000|gt:price',
             'section'       => ['required', Rule::in(Product::SECTIONS)],
             'is_active'     => 'boolean',

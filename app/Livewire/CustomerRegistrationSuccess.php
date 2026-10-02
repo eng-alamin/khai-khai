@@ -11,14 +11,27 @@ class CustomerRegistrationSuccess extends Component
 
     /**
      * Laravel resolves {user} via route-model-binding.
-     * We defensively make sure only a genuine customer account can be
-     * shown on this page (never a vendor/rider/admin account).
+     *
+     * Only the browser session that just registered this customer may see
+     * the page (same rule as the rider and vendor success pages). Without
+     * this check anyone could open /registration/success/1, /2, /3 ... and
+     * read other customers' names.
      */
     public function mount(User $user): void
     {
-        abort_unless($user->role === 'customer', 404);
+        $expectedId = session('just_registered_customer_id');
+
+        abort_unless(
+            $expectedId !== null
+                && (int) $expectedId === (int) $user->id
+                && $user->role === 'customer',
+            403
+        );
 
         $this->user = $user;
+
+        // one-time view: prevent re-access via back button / bookmark / link sharing
+        session()->forget('just_registered_customer_id');
     }
 
     public function render()

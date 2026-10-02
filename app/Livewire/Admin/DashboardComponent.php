@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use Livewire\Component;
 use App\Models\Order;
+use App\Models\PlatformTransaction;
 use App\Models\User;
 use App\Models\Restaurant;
 use Carbon\Carbon;
@@ -41,9 +42,9 @@ class DashboardComponent extends Component
             ->where('created_at', '>=', now()->startOfMonth())
             ->count();
 
-        $commissionRate = (float) \App\Models\AdminSetting::get('default_commission_rate', 0);
-        $commissionToday     = ((float) $revenueToday) * ($commissionRate / 100);
-        $commissionYesterday = ((float) $revenueYesterday) * ($commissionRate / 100);
+        // Commission comes from platform_transactions (each restaurant's own rate).
+        $commissionToday     = $this->commissionOn($today);
+        $commissionYesterday = $this->commissionOn($today->copy()->subDay());
         $commissionGrowth = $commissionYesterday > 0
             ? round((($commissionToday - $commissionYesterday) / $commissionYesterday) * 100)
             : 0;
@@ -51,16 +52,27 @@ class DashboardComponent extends Component
         return [
             'orders_today'         => number_format($ordersToday),
             'order_growth'         => $orderGrowth,
-            'revenue_today'        => intdiv((int) $revenueToday, 100),
+            'revenue_today'        => (int) round((float) $revenueToday),
             'revenue_growth'       => $revenueGrowth,
             'active_vendors'       => number_format($activeVendors),
             'new_vendors_week'     => $newVendorsThisWeek,
             'active_riders'        => number_format($activeRiders),
             'total_customers'      => number_format($totalCustomers),
             'customers_growth'     => $customersThisMonth,
-            'commission_today'     => intdiv((int) $commissionToday, 100),
+            'commission_today'     => (int) round($commissionToday),
             'commission_growth'    => $commissionGrowth,
         ];
+    }
+
+    /** Platform commission on delivered orders created on the given day (Taka). */
+    private function commissionOn(Carbon $day): float
+    {
+        return (float) PlatformTransaction::query()
+            ->where('status', 'success')
+            ->whereHas('order', fn ($q) => $q
+                ->where('status', 'delivered')
+                ->whereDate('created_at', $day))
+            ->sum('platform_commission');
     }
 
     // ── Computed: Weekly Orders Chart ───────────────────────────
@@ -165,7 +177,7 @@ class DashboardComponent extends Component
                     $activities->push([
                         'icon'  => 'payments',
                         'color' => 'pink',
-                        'text'  => 'Payout of ৳' . number_format(intdiv((int) $payout->net_amount, 100))
+                        'text'  => 'Payout of ৳' . number_format((int) round((float) $payout->net_amount))
                             . ' sent to ' . ($payout->restaurant->name ?? 'a vendor'),
                         'time'  => $payout->paid_at ?? $payout->created_at,
                     ]);

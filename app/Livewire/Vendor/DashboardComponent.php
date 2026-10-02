@@ -111,11 +111,11 @@ class DashboardComponent extends Component
         $this->todaySales         = round($todaySalesTaka);
         $this->salesChangePercent = $this->percentChange($todaySalesTaka, $yesterdaySalesTaka);
 
-        // Average preparation time: confirmed -> picked_up, for today's orders
+        // Average preparation time: confirmed -> ready (falls back to picked_up for old orders), for today's orders
         $logs = OrderStatusLog::whereHas('order', function ($q) use ($restaurantId) {
                 $q->where('restaurant_id', $restaurantId);
             })
-            ->whereIn('to_status', ['confirmed', 'picked_up'])
+            ->whereIn('to_status', ['confirmed', 'ready', 'picked_up'])
             ->whereDate('created_at', $today)
             ->get()
             ->groupBy('order_id');
@@ -123,7 +123,7 @@ class DashboardComponent extends Component
         $prepMinutes = [];
         foreach ($logs as $group) {
             $confirmed = $group->firstWhere('to_status', 'confirmed');
-            $pickedUp  = $group->firstWhere('to_status', 'picked_up');
+            $pickedUp  = $group->firstWhere('to_status', 'ready') ?? $group->firstWhere('to_status', 'picked_up');
 
             if ($confirmed && $pickedUp) {
                 $prepMinutes[] = $pickedUp->created_at->diffInMinutes($confirmed->created_at);
@@ -179,7 +179,7 @@ class DashboardComponent extends Component
         $restaurantId = $this->restaurantId();
 
         $orders = Order::where('restaurant_id', $restaurantId)
-            ->whereIn('status', ['pending', 'confirmed', 'preparing'])
+            ->whereIn('status', ['pending', 'confirmed', 'preparing', 'ready'])
             ->with(['customer', 'items'])
             ->latest()
             ->limit(5)

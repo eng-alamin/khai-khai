@@ -56,6 +56,9 @@ class CustomerRegistrationComponent extends Component
             return $user;
         });
 
+        // Lets the success page confirm that this browser just registered this user.
+        session(['just_registered_customer_id' => $user->id]);
+
         $this->redirect(route('customer.registration.success', ['user' => $user->id]), navigate: true);
     }
 

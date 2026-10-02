@@ -14,6 +14,11 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        // Demo accounts share a known password: never allow them on a live server.
+        if (app()->isProduction()) {
+            throw new \RuntimeException('UserSeeder creates demo accounts and cannot run in production. Use AdminUserSeeder.');
+        }
+
         $users = [
             // Admin — 1 ta
             ['name' => 'Admin User', 'role' => 'admin', 'phone' => '01700000001', 'email' => 'admin@demo.com'],

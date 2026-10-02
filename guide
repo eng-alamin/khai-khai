@@ -1,0 +1,12 @@
+php artisan migrate --force
+php artisan db:seed --force          # prothombar-i, tarpor SEED_ADMIN_PASSWORD .env theke muche dao
+php artisan storage:link
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+
+
+Ar queue worker chalu rakho (php artisan queue:work, Supervisor diye), noile mail/queue-er kaj atke thakbe. Backup-er jonno database-er daily dump-o thik kore nao.
+
+
+Server-e duita jinish lagbe, na hole kono kaj-i hobe na:
+Cron line: * * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1
+Setting row: php artisan db:seed --class=AdminSettingSeeder --force. Eta safe, purono value overwrite kore na. Seed na korleo default (15 ar 20) kaj kore.

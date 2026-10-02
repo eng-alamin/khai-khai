@@ -45,6 +45,7 @@
         'pending'    => ['label' => 'Pending',    'class' => 'badge-orange'],
         'confirmed'  => ['label' => 'Confirmed',  'class' => 'badge-pink'],
         'preparing'  => ['label' => 'Preparing',  'class' => 'badge-pink'],
+        'ready'      => ['label' => 'Preparing',  'class' => 'badge-pink'],
         'picked_up'  => ['label' => 'On the Way', 'class' => 'badge-pink'],
         'delivered'  => ['label' => 'Delivered',  'class' => 'badge-green'],
         'cancelled'  => ['label' => 'Cancelled',  'class' => 'badge-red'],
@@ -62,7 +63,7 @@
 
       {{-- META --}}
       <div class="order-meta">
-        <span><i class="fa fa-store me-1"></i>{{ $order->restaurant->name }}</span>
+        <span><i class="fa fa-store me-1"></i>{{ $order->isAdminOrder() ? 'KhaiKhai Store' : ($order->restaurant->name ?? '—') }}</span>
         <span><i class="fa fa-clock me-1"></i>{{ $order->created_at->format('d M, g:i A') }}</span>
       </div>
 
@@ -75,7 +76,7 @@
         <div class="d-flex gap-2">
 
           {{-- Track — active orders only --}}
-          @if(in_array($order->status, ['pending', 'confirmed', 'preparing', 'picked_up']))
+          @if(in_array($order->status, ['pending', 'confirmed', 'preparing', 'ready', 'picked_up']))
           <a href="{{ route('customer.track', $order->order_number) }}" class="btn-kk btn-outline-kk btn-sm-kk">
             <i class="fa fa-map-marker-alt"></i> Track
           </a>

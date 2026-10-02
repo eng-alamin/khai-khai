@@ -5,7 +5,6 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\Restaurant;
 use App\Models\User;
-use App\Models\MenuCategory;
 use App\Mail\NewVendorRegisteredMail;
 use App\Livewire\Concerns\HasAccountRegistrationValidation;
 use Illuminate\Support\Facades\DB;
@@ -190,30 +189,6 @@ class VendorRegistrationWizard extends Component
                 'is_approved'     => false,
                 'is_active'       => true,
             ]);
-
-            // 4. Default menu categories
-            $categories = [
-                ['name' => 'Burger', 'emoji' => '🍔'],
-                ['name' => 'Pizza', 'emoji' => '🍕'],
-                ['name' => 'Fried Chicken', 'emoji' => '🍗'],
-                ['name' => 'Biryani', 'emoji' => '🍛'],
-                ['name' => 'Drinks', 'emoji' => '🥤'],
-                ['name' => 'Dessert', 'emoji' => '🍰'],
-            ];
-
-            foreach ($categories as $index => $cat) {
-                MenuCategory::firstOrCreate(
-                    [
-                        'restaurant_id' => $restaurant->id,
-                        'name'          => $cat['name'],
-                    ],
-                    [
-                        'emoji'      => $cat['emoji'],
-                        'sort_order' => $index + 1,
-                        'is_active'  => true,
-                    ]
-                );
-            }
 
             if (function_exists('activity')) {
                 activity()
