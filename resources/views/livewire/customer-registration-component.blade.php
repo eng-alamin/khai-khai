@@ -250,6 +250,14 @@
 
                 {{-- Submit --}}
                 <div class="col-12 mt-2">
+                    @if($throttleMsg)
+                        <div class="info-alert" style="flex:1 0 100%;width:100%;">
+                            <span class="info-icon">⚠️</span>
+                            <div>{{ $throttleMsg }}</div>
+                        </div>
+                    @endif
+                </div>
+                <div class="col-12 mt-2">
                     <button type="button" class="btn-kk-primary"
                         wire:click="submit"
                         wire:loading.attr="disabled"

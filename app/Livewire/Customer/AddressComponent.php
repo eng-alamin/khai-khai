@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Customer;
 
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +34,7 @@ class AddressComponent extends Component
         return [
             'label'       => 'required|in:home,office,other',
             'fullAddress' => 'required|string|max:500',
-            'city'        => 'required|string|max:60',
+            'city'        => ['required', 'string', 'max:60', Rule::in(config('delivery.cities', []))],
             'postalCode'  => 'nullable|string|max:10',
             'latitude'    => 'nullable|numeric|between:-90,90',
             'longitude'   => 'nullable|numeric|between:-180,180',

@@ -75,6 +75,13 @@ class Login extends Component
             return;
         }
 
+        // Vendor: a blocked restaurant cannot log in either
+        if ($user->isVendor() && $user->restaurant && ! $user->restaurant->is_active) {
+            Auth::logout();
+            $this->errorMsg = 'আপনার রেস্টুরেন্ট ব্লক করা হয়েছে। বিস্তারিত জানতে সাপোর্টে যোগাযোগ করুন।';
+            return;
+        }
+
         RateLimiter::clear($throttleKey);
 
         // Role-based redirect

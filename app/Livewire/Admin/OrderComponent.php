@@ -293,7 +293,7 @@ class OrderComponent extends Component
             ->paginate($this->perPage);
 
         $selectedOrder = $this->selectedOrderId
-            ? Order::with(['customer', 'restaurant', 'rider', 'items'])->find($this->selectedOrderId)
+            ? Order::with(['customer', 'restaurant', 'rider', 'items', 'riderAssignments.rider', 'riderAssignments.endedBy'])->find($this->selectedOrderId)
             : null;
 
         return view('livewire.admin.order-component', [

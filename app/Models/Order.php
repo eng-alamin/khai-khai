@@ -43,7 +43,11 @@ class Order extends Model
     // CASTS
     // ─────────────────────────────────────────
     protected $casts = [
-        // JSON column → automatically cast to array
+        // JSON columns → automatically cast to array
+        'restaurant_snapshot'       => 'array',
+        'customer_snapshot'         => 'array',
+        'rider_snapshot'            => 'array',
+        'coupon_snapshot'           => 'array',
         'delivery_address_snapshot' => 'array',
 
         // Enum columns
@@ -52,9 +56,19 @@ class Order extends Model
         'payment_method' => 'string',
         'payment_status' => 'string',
 
+        // Money columns are decimal(15,2) taka in the DB
+        'subtotal'             => 'decimal:2',
+        'delivery_fee'         => 'decimal:2',
+        'discount_amount'      => 'decimal:2',
+        'tax_amount'           => 'decimal:2',
+        'tip_amount'           => 'decimal:2',
+        'total_amount'         => 'decimal:2',
+        'delivery_distance_km' => 'decimal:2',
+
         // Timestamps
         'estimated_delivery_at' => 'datetime',
         'assigned_at'           => 'datetime',
+        'ready_at'              => 'datetime',
         'accepted_at'           => 'datetime',
         'picked_up_at'          => 'datetime',
         'delivered_at'          => 'datetime',
@@ -124,15 +138,11 @@ class Order extends Model
         return $this->hasOne(Review::class);
     }
 
-    // NOTE: requires App\Models\PlatformTransaction, which does not yet
-    // exist in this codebase — create it before calling this relation.
     public function transaction(): HasOne
     {
         return $this->hasOne(PlatformTransaction::class);
     }
 
-    // NOTE: requires App\Models\CouponUsage, which does not yet exist in
-    // this codebase — create it before calling this relation.
     public function couponUsage(): HasOne
     {
         return $this->hasOne(CouponUsage::class);
@@ -141,6 +151,12 @@ class Order extends Model
     public function riderEarning(): HasOne
     {
         return $this->hasOne(RiderEarning::class);
+    }
+
+    /** Every time a rider took this order (newest first), including released ones. */
+    public function riderAssignments(): HasMany
+    {
+        return $this->hasMany(OrderRiderAssignment::class)->latest('assigned_at');
     }
 
     // ─────────────────────────────────────────

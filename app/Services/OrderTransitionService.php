@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Order;
+use App\Models\OrderRiderAssignment;
 use App\Models\OrderStatusLog;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -45,7 +46,8 @@ class OrderTransitionService
 
     public function __construct(
         private readonly CouponService $coupons,
-        private readonly OrderNotifier $notifier
+        private readonly OrderNotifier $notifier,
+        private readonly RiderAssignmentService $assignments
     ) {
     }
 
@@ -158,7 +160,18 @@ class OrderTransitionService
                 'rider_id'    => null,
                 'assigned_at' => null,
                 'accepted_at' => null,
+                'rider_snapshot' => null,
             ])->save();
+
+            // No actor = the scheduled timeout took the order back, not a person.
+            $this->assignments->close(
+                $order->id,
+                $actor === null
+                    ? OrderRiderAssignment::OUTCOME_RELEASED_BY_SYSTEM
+                    : OrderRiderAssignment::OUTCOME_REMOVED_BY_STAFF,
+                $actor,
+                $reason
+            );
 
             // Only the activity log: an extra status-log row ("ready" -> "ready")
             // would distort the vendor dashboard's preparation-time numbers.
@@ -319,6 +332,13 @@ class OrderTransitionService
                 'note'         => $text,
             ]);
 
+            $this->assignments->close(
+                $order->id,
+                OrderRiderAssignment::OUTCOME_DELIVERY_FAILED,
+                $admin,
+                $text
+            );
+
             activity()
                 ->causedBy($admin)
                 ->performedOn($order)
@@ -381,7 +401,11 @@ class OrderTransitionService
                 return false;
             }
 
-            $order->forceFill(['status' => $to])->save();
+            $order->forceFill(array_filter([
+                'status'   => $to,
+                // When the order became available to riders (zone-based dispatch timer).
+                'ready_at' => $to === 'ready' ? now() : null,
+            ], fn ($v) => $v !== null))->save();
 
             OrderStatusLog::create([
                 'order_id'     => $order->id,

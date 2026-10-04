@@ -12,6 +12,7 @@ use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class VendorComponent extends Component
 {
@@ -59,11 +60,11 @@ class VendorComponent extends Component
 
         return [
             'name'             => 'required|string|max:120',
-            'category'         => 'required|string|max:60',
+            'category'         => ['required', 'string', 'max:60', Rule::in(config('delivery.categories', []))],
             'emoji'            => 'nullable|string|max:10',
             'tag'              => 'nullable|string|max:40',
             'address'          => 'required|string',
-            'city'             => 'required|string|max:60',
+            'city'             => ['required', 'string', 'max:60', Rule::in(config('delivery.cities', []))],
             'phone'            => 'nullable|string|max:15',
             'commission_rate'  => 'required|numeric|min:0|max:100',
             'owner_name'       => 'required|string|max:100',

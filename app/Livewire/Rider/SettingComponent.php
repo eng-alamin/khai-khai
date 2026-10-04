@@ -50,7 +50,7 @@ class SettingComponent extends Component
             'vehiclePlate'  => ['nullable', 'string', 'max:20', Rule::unique('rider_profiles', 'vehicle_plate')->ignore($this->riderProfileId)],
             'licenseNumber' => ['nullable', 'string', 'max:30', Rule::unique('rider_profiles', 'license_number')->ignore($this->riderProfileId)],
             'nidNumber'     => ['nullable', 'string', 'max:20', Rule::unique('rider_profiles', 'nid_number')->ignore($this->riderProfileId)],
-            'zone'          => 'nullable|string|max:80',
+            'zone'          => ['nullable', 'string', 'max:80', Rule::in(config('delivery.zones', []))],
             'currentLat'    => 'nullable|numeric|between:-90,90',
             'currentLng'    => 'nullable|numeric|between:-180,180',
         ];
@@ -85,7 +85,8 @@ class SettingComponent extends Component
             $this->vehiclePlate    = $profile->vehicle_plate;
             $this->licenseNumber   = $profile->license_number;
             $this->nidNumber       = $profile->nid_number;
-            $this->zone            = $profile->zone;
+            // An old free-text zone that is not in the list is shown as empty, so the rider can pick a valid one.
+            $this->zone            = in_array($profile->zone, config('delivery.zones', []), true) ? $profile->zone : null;
             $this->currentLat      = $profile->current_lat !== null ? (float) $profile->current_lat : null;
             $this->currentLng      = $profile->current_lng !== null ? (float) $profile->current_lng : null;
             $this->avgRating       = $profile->avg_rating;

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AdminSetting;
 use App\Models\Order;
+use Illuminate\Support\Facades\Log;
 
 /**
  * One place for commission rules, so the vendor finance page, the admin
@@ -16,13 +17,31 @@ use App\Models\Order;
  */
 class CommissionService
 {
+    /** Same value the admin settings page and the seeder show, so all three agree. */
+    public const FALLBACK_RATE = 12.0;
+
     public function rateFor(Order $order): float
     {
         $order->loadMissing('restaurant');
 
         $rate = $order->restaurant?->commission_rate;
 
-        return (float) ($rate ?? AdminSetting::get('default_commission_rate', 0));
+        if ($rate !== null) {
+            return (float) $rate;
+        }
+
+        $default = AdminSetting::get('default_commission_rate');
+
+        if ($default === null) {
+            Log::warning('default_commission_rate setting is missing; using fallback rate', [
+                'order_id' => $order->id,
+                'fallback' => self::FALLBACK_RATE,
+            ]);
+
+            return self::FALLBACK_RATE;
+        }
+
+        return (float) $default;
     }
 
     /**

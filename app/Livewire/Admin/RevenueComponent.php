@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use Livewire\Component;
 use App\Models\Order;
 use App\Models\PlatformTransaction;
+use App\Models\Refund;
 
 class RevenueComponent extends Component
 {
@@ -32,6 +33,22 @@ class RevenueComponent extends Component
             ->sum('platform_commission');
     }
 
+    /**
+     * Refunds already paid out for delivered orders created in the range.
+     * They are matched to the month of the ORDER (not the refund), so a late
+     * refund lowers the month that earned the money.
+     */
+    private function refundsBetween(\Illuminate\Support\Carbon $from, ?\Illuminate\Support\Carbon $to = null): float
+    {
+        return (float) Refund::query()
+            ->where('status', 'paid')
+            ->whereHas('order', fn ($q) => $q
+                ->where('status', 'delivered')
+                ->where('created_at', '>=', $from)
+                ->when($to !== null, fn ($w) => $w->where('created_at', '<=', $to)))
+            ->sum('amount');
+    }
+
     private function toLakh(float $taka): float
     {
         return round($taka / 100000, 2);
@@ -44,13 +61,17 @@ class RevenueComponent extends Component
         $startOfLastMonth = now()->subMonthNoOverflow()->startOfMonth();
         $endOfLastMonth   = now()->subMonthNoOverflow()->endOfMonth();
 
-        $thisMonthRevenue = (int) Order::where('status', 'delivered')
-            ->where('created_at', '>=', $startOfThisMonth)
-            ->sum('total_amount');
+        $thisMonthRefunds = $this->refundsBetween($startOfThisMonth);
+        $lastMonthRefunds = $this->refundsBetween($startOfLastMonth, $endOfLastMonth);
 
-        $lastMonthRevenue = (int) Order::where('status', 'delivered')
+        // Revenue = what customers paid, minus what was refunded to them.
+        $thisMonthRevenue = (float) Order::where('status', 'delivered')
+            ->where('created_at', '>=', $startOfThisMonth)
+            ->sum('total_amount') - $thisMonthRefunds;
+
+        $lastMonthRevenue = (float) Order::where('status', 'delivered')
             ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
-            ->sum('total_amount');
+            ->sum('total_amount') - $lastMonthRefunds;
 
         $thisMonthTaka = $thisMonthRevenue; // orders store Taka, not paisa
         $lastMonthTaka = $lastMonthRevenue;
@@ -63,6 +84,7 @@ class RevenueComponent extends Component
 
         return [
             'total_revenue' => $this->toLakh($thisMonthTaka),
+            'refunds'       => $thisMonthRefunds,
             'commission'    => $this->toLakh($commission),
             'growth'        => $growth,
         ];
@@ -79,9 +101,9 @@ class RevenueComponent extends Component
             $start     = $monthDate->copy()->startOfMonth();
             $end       = $monthDate->copy()->endOfMonth();
 
-            $revenue = (int) Order::where('status', 'delivered')
+            $revenue = (float) Order::where('status', 'delivered')
                 ->whereBetween('created_at', [$start, $end])
-                ->sum('total_amount');
+                ->sum('total_amount') - $this->refundsBetween($start, $end);
 
             $taka = $revenue;
             $lakh = $this->toLakh($taka);

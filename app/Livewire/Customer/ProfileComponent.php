@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Customer;
 
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
-use App\Models\CustomerAddress;
 
 class ProfileComponent extends Component
 {
@@ -22,7 +22,6 @@ class ProfileComponent extends Component
     public bool   $isVerified  = false;
 
     // Address fields (from default customer_address)
-    public ?int   $defaultAddressId = null;
     public string $fullAddress      = '';
     public string $city             = 'Dhaka';
     public string $postalCode       = '';
@@ -33,10 +32,12 @@ class ProfileComponent extends Component
         $userId = Auth::id();
 
         return [
-            'phone'       => "required|string|max:15|unique:users,phone,{$userId}",
+            // Bangladeshi mobile number, same format as registration: 01XXXXXXXXX
+            'phone'       => ['required', 'string', 'regex:/^01[3-9]\d{8}$/', "unique:users,phone,{$userId}"],
             'email'       => "nullable|email|max:150|unique:users,email,{$userId}",
+            'addressLabel' => 'required|in:home,office,other',
             'fullAddress' => 'nullable|string|max:500',
-            'city'        => 'nullable|string|max:60',
+            'city'        => ['nullable', 'string', 'max:60', Rule::in(config('delivery.cities', []))],
             'postalCode'  => 'nullable|string|max:10',
         ];
     }
@@ -44,6 +45,7 @@ class ProfileComponent extends Component
     protected function messages(): array
     {
         return [
+            'phone.regex'  => 'Please enter a valid Bangladeshi mobile number (01XXXXXXXXX).',
             'phone.unique' => 'This phone number is already registered with another account.',
             'email.unique' => 'This email is already registered with another account.',
         ];
@@ -71,7 +73,6 @@ class ProfileComponent extends Component
         // Default address
         $defaultAddr = $user->addresses()->where('is_default', true)->first();
         if ($defaultAddr) {
-            $this->defaultAddressId = $defaultAddr->id;
             $this->fullAddress      = $defaultAddr->full_address;
             $this->city             = $defaultAddr->city;
             $this->postalCode       = $defaultAddr->postal_code ?? '';
@@ -92,10 +93,14 @@ class ProfileComponent extends Component
                 'phone' => $this->phone,
             ]);
 
-            // Update or create default address
+            // Update or create default address.
+            // The address is always found through the logged-in user's own
+            // addresses, so another customer's address can never be touched.
             if ($this->fullAddress) {
-                if ($this->defaultAddressId) {
-                    CustomerAddress::where('id', $this->defaultAddressId)->update([
+                $default = $user->addresses()->where('is_default', true)->first();
+
+                if ($default) {
+                    $default->update([
                         'full_address' => $this->fullAddress,
                         'city'         => $this->city,
                         'postal_code'  => $this->postalCode ?: null,
@@ -112,7 +117,9 @@ class ProfileComponent extends Component
                         'is_default'   => true,
                     ]);
 
-                    $this->defaultAddressId = $addr->id;
+                    // Keep customer_profiles.default_address_id in step
+                    // (AddressComponent and QuickAddressComponent already do this).
+                    $user->customerProfile?->update(['default_address_id' => $addr->id]);
                 }
             }
 

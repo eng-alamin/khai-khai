@@ -5,8 +5,10 @@ namespace App\Livewire\Vendor;
 use App\Models\Order;
 use App\Models\Payout;
 use App\Models\Restaurant;
+use App\Services\PaymentAccountService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class FinanceComponent extends Component
@@ -27,6 +29,13 @@ class FinanceComponent extends Component
 
     public int $historyLimit = 3;
 
+    // ── Payout account (where KhaiKhai sends the money) ────
+    public string $accMethod  = 'bkash';
+    public string $accNumber  = '';
+    public string $accName    = '';
+    public string $accBank    = '';
+    public bool   $accountSaved = false;
+
     // ── Restaurant helpers ──────────────────────────────────
     private function restaurant(): Restaurant
     {
@@ -38,9 +47,44 @@ class FinanceComponent extends Component
         return $this->restaurant()->id;
     }
 
-    public function mount(): void
+    public function mount(PaymentAccountService $accounts): void
     {
         $this->loadFinanceData();
+        $this->fillSavedAccount($accounts);
+    }
+
+    public function updatedAccMethod(): void
+    {
+        $this->accountSaved = false;
+        $this->resetValidation();
+        $this->fillSavedAccount(app(PaymentAccountService::class));
+    }
+
+    private function fillSavedAccount(PaymentAccountService $accounts): void
+    {
+        $saved = $accounts->find((int) Auth::id(), $this->accMethod);
+
+        $this->accNumber = $saved?->account_number ?? '';
+        $this->accName   = $saved?->account_name ?? '';
+        $this->accBank   = $saved?->bank_name ?? '';
+    }
+
+    public function saveAccount(PaymentAccountService $accounts): void
+    {
+        $this->validate([
+            'accMethod' => ['required', Rule::in(PaymentAccountService::METHODS)],
+            'accNumber' => $accounts->numberRules($this->accMethod),
+            'accName'   => ['nullable', 'string', 'max:100'],
+            'accBank'   => [$this->accMethod === 'bank' ? 'required' : 'nullable', 'string', 'max:100'],
+        ], [
+            'accNumber.required' => 'Please enter your account number.',
+            'accNumber.regex'    => $accounts->numberMessage($this->accMethod),
+            'accBank.required'   => 'Please enter the bank name.',
+        ]);
+
+        $accounts->save(Auth::user(), $this->accMethod, $this->accNumber, $this->accName, $this->accBank);
+
+        $this->accountSaved = true;
     }
 
     // ── Core data loader ────────────────────────────────────

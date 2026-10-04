@@ -230,10 +230,13 @@
                         <div class="col">
                             <div class="form-group">
                                 <label class="form-label">Category <span class="req">*</span></label>
-                                <input type="text"
-                                    class="form-control @error('category') is-invalid @enderror"
-                                    wire:model.defer="category"
-                                    placeholder="e.g. Bangla Food, Fast Food">
+                                <select class="form-control @error('category') is-invalid @enderror"
+                                    wire:model.defer="category">
+                                    <option value="">— Select category —</option>
+                                    @foreach(config('delivery.categories', []) as $opt)
+                                        <option value="{{ $opt }}">{{ $opt }}</option>
+                                    @endforeach
+                                </select>
                                 @error('category') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                         </div>
@@ -243,10 +246,13 @@
                         <div class="col">
                             <div class="form-group">
                                 <label class="form-label">City <span class="req">*</span></label>
-                                <input type="text"
-                                    class="form-control @error('city') is-invalid @enderror"
-                                    wire:model.defer="city"
-                                    placeholder="e.g. Dhaka">
+                                <select class="form-control @error('city') is-invalid @enderror"
+                                    wire:model.defer="city">
+                                    <option value="">— Select city —</option>
+                                    @foreach(config('delivery.cities', []) as $opt)
+                                        <option value="{{ $opt }}">{{ $opt }}</option>
+                                    @endforeach
+                                </select>
                                 @error('city') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                         </div>

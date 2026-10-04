@@ -9,6 +9,7 @@ use App\Models\Food;
 use App\Models\Restaurant;
 use App\Models\Product;
 use App\Models\Slider;
+use App\Models\OfferPopup;
 
 class HomeComponent extends Component
 {
@@ -57,7 +58,7 @@ class HomeComponent extends Component
             ->whereHas('restaurant', fn ($q) =>
                 $q->where('is_active', true)->where('is_approved', true)
             )
-            ->with('category:id,name,emoji', 'restaurant:id,name')
+            ->with('category:id,name,emoji', 'restaurant:id,name,slug')
             ->orderBy('sort_order')
             ->limit(8)
             ->get();
@@ -82,12 +83,16 @@ class HomeComponent extends Component
             ->orderByDesc('id')
             ->get(['id', 'image', 'url']);
 
+        // Admin theke manage kora offer popup (live + schedule-er moddhe)
+        $offerPopup = OfferPopup::current();
+
         return view('livewire.customer.home-component', [
                 'restaurants'     => $restaurants,
                 'menuItems'       => $menuItems,
                 'products'        => $products,
                 'categories'      => $categories,
                 'sliders'         => $sliders,
+                'offerPopup'      => $offerPopup,
                 'currentAddress'  => $this->currentAddress(),
             ])
             ->layout('layouts.customer', [

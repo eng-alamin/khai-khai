@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Models\OrderRiderAssignment;
 use App\Models\OrderStatusLog;
 use App\Models\PlatformTransaction;
 use App\Models\RiderEarning;
@@ -13,7 +14,8 @@ class RiderDeliveryService
 {
     public function __construct(
         private readonly CommissionService $commission,
-        private readonly OrderNotifier $notifier
+        private readonly OrderNotifier $notifier,
+        private readonly RiderAssignmentService $assignments
     ) {
     }
 
@@ -60,6 +62,8 @@ class RiderDeliveryService
                 'changed_by'  => $rider->id,
                 'changed_type' => 'rider',
             ]);
+
+            $this->assignments->close($order->id, OrderRiderAssignment::OUTCOME_DELIVERED, $rider);
 
             RiderEarning::firstOrCreate(
                 ['order_id' => $order->id],

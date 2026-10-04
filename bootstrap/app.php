@@ -4,6 +4,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\EnsureRiderApproved;
+use App\Http\Middleware\EnsureUserActive;
+use App\Http\Middleware\EnsureVendorRestaurantActive;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\UpdateLastSeen;
 use Illuminate\Http\Request;
@@ -27,6 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role'           => RoleMiddleware::class,
             'rider.approved' => EnsureRiderApproved::class,
+            'vendor.active'  => EnsureVendorRestaurantActive::class,
+            'user.active'    => EnsureUserActive::class,
         ]);
         $middleware->web(append: [
             UpdateLastSeen::class,

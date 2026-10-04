@@ -137,7 +137,12 @@
 
           <div class="form-group">
             <label class="form-label-kk">Zone</label>
-            <input class="form-control-kk" wire:model="zone" type="text" placeholder="e.g. Dhaka-Metro">
+            <select class="form-control-kk" wire:model="zone">
+              <option value="">— Select zone —</option>
+              @foreach(config('delivery.zones', []) as $z)
+                <option value="{{ $z }}">{{ $z }}</option>
+              @endforeach
+            </select>
             @error('zone') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
           </div>
 

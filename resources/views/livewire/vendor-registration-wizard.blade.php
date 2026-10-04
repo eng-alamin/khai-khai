@@ -682,6 +682,12 @@
                         </span>
                     </button>
                 @else
+                    @if($throttleMsg)
+                        <div class="info-alert warning" style="flex:1 0 100%;width:100%;">
+                            <span class="info-icon">⚠️</span>
+                            <div>{{ $throttleMsg }}</div>
+                        </div>
+                    @endif
                     <button type="button" class="btn-kk-primary"
                         wire:click="submit"
                         wire:loading.attr="disabled"

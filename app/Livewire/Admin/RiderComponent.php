@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class RiderComponent extends Component
 {
@@ -63,7 +64,7 @@ class RiderComponent extends Component
             'email'          => 'nullable|email|unique:users,email',
             'phone'          => 'required|string|max:15|unique:users,phone',
             'password'       => 'required|string|min:6',
-            'zone'           => 'nullable|string|max:80',
+            'zone'           => ['nullable', 'string', 'max:80', Rule::in(config('delivery.zones', []))],
             'vehicle_type'   => 'required|string|max:40',
             'vehicle_plate'  => 'nullable|string|max:20|unique:rider_profiles,vehicle_plate',
             'license_number' => 'nullable|string|max:30|unique:rider_profiles,license_number',
@@ -227,15 +228,11 @@ class RiderComponent extends Component
     }
 
     // ═════════════════════════════════════════════════════════
-    // ZONE LIST (for filter dropdown)
+    // ZONE LIST (filter dropdown + create form) - from config/delivery.php
     // ═════════════════════════════════════════════════════════
     public function getZonesProperty(): array
     {
-        return RiderProfile::distinct()
-            ->whereNotNull('zone')
-            ->orderBy('zone')
-            ->pluck('zone')
-            ->toArray();
+        return config('delivery.zones', []);
     }
 
     // ═════════════════════════════════════════════════════════

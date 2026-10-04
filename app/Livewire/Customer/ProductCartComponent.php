@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Livewire\Customer;
 
+use App\Livewire\Concerns\RedirectsToAddressPage;
+use App\Livewire\Concerns\ThrottlesActions;
+
 use App\Models\AdminSetting;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -28,6 +31,9 @@ use Livewire\Component;
  */
 class ProductCartComponent extends Component
 {
+    use RedirectsToAddressPage;
+    use ThrottlesActions;
+
     private const MAX_QTY_PER_ITEM = 20;
 
     /** @var array<int, array{name:string, price:float, qty:int, image_url:?string, emoji:?string}> */
@@ -199,6 +205,14 @@ class ProductCartComponent extends Component
             return;
         }
 
+        // Cap how often one customer can submit checkout (the lock below only
+        // stops two at the same moment). Shared by the food and product carts.
+        $wait = $this->throttleHit('place-order-rate', (string) Auth::id(), 10, 600);
+        if ($wait > 0) {
+            $this->dispatch('notify', message: $this->throttleMessage($wait), type: 'error');
+            return;
+        }
+
         // One checkout at a time per customer (same key as the food cart):
         // a double click, a retry or a second browser tab cannot create
         // two orders at the same moment.
@@ -228,11 +242,7 @@ class ProductCartComponent extends Component
             ?? $user->addresses()->latest()->first();
 
         if (! $address) {
-            // Redirect to the address page instead of the quick-address modal,
-            // because that modal's "address-saved" event also resumes the
-            // vendor cart and could place two orders at once.
-            session()->flash('info', 'অর্ডার করতে আগে একটি ডেলিভারি ঠিকানা যোগ করুন।');
-            $this->redirect(route('customer.addresses'), navigate: true);
+            $this->redirectToAddressPage();
             return;
         }
 
@@ -295,6 +305,7 @@ class ProductCartComponent extends Component
                     'order_type'                 => Order::TYPE_ADMIN,
                     'customer_id'                => $user->id,
                     'restaurant_id'              => null,
+                    'customer_snapshot'          => app(\App\Services\OrderSnapshotService::class)->customer($user),
                     'rider_id'                   => null,
                     'delivery_address_id'        => $address->id,
                     'delivery_address_snapshot'  => [

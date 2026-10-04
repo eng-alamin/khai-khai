@@ -3,14 +3,19 @@
 namespace App\Livewire\Rider;
 
 use App\Models\Order;
+use App\Models\OrderRiderAssignment;
 use App\Models\RiderProfile;
 use App\Models\RiderEarning;
+use App\Models\User;
 use App\Services\OrderNotifier;
 use App\Services\OrderTransitionService;
+use App\Services\RiderAssignmentService;
 use App\Services\RiderDeliveryService;
+use App\Services\ZoneDispatchService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -74,11 +79,17 @@ class DeliveryOngoingComponent extends Component
 
         // No 'customer' relation here on purpose: unclaimed orders must never
         // carry the customer's personal data.
+        $zones   = app(ZoneDispatchService::class);
+        $profile = Auth::user()->riderProfile;
+
         return Order::with(['items', 'restaurant'])
             ->whereNull('rider_id')
             ->whereIn('status', self::AVAILABLE_STATUSES)
             ->orderBy('created_at')
             ->get()
+            // Zone-based dispatch: own-zone orders first, everyone after the wait.
+            ->filter(fn (Order $order) => $zones->canTake($order, $profile))
+            ->values()
             ->map(fn (Order $order) => $this->formatOrder($order));
     }
 
@@ -111,11 +122,55 @@ class DeliveryOngoingComponent extends Component
             return;
         }
 
-        $activeCount = Order::where('rider_id', $user->id)
-            ->whereIn('status', self::ONGOING_STATUSES)
-            ->count();
+        // Atomic conditional update — avoids the race condition where two
+        // riders could accept the same order at the same moment.
+        // The assignment history row is written in the same transaction, so
+        // the order and its history can never disagree.
+        //
+        // The rider's own user row is locked first, so two quick taps by the
+        // SAME rider run one after the other and the "max active orders"
+        // count below cannot be beaten by a double click or a second tab.
+        $affected = DB::transaction(function () use ($orderId, $user) {
+            User::whereKey($user->id)->lockForUpdate()->first();
 
-        if ($activeCount >= self::MAX_ACTIVE_ORDERS) {
+            $activeCount = Order::where('rider_id', $user->id)
+                ->whereIn('status', self::ONGOING_STATUSES)
+                ->count();
+
+            if ($activeCount >= self::MAX_ACTIVE_ORDERS) {
+                return 'limit';
+            }
+
+            // Same zone rule as the list: hiding the card is not enough,
+            // a rider could still send the accept call by hand.
+            $candidate = Order::with('restaurant')
+                ->where('id', $orderId)
+                ->whereNull('rider_id')
+                ->where('status', 'ready')
+                ->first();
+
+            if ($candidate !== null
+                && ! app(ZoneDispatchService::class)->canTake($candidate, $user->riderProfile)) {
+                return 'zone';
+            }
+
+            $affected = Order::where('id', $orderId)
+                ->whereNull('rider_id')
+                ->where('status', 'ready')
+                ->update([
+                    'rider_id'    => $user->id,
+                    'assigned_at' => now(),
+                    'accepted_at' => now(),
+                ]);
+
+            if ($affected > 0) {
+                app(RiderAssignmentService::class)->open($orderId, $user->id);
+            }
+
+            return $affected;
+        });
+
+        if ($affected === 'limit') {
             $this->dispatch(
                 'show-toast',
                 message: 'একসাথে সর্বোচ্চ ' . self::MAX_ACTIVE_ORDERS . 'টি অর্ডার নেওয়া যাবে। আগে একটি শেষ করুন।',
@@ -124,16 +179,14 @@ class DeliveryOngoingComponent extends Component
             return;
         }
 
-        // Atomic conditional update — avoids the race condition where two
-        // riders could accept the same order at the same moment.
-        $affected = Order::where('id', $orderId)
-            ->whereNull('rider_id')
-            ->where('status', 'ready')
-            ->update([
-                'rider_id'    => $user->id,
-                'assigned_at' => now(),
-                'accepted_at' => now(),
-            ]);
+        if ($affected === 'zone') {
+            $this->dispatch(
+                'show-toast',
+                message: 'এই অর্ডারটি এখন শুধু সংশ্লিষ্ট zone-এর রাইডারদের জন্য। কিছুক্ষণ পর সবার জন্য খুলবে।',
+                type: 'warning'
+            );
+            return;
+        }
 
         if ($affected === 0) {
             $this->dispatch('show-toast', message: '⚠️ Sorry, this order has already been taken by another rider.', type: 'error');
@@ -141,6 +194,11 @@ class DeliveryOngoingComponent extends Component
         }
 
         $order = Order::findOrFail($orderId);
+
+        // Freeze who the rider was at accept time (name/phone/vehicle can change later).
+        $order->forceFill([
+            'rider_snapshot' => app(\App\Services\OrderSnapshotService::class)->rider($user),
+        ])->save();
 
         activity()
             ->causedBy($user)
@@ -178,14 +236,27 @@ class DeliveryOngoingComponent extends Component
     {
         $user = Auth::user();
 
-        $affected = Order::where('id', $orderId)
-            ->where('rider_id', $user->id)
-            ->where('status', 'ready')
-            ->update([
-                'rider_id'    => null,
-                'assigned_at' => null,
-                'accepted_at' => null,
-            ]);
+        $affected = DB::transaction(function () use ($orderId, $user) {
+            $affected = Order::where('id', $orderId)
+                ->where('rider_id', $user->id)
+                ->where('status', 'ready')
+                ->update([
+                    'rider_id'    => null,
+                    'assigned_at' => null,
+                    'accepted_at' => null,
+                    'rider_snapshot' => null,
+                ]);
+
+            if ($affected > 0) {
+                app(RiderAssignmentService::class)->close(
+                    $orderId,
+                    OrderRiderAssignment::OUTCOME_RELEASED_BY_RIDER,
+                    $user
+                );
+            }
+
+            return $affected;
+        });
 
         if ($affected === 0) {
             $this->dispatch('show-toast', message: 'This order can no longer be released.', type: 'error');

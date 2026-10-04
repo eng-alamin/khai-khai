@@ -1,8 +1,8 @@
 <div>
     @if ($role === 'guest')
         <div></div>
-    @elseif ($role === 'customer')
-        <a href="{{ route('customer.notifications') }}"
+    @elseif ($variant === 'customer')
+        <a href="{{ $listUrl }}"
         class="topbar-btn position-relative"
         title="{{ $unreadCount > 0 ? $unreadCount . ' unread' : 'Notifications' }}"
         wire:poll.20s>
@@ -16,8 +16,9 @@
 
         <div wire:poll.20s>
             <div class="dropdown" wire:ignore.self>
-                <button class="icon-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside" wire:ignore.self>
-                    <i class="fa fa-bell"></i>
+                <button type="button" class="icon-btn" aria-label="{{ $isVendor ? 'নোটিফিকেশন' : 'Notifications' }}"
+                        data-bs-toggle="dropdown" data-bs-auto-close="outside" wire:ignore.self>
+                    <span class="material-icons-round">notifications</span>
                     @if ($unreadCount > 0)
                         <span class="notif-badge">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
                     @endif

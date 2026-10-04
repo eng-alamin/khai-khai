@@ -55,6 +55,18 @@ class Restaurant extends Model
         return $this->hasMany(Payout::class);
     }
 
+    /** Restaurant er nijer banano menu section gulo (Combo Deals, Chef's Special...) */
+    public function menuSections(): HasMany
+    {
+        return $this->hasMany(MenuSection::class);
+    }
+
+    /** Shoptahik khola-bondher shomoy (protidin ekti row) */
+    public function hours(): HasMany
+    {
+        return $this->hasMany(RestaurantHour::class)->orderBy('day_of_week');
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);

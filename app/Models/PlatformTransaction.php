@@ -63,6 +63,12 @@ class PlatformTransaction extends Model
         return $this->belongsTo(Order::class);
     }
 
+    /** The vendor payout that settles this transaction (null = not paid out yet). */
+    public function payout(): BelongsTo
+    {
+        return $this->belongsTo(Payout::class);
+    }
+
     // ── Computed Attributes ───────────────────────────────
 
     public function getIsSuccessfulAttribute(): bool

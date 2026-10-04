@@ -539,7 +539,7 @@
                         <div class="col-12">
                             <div class="info-alert success">
                                 <span class="info-icon">✅</span>
-                                <div>You have selected the <strong>{{ $zone }}</strong> zone. Active orders in this zone will be sent to you.</div>
+                                <div>You have selected the <strong>{{ $zone }}</strong> zone. This is your preferred delivery area, shown on your profile. You can change it later from your settings.</div>
                             </div>
                         </div>
                     @endif
@@ -644,6 +644,12 @@
                         </span>
                     </button>
                 @else
+                    @if($throttleMsg)
+                        <div class="info-alert warning" style="flex:1 0 100%;width:100%;">
+                            <span class="info-icon">⚠️</span>
+                            <div>{{ $throttleMsg }}</div>
+                        </div>
+                    @endif
                     <button type="button" class="btn-kk-primary"
                         wire:click="submit"
                         wire:loading.attr="disabled"

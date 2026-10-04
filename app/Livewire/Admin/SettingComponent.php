@@ -28,6 +28,8 @@ class SettingComponent extends Component
     public float $perKmDeliveryRate     = 10;
     public float $includedKmInMinimum   = 1;
     public float $productDeliveryFee    = 49;   // flat fee for admin product orders
+    public float $maxDeliveryDistanceKm = 0;    // longest delivery accepted, 0 = no limit
+    public int   $zoneDispatchOpenAfterMinutes = 0; // zone-only window for riders, 0 = off
 
     // ── Commission Settings Fields ───────────────────────────
     public float  $defaultCommissionRate = 12;
@@ -45,6 +47,8 @@ class SettingComponent extends Component
         'perKmDeliveryRate'     => 'per_km_delivery_rate',
         'includedKmInMinimum'   => 'included_km_in_minimum',
         'productDeliveryFee'    => 'product_delivery_fee',
+        'maxDeliveryDistanceKm' => 'max_delivery_distance_km',
+        'zoneDispatchOpenAfterMinutes' => 'zone_dispatch_open_after_minutes',
     ];
 
     private array $commissionKeyMap = [
@@ -73,6 +77,8 @@ class SettingComponent extends Component
         $this->perKmDeliveryRate     = (float) $settings->get('per_km_delivery_rate', 10);
         $this->includedKmInMinimum   = (float) $settings->get('included_km_in_minimum', 1);
         $this->productDeliveryFee    = (float) $settings->get('product_delivery_fee', 49);
+        $this->maxDeliveryDistanceKm = (float) $settings->get('max_delivery_distance_km', 0);
+        $this->zoneDispatchOpenAfterMinutes = (int) $settings->get('zone_dispatch_open_after_minutes', 0);
 
         // Commission — stored as plain percentage numbers, no conversion needed
         $this->defaultCommissionRate = (float) $settings->get('default_commission_rate', 12);
@@ -97,6 +103,8 @@ class SettingComponent extends Component
             'perKmDeliveryRate'     => ['required', 'numeric', 'min:0', 'max:500'],
             'includedKmInMinimum'   => ['required', 'numeric', 'min:0', 'max:50'],
             'productDeliveryFee'    => ['required', 'numeric', 'min:0', 'max:1000'],
+            'maxDeliveryDistanceKm' => ['required', 'numeric', 'min:0', 'max:500'],
+            'zoneDispatchOpenAfterMinutes' => ['required', 'integer', 'min:0', 'max:120'],
         ];
     }
 
@@ -125,6 +133,10 @@ class SettingComponent extends Component
         'includedKmInMinimum.numeric'    => 'Included distance must be a number.',
         'productDeliveryFee.required'    => 'Product delivery fee is required.',
         'productDeliveryFee.numeric'     => 'Product delivery fee must be a number.',
+        'maxDeliveryDistanceKm.required' => 'Maximum delivery distance is required (0 = no limit).',
+        'maxDeliveryDistanceKm.numeric'  => 'Maximum delivery distance must be a number.',
+        'zoneDispatchOpenAfterMinutes.required' => 'Zone dispatch wait time is required (0 = off).',
+        'zoneDispatchOpenAfterMinutes.integer'  => 'Zone dispatch wait time must be a whole number of minutes.',
     ];
 
     protected array $commissionMessages = [
@@ -201,6 +213,8 @@ class SettingComponent extends Component
                     'per_km_delivery_rate'    => $validated['perKmDeliveryRate'],
                     'included_km_in_minimum'  => $validated['includedKmInMinimum'],
                     'product_delivery_fee'    => $validated['productDeliveryFee'],
+                    'max_delivery_distance_km' => $validated['maxDeliveryDistanceKm'],
+                    'zone_dispatch_open_after_minutes' => $validated['zoneDispatchOpenAfterMinutes'],
                 ])
                 ->log('Delivery charge settings updated');
 

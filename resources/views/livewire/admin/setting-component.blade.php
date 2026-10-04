@@ -102,6 +102,24 @@
                     @error('productDeliveryFee') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label">Maximum Delivery Distance (KM)</label>
+                    <input type="number" step="0.5" min="0"
+                           class="form-control @error('maxDeliveryDistanceKm') is-invalid @enderror"
+                           wire:model.defer="maxDeliveryDistanceKm">
+                    <small class="text-muted">Orders farther than this are refused. 0 = no limit.</small>
+                    @error('maxDeliveryDistanceKm') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Zone-only dispatch window (minutes)</label>
+                    <input type="number" step="1" min="0" max="120"
+                           class="form-control @error('zoneDispatchOpenAfterMinutes') is-invalid @enderror"
+                           wire:model.defer="zoneDispatchOpenAfterMinutes">
+                    <small class="text-muted">A ready order is first offered only to riders of the restaurant's zone. After this many minutes it opens to every rider. 0 = off (all riders see all orders).</small>
+                    @error('zoneDispatchOpenAfterMinutes') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
                 <button type="submit" class="save-btn" wire:loading.attr="disabled" wire:target="saveDeliverySettings">
                     <span wire:loading wire:target="saveDeliverySettings" class="spinner-sm"></span>
                     <span class="material-icons-round" wire:loading.remove wire:target="saveDeliverySettings">save</span>

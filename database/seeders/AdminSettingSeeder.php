@@ -20,6 +20,8 @@ class AdminSettingSeeder extends Seeder
             ['minimum_delivery_charge', '40', 'Base delivery fee in BDT (Taka), covers the included distance'],
             ['per_km_delivery_rate', '10', 'BDT (Taka) charged per additional km beyond included_km_in_minimum'],
             ['included_km_in_minimum', '1', 'Distance in km covered by the minimum delivery charge'],
+            ['max_delivery_distance_km', '0', 'Longest delivery distance in km that checkout accepts (0 = no limit)'],
+            ['zone_dispatch_open_after_minutes', '0', 'Minutes a ready order is offered only to riders of its zone before it opens to all riders (0 = zone dispatch off)'],
             ['default_commission_rate', '12', 'Default platform commission (%) when a restaurant has no own rate'],
             ['premium_vendor_rate', '8', 'Commission (%) for premium vendors'],
             ['payment_cycle', 'monthly', 'How often vendors and riders are paid out'],

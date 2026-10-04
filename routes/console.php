@@ -12,3 +12,8 @@ Artisan::command('inspire', function () {
 Schedule::command('orders:process-timeouts')
     ->everyMinute()
     ->withoutOverlapping(5);
+
+// Applies each vendor's weekly opening hours (only for vendors who switched it on).
+Schedule::command('restaurants:sync-opening-hours')
+    ->everyMinute()
+    ->withoutOverlapping(5);

@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\ThrottlesActions;
+
 use Livewire\Component;
 use App\Models\Restaurant;
 use App\Models\User;
@@ -12,10 +14,16 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\WithFileUploads;
 
 class VendorRegistrationWizard extends Component
 {
+    use ThrottlesActions;
+
+    // Shown above the submit button when too many attempts were made.
+    public string $throttleMsg = '';
+
     use WithFileUploads;
     use HasAccountRegistrationValidation;
 
@@ -42,27 +50,17 @@ class VendorRegistrationWizard extends Component
     public $logo   = null;
     public $banner = null;
 
-    // ── Categories list ──────────────────────────────────────────────
-    public array $categories = [
-        'Bangla Food',
-        'Fast Food',
-        'Burger',
-        'Pizza',
-        'Biryani',
-        'Chinese',
-        'Indian',
-        'Seafood',
-        'Dessert & Sweets',
-        'Tea & Coffee',
-        'Healthy Food',
-        'Street Food',
-    ];
+    // ── Categories list (filled from config/delivery.php in mount()) ──
+    public array $categories = [];
 
-    // ── Cities list ──────────────────────────────────────────────────
-    public array $cities = [
-        'Dhaka', 'Gazipur', 'Narayanganj', 'Chittagong',
-        'Sylhet', 'Rajshahi', 'Khulna', 'Barisal', 'Mymensingh',
-    ];
+    // ── Cities list (filled from config/delivery.php in mount()) ──────
+    public array $cities = [];
+
+    public function mount(): void
+    {
+        $this->categories = config('delivery.categories', []);
+        $this->cities     = config('delivery.cities', []);
+    }
 
     // ── Validation rules per step ────────────────────────────────────
     protected function rulesForStep(int $step): array
@@ -74,10 +72,10 @@ class VendorRegistrationWizard extends Component
             1 => $this->accountRegistrationRules(),
             2 => [
                 'restaurant_name'   => 'required|string|min:3|max:120',
-                'category'          => 'required|string',
+                'category'          => ['required', 'string', Rule::in(config('delivery.categories', []))],
                 'restaurant_phone'  => 'required|string|regex:/^01[3-9]\d{8}$/',
                 'address'           => 'required|string|min:10|max:255',
-                'city'              => 'required|string',
+                'city'              => ['required', 'string', Rule::in(config('delivery.cities', []))],
                 'description'       => 'nullable|string|max:500',
             ],
             3 => [
@@ -135,10 +133,17 @@ class VendorRegistrationWizard extends Component
     // ── Final submission ─────────────────────────────────────────────
     public function submit(): void
     {
+        $this->throttleMsg = '';
         $this->validate(
             $this->rulesForStep(3),
             $this->messagesForStep(3)
         );
+
+        $wait = $this->throttleHit('register-vendor', (string) request()->ip(), 10, 3600);
+        if ($wait > 0) {
+            $this->throttleMsg = $this->throttleMessage($wait);
+            return;
+        }
 
         $restaurant = null;
         $user       = null;

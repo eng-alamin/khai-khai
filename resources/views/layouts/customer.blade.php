@@ -277,6 +277,7 @@
     {{-- <a href="{{ route('customer.track') }}"       class="nav-item {{ request()->routeIs('customer.track') ? 'active' : '' }}">
       <i class="fa fa-map-marker-alt"></i> Order Track
     </a> --}}
+    
     <div class="nav-section">My Account</div>
     <a href="{{ route('customer.profile') }}"     class="nav-item {{ request()->routeIs('customer.profile') ? 'active' : '' }}">
       <i class="fa fa-user"></i> Profile
@@ -322,7 +323,7 @@
       <span class="dot"></span>
     </a>
 
-    @livewire('notification-bell')
+    @livewire('notification-bell', ['variant' => 'customer'])
     
     <a class="top-avatar text-decoration-none" href="{{route('customer.profile')}}">{{ mb_substr(auth()->user()->name ?? 'C', 0, 1) }}</a>
   </div>
@@ -381,6 +382,11 @@
     setTimeout(() => t.remove(), 3000);
   }
   
+  // A message left by a redirect (e.g. "add an address before ordering").
+  @if (session('info'))
+    showToast(@js(session('info')));
+  @endif
+
   document.addEventListener('livewire:initialized', () => {
     Livewire.on('order-placed', () => {
       showToast('✅ অর্ডার সফলভাবে দেওয়া হয়েছে!', 'success');

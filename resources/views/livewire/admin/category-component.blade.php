@@ -54,6 +54,13 @@
                         <option value="{{ $value }}">{{ $label }}</option>
                     @endforeach
                 </select>
+
+                <select class="select" wire:model.live="filterLevel">
+                    <option value="">All Levels</option>
+                    <option value="category">Category</option>
+                    <option value="sub">Sub Category</option>
+                    <option value="child">Child Category</option>
+                </select>
             </div>
         </div>
 
@@ -70,18 +77,26 @@
                     <div class="card-thumb">
                         @if($category->image_url)
                             <img src="{{ $category->image_url }}" alt="{{ $category->name }}">
+                        @elseif($category->emoji)
+                            <span style="font-size:24px;">{{ $category->emoji }}</span>
                         @else
                             <span class="material-icons-round icon-fallback">image</span>
                         @endif
                     </div>
                     <div class="card-info">
                         <div class="card-title">{{ $category->name }}</div>
+                        @if($category->parent_id)
+                            <div class="card-desc card-desc-muted">{{ $category->path }}</div>
+                        @endif
                         @php
                             $isFoodType = $category->type === \App\Models\Category::TYPE_FOOD;
                             $itemCount  = $isFoodType ? $category->foods_count : $category->products_count;
                         @endphp
                         <div class="card-desc">
                             {{ $itemCount }} {{ $isFoodType ? 'food(s)' : 'product(s)' }}
+                            @if($category->children_count > 0)
+                                · {{ $category->children_count }} sub
+                            @endif
                         </div>
                     </div>
                     <span class="status-badge {{ $statusClass }}">{{ $statusLabel }}</span>
@@ -90,6 +105,7 @@
                 {{-- Meta --}}
                 <div class="card-meta">
                     <span class="type-badge">{{ $categoryTypes[$category->type] ?? ucfirst($category->type) }}</span>
+                    <span class="type-badge">{{ $category->level_label }}</span>
                     <span class="meta-item">
                         <span class="material-icons-round">sort</span>
                         Order: {{ $category->sort_order }}
@@ -159,12 +175,31 @@
                     <div class="form-group">
                         <label class="form-label">Category Type <span class="req">*</span></label>
                         <select class="form-control @error('type') is-invalid @enderror"
-                            wire:model.defer="type">
+                            wire:model.live="type" @disabled($parent_id)>
                             @foreach($categoryTypes as $value => $label)
                                 <option value="{{ $value }}">{{ $label }}</option>
                             @endforeach
                         </select>
+                        @if($parent_id)
+                            <div class="form-hint">Parent-er type-i use hobe.</div>
+                        @endif
                         @error('type') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+
+                    {{-- Parent (Category / Sub Category / Child Category) --}}
+                    <div class="form-group">
+                        <label class="form-label">Parent Category</label>
+                        <select class="form-control @error('parent_id') is-invalid @enderror"
+                            wire:model.live="parent_id">
+                            <option value="">— None (top-level Category) —</option>
+                            @foreach($parentOptions as $id => $path)
+                                <option value="{{ $id }}">{{ $path }}</option>
+                            @endforeach
+                        </select>
+                        <div class="form-hint">
+                            None = Category · Category select korle = Sub Category · Sub Category select korle = Child Category (max 3 level).
+                        </div>
+                        @error('parent_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
                     {{-- Name + Sort Order --}}
@@ -190,6 +225,16 @@
                                 @error('sort_order') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                         </div>
+                    </div>
+
+                    {{-- Emoji --}}
+                    <div class="form-group">
+                        <label class="form-label">Emoji</label>
+                        <input type="text"
+                            class="form-control @error('emoji') is-invalid @enderror"
+                            wire:model="emoji" maxlength="10" placeholder="🛒">
+                        <div class="form-hint">Image na thakle emoji dekhabe.</div>
+                        @error('emoji') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
                     {{-- Image --}}
@@ -272,7 +317,7 @@
             <div class="jara-delete-modal">
                 <div class="delete-icon">⚠️</div>
                 <h6>Delete Category?</h6>
-                <p>The image and all data will be permanently removed.<br>This action cannot be undone.</p>
+                <p>The image and all data will be permanently removed.<br>Sub categories must be deleted first. This action cannot be undone.</p>
                 <div class="delete-actions">
                     <button class="btn-cancel"
                         wire:click="$set('confirmDelete', false)">Cancel</button>

@@ -2,11 +2,13 @@
 
 namespace App\Livewire\Vendor;
 
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use App\Models\Restaurant;
 use App\Models\VendorSetting;
 
@@ -19,8 +21,8 @@ class SettingComponent extends Component
     public string  $slug          = '';
     public string  $category      = '';
     public string  $emoji         = '';
-    public ?string $logo_url      = null;
-    public ?string $banner_url    = null;
+    #[Locked] public ?string $logo_url   = null;   // set on the server after an upload
+    #[Locked] public ?string $banner_url = null;   // set on the server after an upload
     public string  $address       = '';
     public string  $city          = '';
     public ?float  $latitude      = null;
@@ -28,7 +30,8 @@ class SettingComponent extends Component
     public ?string $phone         = null;
     public ?string $tag           = null;
     public bool    $is_open       = true;
-    public bool    $is_active     = true;
+    #[Locked] public bool $is_active     = true;   // read-only here: only admin can block/unblock
+    #[Locked] public bool $initialIsOpen = true;   // value when the form was loaded (to detect a real change)
 
     // ── vendor_settings fields ──────────────────────────────────────
     public bool $auto_accept          = false;
@@ -43,50 +46,34 @@ class SettingComponent extends Component
     // ── UI state ────────────────────────────────────────────────────
     public string $activeTab = 'basic';
 
-    // ── store restaurant id for rules() ─────────────────────────────
-    public ?int $restaurantId = null;
-
+    // The restaurant is NEVER kept in a public property: anything public can be
+    // changed from the browser. It is loaded from the logged-in owner on every
+    // request (see boot()), so a vendor can only ever edit their own restaurant.
     protected Restaurant    $restaurant;
     protected VendorSetting $vendorSetting;
 
-    // ── categories list ─────────────────────────────────────────────
-    public array $categories = [
-        'Bengali Food',
-        'Biryani',
-        'Fast Food',
-        'Pizza',
-        'Chinese',
-        'Italian',
-        'Seafood',
-        'Desserts & Sweets',
-        'Beverages',
-        'Other',
-    ];
+    // ── categories / cities lists (filled from config/delivery.php in mount()) ──
+    public array $categories = [];
 
-    public array $cities = [
-        'Dhaka', 'Chittagong', 'Sylhet', 'Rajshahi',
-        'Khulna', 'Barisal', 'Rangpur', 'Mymensingh',
-        'Gazipur', 'Narayanganj',
-    ];
+    public array $cities = [];
 
     // ── validation ──────────────────────────────────────────────────
     protected function rules(): array
     {
         return [
             'name'              => ['required', 'string', 'max:120'],
-            'slug'              => ['required', 'string', 'max:130', "unique:restaurants,slug,{$this->restaurantId}"],
-            'category'          => ['required', 'string', 'max:60'],
+            'slug'              => ['required', 'string', 'max:130', Rule::unique('restaurants', 'slug')->ignore($this->restaurant->id)],
+            'category'          => ['required', 'string', 'max:60', Rule::in(config('delivery.categories', []))],
             'emoji'             => ['nullable', 'string', 'max:10'],
             'address'           => ['required', 'string'],
-            'city'              => ['required', 'string', 'max:60'],
+            'city'              => ['required', 'string', 'max:60', Rule::in(config('delivery.cities', []))],
             'latitude'          => ['nullable', 'numeric', 'between:-90,90'],
             'longitude'         => ['nullable', 'numeric', 'between:-180,180'],
             'phone'             => ['nullable', 'string', 'max:15'],
             'tag'               => ['nullable', 'string', 'max:40'],
             'is_open'           => ['boolean'],
-            'is_active'         => ['boolean'],
-            'logoUpload'        => ['nullable', 'image', 'max:2048'],
-            'bannerUpload'      => ['nullable', 'image', 'max:4096'],
+            'logoUpload'        => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'bannerUpload'      => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             // vendor_settings
             'auto_accept'       => ['boolean'],
             'prep_time_min'     => ['required', 'integer', 'min:1', 'max:120'],
@@ -104,8 +91,10 @@ class SettingComponent extends Component
         'city.required'             => 'Please select a city.',
         'prep_time_min.required'    => 'Prep time is required.',
         'logoUpload.image'          => 'Logo must be an image file.',
+        'logoUpload.mimes'          => 'Logo must be a JPG, PNG or WebP file.',
         'logoUpload.max'            => 'Logo must not exceed 2 MB.',
         'bannerUpload.image'        => 'Banner must be an image file.',
+        'bannerUpload.mimes'        => 'Banner must be a JPG, PNG or WebP file.',
         'bannerUpload.max'          => 'Banner must not exceed 4 MB.',
         'latitude.between'          => 'Latitude must be between -90 and 90.',
         'longitude.between'         => 'Longitude must be between -180 and 180.',
@@ -114,11 +103,42 @@ class SettingComponent extends Component
     // ── mount ────────────────────────────────────────────────────────
     public function mount(): void
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
+        // $this->restaurant and $this->vendorSetting are already loaded by boot().
+        $this->categories = config('delivery.categories', []);
+        $this->cities     = config('delivery.cities', []);
 
-        $this->restaurant = Restaurant::where('owner_id', $user->id)->firstOrFail();
-        $this->restaurantId = $this->restaurant->id;
+        $this->fill([
+            'name'             => $this->restaurant->name,
+            'slug'             => $this->restaurant->slug,
+            // An old value that is not in the list is shown as empty, so the owner can pick a valid one.
+            'category'         => in_array($this->restaurant->category, $this->categories, true) ? $this->restaurant->category : '',
+            'emoji'            => $this->restaurant->emoji ?? '',
+            'logo_url'         => $this->restaurant->logo_url,
+            'banner_url'       => $this->restaurant->banner_url,
+            'address'          => $this->restaurant->address,
+            'city'             => in_array($this->restaurant->city, $this->cities, true) ? $this->restaurant->city : '',
+            'latitude'         => $this->restaurant->latitude !== null ? (float) $this->restaurant->latitude : null,
+            'longitude'        => $this->restaurant->longitude !== null ? (float) $this->restaurant->longitude : null,
+            'phone'            => $this->restaurant->phone,
+            'tag'              => $this->restaurant->tag,
+            'is_open'          => $this->restaurant->is_open,
+            'is_active'        => $this->restaurant->is_active,
+            'initialIsOpen'    => $this->restaurant->is_open,
+            // vendor_settings
+            'auto_accept'          => $this->vendorSetting->auto_accept,
+            'prep_time_min'        => $this->vendorSetting->prep_time_min,
+            'notification_sound'   => $this->vendorSetting->notification_sound,
+            'min_order_amount'     => $this->vendorSetting->min_order_amount,
+        ]);
+    }
+
+    // ── boot: runs on EVERY request (first load and every Livewire update) ──
+    // The restaurant always comes from the logged-in owner, never from the page.
+    public function boot(): void
+    {
+        abort_unless(Auth::check(), 403);
+
+        $this->restaurant = Restaurant::where('owner_id', Auth::id())->firstOrFail();
 
         $this->vendorSetting = VendorSetting::firstOrCreate(
             ['restaurant_id' => $this->restaurant->id],
@@ -129,37 +149,6 @@ class SettingComponent extends Component
                 'min_order_amount'   => 0,
             ]
         );
-
-        $this->fill([
-            'name'             => $this->restaurant->name,
-            'slug'             => $this->restaurant->slug,
-            'category'         => $this->restaurant->category,
-            'emoji'            => $this->restaurant->emoji ?? '',
-            'logo_url'         => $this->restaurant->logo_url,
-            'banner_url'       => $this->restaurant->banner_url,
-            'address'          => $this->restaurant->address,
-            'city'             => $this->restaurant->city,
-            'latitude'         => $this->restaurant->latitude !== null ? (float) $this->restaurant->latitude : null,
-            'longitude'        => $this->restaurant->longitude !== null ? (float) $this->restaurant->longitude : null,
-            'phone'            => $this->restaurant->phone,
-            'tag'              => $this->restaurant->tag,
-            'is_open'          => $this->restaurant->is_open,
-            'is_active'        => $this->restaurant->is_active,
-            // vendor_settings
-            'auto_accept'          => $this->vendorSetting->auto_accept,
-            'prep_time_min'        => $this->vendorSetting->prep_time_min,
-            'notification_sound'   => $this->vendorSetting->notification_sound,
-            'min_order_amount'     => $this->vendorSetting->min_order_amount,
-        ]);
-    }
-
-    // ── boot: re-hydrate protected models after Livewire re-renders ──
-    public function boot(): void
-    {
-        if ($this->restaurantId) {
-            $this->restaurant    = Restaurant::findOrFail($this->restaurantId);
-            $this->vendorSetting = VendorSetting::where('restaurant_id', $this->restaurantId)->firstOrFail();
-        }
     }
 
     // ── auto-generate slug from name ─────────────────────────────────
@@ -239,9 +228,15 @@ class SettingComponent extends Component
             'longitude'        => $this->longitude,
             'phone'            => $this->phone ?: null,
             'tag'              => $this->tag ?: null,
-            'is_open'          => $this->is_open,
-            'is_active'        => $this->is_active,
         ];
+
+        // is_open is written only when the vendor really changed it in this form.
+        // The opening-hours schedule may have flipped it since the page was loaded;
+        // saving the old value back would undo that.
+        // is_active is never written here: only the admin can block/unblock a restaurant.
+        if ($this->is_open !== $this->initialIsOpen) {
+            $restaurantData['is_open'] = $this->is_open;
+        }
 
         $settingData = [
             'auto_accept'        => $this->auto_accept,
@@ -264,6 +259,12 @@ class SettingComponent extends Component
                 ->log('Vendor updated restaurant settings');
         });
 
+        // Form ke DB er asol maan er shathe milie rakhi.
+        $fresh = $this->restaurant->fresh();
+        $this->is_open       = (bool) $fresh->is_open;
+        $this->initialIsOpen = $this->is_open;
+        $this->is_active     = (bool) $fresh->is_active;
+
         $this->dispatch('settings-saved');
         session()->flash('success', 'Settings saved successfully ✅');
     }
@@ -271,7 +272,10 @@ class SettingComponent extends Component
     // ── toggle is_open directly ──────────────────────────────────────
     public function toggleOpen(): void
     {
-        $this->is_open = ! $this->is_open;
+        // Base the toggle on the real DB value (boot() reloads it every request),
+        // not on the form value, which may be stale after an automatic schedule change.
+        $this->is_open       = ! $this->restaurant->is_open;
+        $this->initialIsOpen = $this->is_open;
         $this->restaurant->update(['is_open' => $this->is_open]);
 
         activity()

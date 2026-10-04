@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\ThrottlesActions;
+
 use App\Models\User;
 use Livewire\Component;
 use Illuminate\Support\Str;
@@ -11,6 +13,8 @@ use Illuminate\Auth\Events\PasswordReset as PasswordResetEvent;
 
 class ResetPassword extends Component
 {
+    use ThrottlesActions;
+
     // ── State ────────────────────────────────────────────
     public string $token                  = '';
     public string $email                  = '';
@@ -54,6 +58,15 @@ class ResetPassword extends Component
 
         $this->validate();
 
+        // Stops guessing reset tokens. Cleared again after a successful reset.
+        $throttleKey = strtolower($this->email) . '|' . request()->ip();
+        $wait = $this->throttleHit('reset-password', $throttleKey, 5, 900);
+
+        if ($wait > 0) {
+            $this->errorMsg = $this->throttleMessage($wait);
+            return;
+        }
+
         $status = Password::reset(
             [
                 'token'                 => $this->token,
@@ -72,6 +85,7 @@ class ResetPassword extends Component
         );
 
         if ($status === Password::PASSWORD_RESET) {
+            $this->throttleClear('reset-password', $throttleKey);
             $this->statusMsg = 'Your password has been reset successfully. Redirecting to login...';
             $this->dispatch('password-reset-success');
             $this->redirect(route('login'), navigate: true);

@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\ThrottlesActions;
+
 use Livewire\Component;
 use App\Models\User;
 use App\Livewire\Concerns\HasAccountRegistrationValidation;
@@ -10,6 +12,11 @@ use Illuminate\Support\Str;
 
 class CustomerRegistrationComponent extends Component
 {
+    use ThrottlesActions;
+
+    // Shown above the submit button when too many attempts were made.
+    public string $throttleMsg = '';
+
     use HasAccountRegistrationValidation;
 
     // ── Account info (Single Step) ────────────────────────────
@@ -33,7 +40,14 @@ class CustomerRegistrationComponent extends Component
     // ── Submit ────────────────────────────────────────────────
     public function submit(): void
     {
+        $this->throttleMsg = '';
         $this->validate($this->rules(), $this->messages());
+
+        $wait = $this->throttleHit('register-customer', (string) request()->ip(), 10, 3600);
+        if ($wait > 0) {
+            $this->throttleMsg = $this->throttleMessage($wait);
+            return;
+        }
 
         $user = DB::transaction(function () {
             $user = User::create([

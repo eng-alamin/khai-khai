@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\ThrottlesActions;
+
 use Livewire\Component;
 use App\Models\User;
 use App\Models\RiderProfile;
@@ -11,10 +13,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\WithFileUploads;
 
 class RiderRegistrationWizard extends Component
 {
+    use ThrottlesActions;
+
+    // Shown above the submit button when too many attempts were made.
+    public string $throttleMsg = '';
+
     use WithFileUploads;
     use HasAccountRegistrationValidation;
 
@@ -51,19 +59,14 @@ class RiderRegistrationWizard extends Component
     ];
 
     // ── Zones ────────────────────────────────────────────────────────
-    public array $zones = [
-        'Dhaka-Metro',
-        'Dhaka-North',
-        'Dhaka-South',
-        'Gazipur',
-        'Narayanganj',
-        'Chittagong',
-        'Sylhet',
-        'Rajshahi',
-        'Khulna',
-        'Barisal',
-        'Mymensingh',
-    ];
+    // The list lives in config/delivery.php (filled in mount()). The rules below
+    // check against the config, so a tampered value from the browser is rejected.
+    public array $zones = [];
+
+    public function mount(): void
+    {
+        $this->zones = config('delivery.zones', []);
+    }
 
     // ── Validation rules per step ────────────────────────────────────
     protected function rulesForStep(int $step): array
@@ -80,7 +83,7 @@ class RiderRegistrationWizard extends Component
                 'nid_number'     => 'nullable|string|max:20|unique:rider_profiles,nid_number',
             ],
             3 => [
-                'zone' => 'required|string',
+                'zone' => ['required', 'string', Rule::in(config('delivery.zones', []))],
             ],
             4 => [],
             default => [],
@@ -134,6 +137,14 @@ class RiderRegistrationWizard extends Component
     // ── Final submission ─────────────────────────────────────────────
     public function submit(): void
     {
+        $this->throttleMsg = '';
+
+        $wait = $this->throttleHit('register-rider', (string) request()->ip(), 10, 3600);
+        if ($wait > 0) {
+            $this->throttleMsg = $this->throttleMessage($wait);
+            return;
+        }
+
         $riderProfile = null;
         $user         = null;
 

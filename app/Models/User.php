@@ -145,11 +145,6 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\Order::class, 'customer_id');
     }
 
-    public function wallet()
-    {
-        return $this->hasOne(\App\Models\Wallet::class);
-    }
-
     public function deviceTokens()
     {
         return $this->hasMany(\App\Models\DeviceToken::class);
@@ -158,16 +153,6 @@ class User extends Authenticatable
     public function favorites()
     {
         return $this->hasMany(\App\Models\Favorite::class);
-    }
-
-    /**
-     * Wallet na thakle create kore return kore — jekhanei wallet lagbe
-     * shekhaneo $user->getOrCreateWallet() call korle chalbe, "user er
-     * wallet nai" error handle korte hobe na.
-     */
-    public function getOrCreateWallet(): \App\Models\Wallet
-    {
-        return $this->wallet ?? $this->wallet()->create(['balance' => 0]);
     }
 
     protected function isOnline(): Attribute

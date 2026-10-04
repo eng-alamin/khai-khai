@@ -25,6 +25,9 @@
                 <span class="title-emoji">🍽️</span>
                 Menu Items
             </div>
+            <button class="btn-new-adm" wire:click="openSections" type="button">
+                Sections
+            </button>
             <button class="btn-new-adm" wire:click="openCreate">
                 <span class="plus-icon">＋</span>
                 Add Item
@@ -88,6 +91,9 @@
                         <span class="cat-pill">
                             {{ $item->category->emoji }} {{ $item->category->name }}
                         </span>
+                    @endif
+                    @if($item->menuSection)
+                        <span class="cat-pill">📂 {{ $item->menuSection->name }}</span>
                     @endif
                     <span class="meta-item">
                         <span class="material-icons-round">sort</span>
@@ -182,6 +188,20 @@
                                 @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                         </div>
+                    </div>
+
+                    {{-- Menu Section (optional) --}}
+                    <div class="form-group">
+                        <label class="form-label">Menu Section <small>(optional)</small></label>
+                        <select class="form-control @error('menu_section_id') is-invalid @enderror"
+                            wire:model.defer="menu_section_id">
+                            <option value="">— None —</option>
+                            @foreach($sections as $section)
+                                <option value="{{ $section->id }}">{{ $section->name }}</option>
+                            @endforeach
+                        </select>
+                        <div class="form-hint">Customers see your items grouped by these sections. Create them with the “Sections” button.</div>
+                        @error('menu_section_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 
                     {{-- Price + Emoji + Sort Order --}}
@@ -301,6 +321,78 @@
                     </button>
                 </div>
 
+            </div>
+        </div>
+    @endif
+
+
+    {{-- ══════════════════════════════════════
+         Menu Sections Modal
+         ══════════════════════════════════════ --}}
+    @if($showSectionModal)
+        <div class="jara-modal-backdrop" wire:click.self="$set('showSectionModal', false)">
+            <div class="jara-modal">
+                <div class="jara-modal-drag"></div>
+
+                <div class="jara-modal-header">
+                    <div class="jara-modal-title">📂 Menu Sections</div>
+                    <button class="jara-modal-close" wire:click="$set('showSectionModal', false)">✕</button>
+                </div>
+
+                <div class="jara-modal-body">
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-group">
+                                <label class="form-label">New section name</label>
+                                <input type="text"
+                                    class="form-control @error('newSectionName') is-invalid @enderror"
+                                    wire:model="newSectionName"
+                                    wire:keydown.enter="addSection"
+                                    placeholder="e.g. Combo Deals, Chef's Special">
+                                @error('newSectionName') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-group">
+                                <label class="form-label">Show order</label>
+                                <input type="number" min="0"
+                                    class="form-control @error('newSectionSort') is-invalid @enderror"
+                                    wire:model="newSectionSort">
+                                <div class="form-hint">Smaller number appears first.</div>
+                                @error('newSectionSort') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" type="button" wire:click="addSection" wire:loading.attr="disabled">
+                        ＋ Add Section
+                    </button>
+
+                    <hr>
+
+                    @forelse($sections as $section)
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;"
+                             wire:key="section-{{ $section->id }}">
+                            <div>
+                                <strong>{{ $section->name }}</strong>
+                                <small style="opacity:.7;">
+                                    · {{ $section->foods_count }} item(s) · order {{ $section->sort_order }}
+                                </small>
+                            </div>
+                            <button class="btn-secondary" type="button"
+                                wire:click="deleteSection({{ $section->id }})"
+                                wire:confirm="Delete this section? Its items will stay on your menu.">
+                                Delete
+                            </button>
+                        </div>
+                    @empty
+                        <p style="opacity:.7;margin:0;">No sections yet. Items are grouped by category.</p>
+                    @endforelse
+                </div>
+
+                <div class="jara-modal-footer">
+                    <button class="btn-secondary" wire:click="$set('showSectionModal', false)">Close</button>
+                </div>
             </div>
         </div>
     @endif

@@ -74,7 +74,12 @@
           <div class="row g-2 mb-3">
             <div class="col-8">
               <label class="form-label-kk">City</label>
-              <input class="form-control-kk mt-1" wire:model="city" type="text" placeholder="Dhaka">
+              <select class="form-control-kk mt-1" wire:model="city">
+                <option value="">Select city</option>
+                @foreach(config('delivery.cities', []) as $cityOption)
+                  <option value="{{ $cityOption }}">{{ $cityOption }}</option>
+                @endforeach
+              </select>
               @error('city') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
             </div>
             <div class="col-4">

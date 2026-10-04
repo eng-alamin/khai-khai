@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SupportTicket extends Model
 {
@@ -33,5 +34,11 @@ class SupportTicket extends Model
     public function repliedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'replied_by');
+    }
+
+    /** Conversation after the customer's first message, oldest first. */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(SupportTicketMessage::class, 'support_ticket_id')->orderBy('id');
     }
 }

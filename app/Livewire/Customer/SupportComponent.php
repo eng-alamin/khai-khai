@@ -2,18 +2,26 @@
 
 namespace App\Livewire\Customer;
 
+use App\Livewire\Concerns\ThrottlesActions;
+
 use App\Models\Order;
 use App\Models\SupportTicket;
+use App\Services\SupportTicketService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Component;
 
 class SupportComponent extends Component
 {
+    use ThrottlesActions;
+
     public string $category    = '';
     public string $orderNumber = '';
     public string $subject     = '';
     public string $message     = '';
+
+    /** Follow-up text per ticket id: replies.{id} */
+    public array $replies = [];
 
     public array $categoryOptions = [
         'order'        => 'অর্ডার সমস্যা',
@@ -49,6 +57,13 @@ class SupportComponent extends Component
         $this->validate();
 
         $user = Auth::user();
+
+        // Stops ticket spam: 5 tickets per hour per customer.
+        $wait = $this->throttleHit('support-ticket', (string) $user->id, 5, 3600);
+        if ($wait > 0) {
+            $this->dispatch('notify', type: 'error', message: $this->throttleMessage($wait));
+            return;
+        }
 
         // Optional order reference — only linked if it genuinely belongs to this customer.
         // BUG FIX: previously used LIKE '%term%' (wildcard on both sides), which
@@ -93,9 +108,41 @@ class SupportComponent extends Component
         $this->dispatch('show-toast', message: '✅ টিকেট পাঠানো হয়েছে! শীঘ্রই যোগাযোগ করা হবে।', type: 'success');
     }
 
+    /** Customer writes a follow-up message on one of their own tickets. */
+    public function sendTicketReply(int $ticketId): void
+    {
+        $user = Auth::user();
+
+        $this->validate(
+            ["replies.{$ticketId}" => 'required|string|min:2|max:1000'],
+            [
+                "replies.{$ticketId}.required" => 'বার্তা লিখুন!',
+                "replies.{$ticketId}.min"      => 'বার্তা অন্তত ২ অক্ষর লিখুন!',
+                "replies.{$ticketId}.max"      => 'বার্তা সর্বোচ্চ ১০০০ অক্ষরের হতে পারে!',
+            ]
+        );
+
+        $wait = $this->throttleHit('support-reply', (string) $user->id, 20, 3600);
+        if ($wait > 0) {
+            $this->dispatch('show-toast', message: $this->throttleMessage($wait), type: 'error');
+            return;
+        }
+
+        $done = app(SupportTicketService::class)->customerReply($ticketId, $user, trim($this->replies[$ticketId]));
+
+        if (! $done) {
+            $this->dispatch('show-toast', message: 'এই টিকেটে আর বার্তা পাঠানো যাবে না।', type: 'error');
+            return;
+        }
+
+        unset($this->replies[$ticketId]);
+        $this->dispatch('show-toast', message: '✅ বার্তা পাঠানো হয়েছে।', type: 'success');
+    }
+
     public function render()
     {
         $tickets = SupportTicket::where('customer_id', Auth::id())
+            ->with('messages')
             ->latest()
             ->take(20)
             ->get();

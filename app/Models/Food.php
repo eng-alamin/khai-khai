@@ -16,6 +16,7 @@ class Food extends Model
     protected $fillable = [
         'restaurant_id',
         'category_id',
+        'menu_section_id',
         'name',
         'description',
         'price',
@@ -39,6 +40,12 @@ class Food extends Model
         return $this->belongsTo(Category::class, 'category_id');
     }
 
+    /** Restaurant er nijer menu section (optional) — e.g. "Combo Deals" */
+    public function menuSection()
+    {
+        return $this->belongsTo(MenuSection::class, 'menu_section_id');
+    }
+
     public function restaurant()
     {
         return $this->belongsTo(Restaurant::class);
@@ -48,12 +55,6 @@ class Food extends Model
     public function orderItems(): MorphMany
     {
         return $this->morphMany(OrderItem::class, 'orderable');
-    }
-
-    /** Size/variant, addon er moto option group gulo (e.g. Size, Extra Toppings) */
-    public function optionGroups(): MorphMany
-    {
-        return $this->morphMany(ItemOptionGroup::class, 'optionable');
     }
 
     /** Kon kon customer ei food item ta favorite/save rekheche */

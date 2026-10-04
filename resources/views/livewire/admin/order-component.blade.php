@@ -231,6 +231,42 @@
                 </div>
                 @endif
 
+                @if($selectedOrder->riderAssignments->isNotEmpty())
+                @php
+                    $outcomeLabels = [
+                        'active'             => 'With rider now',
+                        'delivered'          => 'Delivered',
+                        'released_by_rider'  => 'Released by rider',
+                        'removed_by_staff'   => 'Removed by staff',
+                        'delivery_failed'    => 'Delivery failed',
+                        'released_by_system' => 'Auto-released (pickup timeout)',
+                    ];
+                @endphp
+                <div class="dialog-field dialog-field-full" style="margin-top:12px;">
+                    <div class="dialog-label">Rider history</div>
+                    @foreach($selectedOrder->riderAssignments as $assignment)
+                        <div style="padding:6px 0;{{ ! $loop->last ? 'border-bottom:1px solid #eee;' : '' }}">
+                            <div class="dialog-value">
+                                {{ $assignment->rider->name ?? '—' }}
+                                <span style="opacity:.7;font-weight:400;">· {{ $outcomeLabels[$assignment->outcome] ?? \Illuminate\Support\Str::headline($assignment->outcome) }}</span>
+                            </div>
+                            <div class="dialog-sub">
+                                Took it {{ $assignment->assigned_at->format('j M, g:i A') }}
+                                @if($assignment->ended_at)
+                                    · ended {{ $assignment->ended_at->format('j M, g:i A') }}
+                                @endif
+                                @if($assignment->endedBy)
+                                    · by {{ $assignment->endedBy->name }}
+                                @endif
+                            </div>
+                            @if($assignment->reason)
+                                <div class="dialog-sub">{{ $assignment->reason }}</div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+                @endif
+
                 @if($showCancelForm && ($canCancel || $canFail))
                 <div class="dialog-field dialog-field-full" style="margin-top:12px;">
                     <div class="dialog-label">Cancel Reason</div>

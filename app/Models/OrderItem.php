@@ -35,6 +35,7 @@ class OrderItem extends Model
         'discount_amount'  => 'decimal:2',
         'line_total'       => 'decimal:2',
         'quantity'         => 'integer',
+        'options'          => 'array',
     ];
 
     // ─────────────────────────────────────────

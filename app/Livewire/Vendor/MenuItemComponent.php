@@ -4,6 +4,7 @@ namespace App\Livewire\Vendor;
 
 use App\Models\Food;
 use App\Models\Category;
+use App\Models\MenuSection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -35,6 +36,7 @@ class MenuItemComponent extends Component
     // ── Form ──────────────────────────────────────────────
     public ?int    $editId        = null;
     public int     $category_id   = 0;
+    public            $menu_section_id = null;   // null = no section (optional)
     public string  $name          = '';
     public string  $description   = '';
     public int     $price         = 0;
@@ -43,6 +45,11 @@ class MenuItemComponent extends Component
     public ?string $existingImage = null;
     public int     $sort_order    = 0;
     public bool    $is_available  = true;
+
+    // ── Menu sections manager ─────────────────────────────
+    public bool   $showSectionModal = false;
+    public string $newSectionName   = '';
+    public int    $newSectionSort   = 0;
 
     // ── Restaurant helper ─────────────────────────────────
     private function restaurantId(): int
@@ -85,6 +92,13 @@ class MenuItemComponent extends Component
                     ->whereNull('deleted_at'),
             ],
             'emoji'        => 'nullable|string|max:10',
+            // Section is optional, but if given it must belong to THIS restaurant.
+            'menu_section_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('menu_sections', 'id')
+                    ->where('restaurant_id', $this->restaurantId()),
+            ],
             'is_available' => 'boolean',
         ]);
     }
@@ -95,6 +109,7 @@ class MenuItemComponent extends Component
             'category_id.required' => 'Please select a category.',
             'category_id.min'      => 'Please select a category.',
             'category_id.exists'   => 'Please select a valid category.',
+            'menu_section_id.exists' => 'Please select a valid menu section.',
             'name.required'        => 'Please enter an item name.',
         ]);
     }
@@ -135,6 +150,7 @@ class MenuItemComponent extends Component
 
         $this->editId        = $id;
         $this->category_id   = $record->category_id ?? 0;
+        $this->menu_section_id = $record->menu_section_id;
         $this->name          = $record->name;
         $this->description   = $record->description ?? '';
         $this->price         = (int) ($record->price);
@@ -164,6 +180,7 @@ class MenuItemComponent extends Component
         $data = [
             'restaurant_id' => $this->restaurantId(),
             'category_id'   => $this->category_id ?: null,
+            'menu_section_id' => $this->menu_section_id ? (int) $this->menu_section_id : null,
             'name'          => $this->name,
             'description'   => $this->description ?: null,
             'price'         => $this->price,
@@ -267,11 +284,79 @@ class MenuItemComponent extends Component
         session()->flash('success', 'Menu item deleted successfully!');
     }
 
+    // ── Menu sections (restaurant's own menu groups) ──────
+    public function getSections()
+    {
+        return MenuSection::where('restaurant_id', $this->restaurantId())
+            ->withCount('foods')
+            ->ordered()
+            ->get();
+    }
+
+    public function openSections(): void
+    {
+        $this->reset(['newSectionName']);
+        $this->newSectionSort = 0;
+        $this->resetValidation();
+        $this->showSectionModal = true;
+    }
+
+    public function addSection(): void
+    {
+        $restaurantId = $this->restaurantId();
+
+        $this->validate([
+            'newSectionName' => [
+                'required',
+                'string',
+                'max:80',
+                Rule::unique('menu_sections', 'name')->where('restaurant_id', $restaurantId),
+            ],
+            'newSectionSort' => ['required', 'integer', 'min:0', 'max:65535'],
+        ], [
+            'newSectionName.required' => 'Please enter a section name.',
+            'newSectionName.unique'   => 'You already have a section with this name.',
+        ]);
+
+        $section = MenuSection::create([
+            'restaurant_id' => $restaurantId,
+            'name'          => trim($this->newSectionName),
+            'sort_order'    => $this->newSectionSort,
+        ]);
+
+        activity()
+            ->causedBy(Auth::user())
+            ->performedOn($section)
+            ->log('Vendor created menu section');
+
+        $this->reset(['newSectionName']);
+        $this->newSectionSort = 0;
+        session()->flash('success', 'Menu section created!');
+    }
+
+    public function deleteSection(int $id): void
+    {
+        // Scoped to this restaurant: a vendor can never touch another vendor's section.
+        $section = MenuSection::where('restaurant_id', $this->restaurantId())->findOrFail($id);
+        $name    = $section->name;
+
+        // foods.menu_section_id is set to NULL by the database; the items stay on the menu.
+        $section->delete();
+
+        activity()
+            ->causedBy(Auth::user())
+            ->withProperties(['section_id' => $id, 'name' => $name])
+            ->log('Vendor deleted menu section');
+
+        session()->flash('success', 'Section deleted. Its items are still on your menu.');
+    }
+
     // ── Reset form ────────────────────────────────────────
     private function resetForm(): void
     {
         $this->reset(['name', 'description', 'emoji', 'editId', 'image', 'existingImage']);
         $this->category_id  = 0;
+        $this->menu_section_id = null;
         $this->price        = 0;
         $this->sort_order   = 0;
         $this->is_available = true;
@@ -283,7 +368,7 @@ class MenuItemComponent extends Component
     {
         $items = Food::query()
             ->where('restaurant_id', $this->restaurantId())
-            ->with('category')
+            ->with('category', 'menuSection')
             ->when($this->search, fn ($q) =>
                 $q->where('name', 'like', "%{$this->search}%")
             )
@@ -302,6 +387,7 @@ class MenuItemComponent extends Component
         return view('livewire.vendor.menu-item-component', [
             'items'      => $items,
             'categories' => $this->getCategories(),
+            'sections'   => $this->getSections(),
         ])->layout('layouts.vendor', [
             'title'           => 'Menu Items | KhaiKhai',
             'breadcrumbTitle' => 'Items',

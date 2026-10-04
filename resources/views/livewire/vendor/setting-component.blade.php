@@ -417,16 +417,15 @@
                         </label>
                     </div>
 
-                    {{-- is_active --}}
+                    {{-- is_active (read-only: only the KhaiKhai admin can block / unblock) --}}
                     <div class="settings-item-row">
                         <div>
-                            <div class="settings-item-title">Account Active</div>
-                            <div class="settings-item-sub">When inactive, restaurant won't appear in the app</div>
+                            <div class="settings-item-title">Account Status</div>
+                            <div class="settings-item-sub">Managed by KhaiKhai admin. To stop new orders for a while, close the restaurant instead.</div>
                         </div>
-                        <label class="settings-toggle">
-                            <input type="checkbox" wire:model="is_active">
-                            <span class="settings-toggle-slider"></span>
-                        </label>
+                        <span class="status-badge {{ $is_active ? 'available' : 'unavailable' }}">
+                            {{ $is_active ? 'Active' : 'Blocked' }}
+                        </span>
                     </div>
 
                     {{-- auto_accept --}}

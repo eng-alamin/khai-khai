@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Wallet extends Model
 {
@@ -35,18 +36,7 @@ class Wallet extends Model
      */
     public function credit(float $amount, string $source, ?string $description = null, $reference = null, ?int $createdBy = null): WalletTransaction
     {
-        $this->increment('balance', $amount);
-
-        return $this->transactions()->create([
-            'type'          => 'credit',
-            'amount'        => $amount,
-            'balance_after' => $this->balance,
-            'source'        => $source,
-            'description'   => $description,
-            'reference_type'=> $reference ? get_class($reference) : null,
-            'reference_id'  => $reference?->id,
-            'created_by'    => $createdBy,
-        ]);
+        return $this->applyTransaction('credit', $amount, $source, $description, $reference, $createdBy);
     }
 
     /**
@@ -54,22 +44,63 @@ class Wallet extends Model
      */
     public function debit(float $amount, string $source, ?string $description = null, $reference = null, ?int $createdBy = null): WalletTransaction
     {
-        if ((float) $this->balance < $amount) {
-            throw new \RuntimeException('Insufficient wallet balance.');
+        return $this->applyTransaction('debit', $amount, $source, $description, $reference, $createdBy);
+    }
+
+    /**
+     * FIX: credit() ar debit() ager version e transaction chhilo na.
+     * Duita request ek shathe ashle duitai purono balance dekhe pass hoye
+     * jeto (double spend). Ekhon:
+     *  1. DB transaction er moddhe kaj hoy — balance ar ledger row ek shathe
+     *     save hoy, na hole duitai rollback.
+     *  2. Wallet row lock kora hoy (lockForUpdate) — ekta request shesh na
+     *     hoa porjonto onnota opekkha kore, tai balance check always fresh.
+     */
+    private function applyTransaction(
+        string $type,
+        float $amount,
+        string $source,
+        ?string $description,
+        $reference,
+        ?int $createdBy
+    ): WalletTransaction {
+        $amount = round($amount, 2);
+
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Wallet amount must be greater than zero.');
         }
 
-        $this->decrement('balance', $amount);
+        return DB::transaction(function () use ($type, $amount, $source, $description, $reference, $createdBy) {
+            $locked = static::query()->lockForUpdate()->findOrFail($this->getKey());
 
-        return $this->transactions()->create([
-            'type'          => 'debit',
-            'amount'        => $amount,
-            'balance_after' => $this->balance,
-            'source'        => $source,
-            'description'   => $description,
-            'reference_type'=> $reference ? get_class($reference) : null,
-            'reference_id'  => $reference?->id,
-            'created_by'    => $createdBy,
-        ]);
+            $current = (float) $locked->balance;
+
+            if ($type === 'debit' && $current < $amount) {
+                throw new \RuntimeException('Insufficient wallet balance.');
+            }
+
+            $newBalance = $type === 'credit'
+                ? round($current + $amount, 2)
+                : round($current - $amount, 2);
+
+            $locked->balance = $newBalance;
+            $locked->save();
+
+            // Ei object er balance o update rakhi, jate caller $wallet->balance e notun maan pay.
+            $this->setAttribute('balance', $newBalance);
+            $this->syncOriginalAttribute('balance');
+
+            return $this->transactions()->create([
+                'type'           => $type,
+                'amount'         => $amount,
+                'balance_after'  => $newBalance,
+                'source'         => $source,
+                'description'    => $description,
+                'reference_type' => $reference instanceof Model ? $reference->getMorphClass() : null,
+                'reference_id'   => $reference instanceof Model ? $reference->getKey() : null,
+                'created_by'     => $createdBy,
+            ]);
+        });
     }
 
     public function getBalanceInTakaAttribute(): string

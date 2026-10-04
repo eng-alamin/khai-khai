@@ -8,11 +8,14 @@
     $catName  = $item->category?->name  ?? '';
     $catEmoji = $item->category?->emoji ?? '';
     $restName = $item->restaurant?->name ?? '';
+    $restSlug = $item->restaurant?->slug ?? null;
+    $detailUrl = route('customer.food', $item->id);
 @endphp
 
 <div class="food-card" style="position:relative; overflow:hidden;">
 
     <div style="position:relative; overflow:hidden;">
+      <a href="{{ $detailUrl }}" style="display:block; text-decoration:none; color:inherit;" aria-label="{{ $item->name }}">
         <img
             src="{{ $thumb }}"
             class="food-img"
@@ -22,6 +25,7 @@
             onmouseover="this.style.transform='scale(1.08)'"
             onmouseout="this.style.transform='scale(1)'"
         >
+      </a>
 
         @if($catName)
             <span style="
@@ -38,13 +42,20 @@
         @if($restName)
             <div class="food-rest">
                 <i class="fa fa-store" style="font-size:10px; color:var(--pink);"></i>
-                {{ $restName }}
+                @if($restSlug)
+                    <a href="{{ route('customer.restaurant', $restSlug) }}"
+                       style="color:inherit; text-decoration:none;">{{ $restName }}</a>
+                @else
+                    {{ $restName }}
+                @endif
             </div>
         @endif
 
         <div class="food-name">
-            @if($item->emoji) {{ $item->emoji }} @endif
-            {{ $item->name }}
+            <a href="{{ $detailUrl }}" style="color:inherit; text-decoration:none;">
+                @if($item->emoji) {{ $item->emoji }} @endif
+                {{ $item->name }}
+            </a>
         </div>
 
         <div class="food-footer">
@@ -60,11 +71,7 @@
                 class="food-add"
                 title="কার্টে যোগ করুন"
                 onclick="
-                    Livewire.dispatch('add-to-cart', {
-                        id:    {{ $item->id }},
-                        name:  '{{ addslashes($item->name) }}',
-                        price: {{ $item->price }}
-                    });
+                    Livewire.dispatch('add-to-cart', { id: {{ $item->id }} });
                     this.innerHTML = '<i class=\'fa fa-check\'></i>';
                     this.style.background = 'var(--success)';
                     const btn = this;

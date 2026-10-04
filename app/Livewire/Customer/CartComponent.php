@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Customer;
 
+use App\Livewire\Concerns\RedirectsToAddressPage;
+use App\Livewire\Concerns\ThrottlesActions;
+
 use Livewire\Component;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -25,6 +28,9 @@ use Illuminate\Support\Str;
 
 class CartComponent extends Component
 {
+    use RedirectsToAddressPage;
+    use ThrottlesActions;
+
     /** Maximum quantity of a single item in one order. */
     private const MAX_QTY_PER_ITEM = 20;
 
@@ -99,8 +105,13 @@ class CartComponent extends Component
         return (float) AdminSetting::get('product_delivery_fee', 49);
     }
 
+    /**
+     * Only the ID is trusted from the browser: name and price are always read
+     * fresh from the database. ...$ignored swallows the old "name" / "price"
+     * values a page that was opened before this change may still send.
+     */
     #[On('add-to-cart')]
-    public function addItem(int $id, string $name = '', float $price = 0): void
+    public function addItem(int $id, mixed ...$ignored): void
     {
         $menuItem = Food::find($id);
         if (! $menuItem) return;
@@ -559,6 +570,24 @@ class CartComponent extends Component
             return;
         }
 
+        // A customer the admin has deactivated must not be able to order,
+        // even if their login session is still open.
+        if (! Auth::user()->is_active) {
+            Auth::logout();
+            session()->invalidate();
+            session()->regenerateToken();
+            $this->redirect(route('login'), navigate: true);
+            return;
+        }
+
+        // Cap how often one customer can submit checkout (the lock below only
+        // stops two at the same moment). Shared by the food and product carts.
+        $wait = $this->throttleHit('place-order-rate', (string) Auth::id(), 10, 600);
+        if ($wait > 0) {
+            $this->dispatch('notify', type: 'error', message: $this->throttleMessage($wait));
+            return;
+        }
+
         // One checkout at a time per customer: a double click, a retry or a
         // second browser tab cannot create two orders at the same moment.
         $lock = Cache::lock('place-order:' . Auth::id(), 15);
@@ -595,10 +624,9 @@ class CartComponent extends Component
     {
         $user = Auth::user();
 
-        // Same flow as the food cart: no address -> quick-address modal, and its
-        // "address-saved" event resumes placeOrder(). Safe now, one cart only.
+        // No saved address: send the customer to the address page.
         if ($user->addresses()->doesntExist()) {
-            $this->dispatch('open-quick-address');
+            $this->redirectToAddressPage();
             return;
         }
 
@@ -664,6 +692,7 @@ class CartComponent extends Component
                     'order_type'                 => Order::TYPE_ADMIN,
                     'customer_id'                => $user->id,
                     'restaurant_id'              => null,
+                    'customer_snapshot'          => app(\App\Services\OrderSnapshotService::class)->customer($user),
                     'rider_id'                   => null,
                     'delivery_address_id'        => $address->id,
                     'delivery_address_snapshot'  => [
@@ -756,8 +785,9 @@ class CartComponent extends Component
 
         $user = Auth::user();
 
+        // No saved address: send the customer to the address page.
         if ($user->addresses()->doesntExist()) {
-            $this->dispatch('open-quick-address');
+            $this->redirectToAddressPage();
             return;
         }
 
@@ -833,6 +863,33 @@ class CartComponent extends Component
         $deliveryFee    = $deliveryData['fee'];
         $deliveryKm     = $deliveryData['distance_km'];
 
+        // Restaurant's minimum order (food subtotal only, before delivery fee
+        // and discount). Set by the vendor in Settings.
+        $minOrder = (float) ($restaurant->settings?->min_order_amount ?? 0);
+
+        if ($minOrder > 0 && $subtotal < $minOrder) {
+            $this->dispatch('notify', type: 'error', message:
+                'এই রেস্টুরেন্টের সর্বনিম্ন অর্ডার ৳' . number_format($minOrder, 0)
+                . '। আপনার কার্টে ৳' . number_format($subtotal, 0)
+                . ' আছে, আরও ৳' . number_format($minOrder - $subtotal, 0) . ' এর আইটেম যোগ করুন।'
+            );
+            return;
+        }
+
+        // Longest delivery the platform accepts (admin setting, 0 = no limit).
+        // If the address has no coordinates the distance is unknown (null),
+        // so the limit cannot be checked and the order is not blocked.
+        $maxKm = (float) AdminSetting::get('max_delivery_distance_km', 0);
+
+        if ($maxKm > 0 && $deliveryKm !== null && $deliveryKm > $maxKm) {
+            $this->dispatch('notify', type: 'error', message:
+                'আপনার ঠিকানা এই রেস্টুরেন্ট থেকে ' . number_format((float) $deliveryKm, 1)
+                . ' কিমি দূরে। সর্বোচ্চ ' . rtrim(rtrim(number_format($maxKm, 1), '0'), '.')
+                . ' কিমি পর্যন্ত ডেলিভারি দেওয়া হয়।'
+            );
+            return;
+        }
+
         do {
             $orderNumber = 'KK' . now()->format('ymd') . strtoupper(Str::random(4));
         } while (Order::where('order_number', $orderNumber)->exists());
@@ -858,7 +915,7 @@ class CartComponent extends Component
         try {
             $order = DB::transaction(function () use (
                 $user, $items, $subtotal, $deliveryFee, $deliveryKm,
-                $orderNumber, $address, $restaurantId, $couponService, $couponCode
+                $orderNumber, $address, $restaurantId, $couponService, $couponCode, $restaurant
             ) {
                 // Re-check under a row lock: limits cannot be beaten by two
                 // checkouts at the same moment.
@@ -888,6 +945,9 @@ class CartComponent extends Component
                     'order_type'                 => Order::TYPE_VENDOR,
                     'customer_id'                => $user->id,
                     'restaurant_id'              => $restaurantId,
+                    'restaurant_snapshot'        => app(\App\Services\OrderSnapshotService::class)->restaurant($restaurant),
+                    'customer_snapshot'          => app(\App\Services\OrderSnapshotService::class)->customer($user),
+                    'coupon_snapshot'            => $coupon ? app(\App\Services\OrderSnapshotService::class)->coupon($coupon, $discount) : null,
                     'rider_id'                   => null,
                     'delivery_address_id'        => $address?->id,
                     'delivery_address_snapshot'  => $address ? [

@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Artisan;
 
 // Guest only (a logged-in user is redirected to their own dashboard)
 Route::middleware('guest')->group(function () {
@@ -31,12 +30,13 @@ Route::middleware('auth')->group(function () {
 // Customer Frontend
 Route::get('/', App\Livewire\Customer\HomeComponent::class)->name('customer.home');
 Route::get('restaurants', App\Livewire\Customer\RestaurantComponent::class)->name('customer.restaurants');
-Route::get('restaurants/{slug}', App\Livewire\Customer\RestaurantComponent::class)->name('customer.restaurant');
+Route::get('restaurants/{slug}', App\Livewire\Customer\RestaurantDetailComponent::class)->name('customer.restaurant');
 Route::get('items', App\Livewire\Customer\ItemComponent::class)->name('customer.items');
+Route::get('food/{id}', App\Livewire\Customer\FoodDetailComponent::class)->whereNumber('id')->name('customer.food');
 Route::get('products/{slug}', App\Livewire\Customer\ProductDetailComponent::class)->name('customer.product');
 
-// Customer
-Route::middleware(['auth'])->group(function () {
+// Customer (a deactivated account is logged out on every request)
+Route::middleware(['auth', 'user.active'])->group(function () {
     Route::get('orders', App\Livewire\Customer\OrderListComponent::class)->name('customer.orders');
     Route::get('track/{orderId}', App\Livewire\Customer\OrderTrackComponent::class)->name('customer.track');
     Route::get('profile', App\Livewire\Customer\ProfileComponent::class)->name('customer.profile');   
@@ -47,7 +47,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // Vendor
-Route::middleware(['auth', 'role:vendor'])->group(function () {
+Route::middleware(['auth', 'role:vendor', 'vendor.active'])->group(function () {
     Route::get('dashboard', App\Livewire\Vendor\DashboardComponent::class)->name('vendor.dashboard');
     Route::get('orders/live', App\Livewire\Vendor\OrderLiveComponent::class)->name('vendor.orders.live');
     Route::get('orders/all', App\Livewire\Vendor\OrderListComponent::class)->name('vendor.orders.list');
@@ -57,6 +57,7 @@ Route::middleware(['auth', 'role:vendor'])->group(function () {
     Route::get('finances', App\Livewire\Vendor\FinanceComponent::class)->name('vendor.finances');
     Route::get('reviews', App\Livewire\Vendor\ReviewComponent::class)->name('vendor.reviews');
     Route::get('settings', App\Livewire\Vendor\SettingComponent::class)->name('vendor.settings');
+    Route::get('opening-hours', App\Livewire\Vendor\OpeningHoursComponent::class)->name('vendor.hours');
     Route::get('vendor/profile', App\Livewire\Vendor\ProfileComponent::class)->name('vendor.profile');
     Route::get('vendor/notifications', App\Livewire\NotificationListComponent::class)->name('vendor.notifications');
 });
@@ -87,27 +88,18 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/products', App\Livewire\Admin\ProductComponent::class)->name('admin.products');
     Route::get('/admin/categories', App\Livewire\Admin\CategoryComponent::class)->name('admin.categories');
     Route::get('admin/sliders', App\Livewire\Admin\SliderComponent::class)->name('admin.sliders');
+    Route::get('/admin/offer-popups', App\Livewire\Admin\OfferPopupComponent::class)->name('admin.offer-popups');
 
     Route::get('/admin/vendors', App\Livewire\Admin\VendorComponent::class)->name('admin.vendors');
     Route::get('/admin/riders', App\Livewire\Admin\RiderComponent::class)->name('admin.riders');
+    Route::get('/admin/rider-payouts', App\Livewire\Admin\RiderPayoutComponent::class)->name('admin.rider-payouts');
+    Route::get('/admin/vendor-payouts', App\Livewire\Admin\VendorPayoutComponent::class)->name('admin.vendor-payouts');
+    Route::get('/admin/rider-cash', App\Livewire\Admin\RiderCashComponent::class)->name('admin.rider-cash');
+    Route::get('/admin/support', App\Livewire\Admin\SupportInboxComponent::class)->name('admin.support');
+    Route::get('/admin/refunds', App\Livewire\Admin\RefundComponent::class)->name('admin.refunds');
     Route::get('/admin/customers', App\Livewire\Admin\CustomerComponent::class)->name('admin.customers');
 
     Route::get('/admin/revenues', App\Livewire\Admin\RevenueComponent::class)->name('admin.revenues');
     Route::get('/admin/settings', App\Livewire\Admin\SettingComponent::class)->name('admin.settings');
     Route::get('/admin/profile', App\Livewire\Admin\ProfileComponent::class)->name('admin.profile');
 });
-
-
-if (app()->environment('local')) {
-    Route::get('/run-migrations', function () {
-        Artisan::call('migrate', [
-            '--force' => true,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Database migrations completed.',
-            'output' => Artisan::output(),
-        ]);
-    })->middleware('auth');
-}

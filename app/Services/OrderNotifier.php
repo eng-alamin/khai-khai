@@ -349,12 +349,26 @@ class OrderNotifier
     /** "Order ready, come and take it" for every online, approved rider. */
     private function offerToRiders(Order $order, ?int $exceptRiderId = null): void
     {
+        // Zone-based dispatch: while the zone-only window is open, only riders
+        // of the order's zone (or with no zone set) are told about the order.
+        $zoneDispatch = app(ZoneDispatchService::class);
+        $zones        = null;
+
+        if ($zoneDispatch->isEnabled() && ! $zoneDispatch->isOpenToAll($order)) {
+            $city  = $zoneDispatch->orderCity($order);
+            $zones = $city !== null ? $zoneDispatch->zonesForCity($city) : null;
+        }
+
         $riderIds = User::query()
             ->where('role', 'rider')
             ->where('is_active', true)
             ->when($exceptRiderId !== null, fn ($q) => $q->where('id', '!=', $exceptRiderId))
-            ->whereHas('riderProfile', function ($q) {
+            ->whereHas('riderProfile', function ($q) use ($zones) {
                 $q->where('is_approved', true)->where('is_online', true);
+
+                if ($zones !== null && $zones !== []) {
+                    $q->where(fn ($z) => $z->whereNull('zone')->orWhere('zone', '')->orWhereIn('zone', $zones));
+                }
             })
             ->limit(self::MAX_RIDERS_PER_OFFER)
             ->pluck('id');

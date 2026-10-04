@@ -135,11 +135,28 @@
         <span class="badge-kk {{ $ts['class'] }}">{{ $ts['label'] }}</span>
       </div>
       <div style="font-size:13px; color:var(--text-2); line-height:1.5;">{{ Str::limit($ticket->message, 80) }}</div>
-      @if(!empty($ticket->reply))
-      <div style="margin-top:10px; padding:10px 14px; background:var(--bg-2,#f8f8f8); border-radius:8px; border-left:3px solid var(--pink);">
-        <div style="font-size:11px; font-weight:700; color:var(--pink); margin-bottom:4px;">🤖 KhaiKhai সাপোর্ট:</div>
-        <div style="font-size:13px; color:var(--text-2);">{{ $ticket->reply }}</div>
-      </div>
+      @foreach($ticket->messages as $m)
+        @php $fromSupport = $m->sender_role === 'admin'; @endphp
+        <div wire:key="tmsg-{{ $m->id }}" style="margin-top:10px; padding:10px 14px; border-radius:8px; {{ $fromSupport ? 'background:var(--bg-2,#f8f8f8); border-left:3px solid var(--pink);' : 'background:#fff7f9; margin-left:20px;' }}">
+          <div style="font-size:11px; font-weight:700; color:{{ $fromSupport ? 'var(--pink)' : 'var(--text-3)' }}; margin-bottom:4px;">
+            {{ $fromSupport ? '🎧 KhaiKhai সাপোর্ট' : 'আপনি' }} · {{ $m->created_at->format('d M, g:i A') }}
+          </div>
+          <div style="font-size:13px; color:var(--text-2); white-space:pre-line;">{{ $m->body }}</div>
+        </div>
+      @endforeach
+
+      @if($ticket->status !== 'closed')
+        <div style="margin-top:12px;">
+          <textarea class="form-control-kk" wire:model="replies.{{ $ticket->id }}" rows="2" maxlength="1000"
+                    placeholder="আরও কিছু জানাতে চান? এখানে লিখুন..." style="width:100%; resize:vertical;"></textarea>
+          @error("replies.{$ticket->id}") <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
+          <button type="button" class="btn-kk btn-primary-kk" wire:click="sendTicketReply({{ $ticket->id }})" wire:loading.attr="disabled"
+                  wire:target="sendTicketReply({{ $ticket->id }})" style="margin-top:8px;">
+            বার্তা পাঠান
+          </button>
+        </div>
+      @else
+        <div style="margin-top:10px; font-size:12px; color:var(--text-3);">এই টিকেটটি বন্ধ হয়ে গেছে। নতুন সমস্যা হলে নতুন টিকেট খুলুন।</div>
       @endif
     </div>
     @empty

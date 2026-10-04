@@ -97,12 +97,6 @@ class Product extends Model
         return $this->morphMany(OrderItem::class, 'orderable');
     }
 
-    /** Size/variant, addon er moto option group gulo */
-    public function optionGroups(): MorphMany
-    {
-        return $this->morphMany(ItemOptionGroup::class, 'optionable');
-    }
-
     /** Kon kon customer ei product ta favorite/save rekheche */
     public function favoritedBy(): MorphMany
     {

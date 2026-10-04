@@ -40,6 +40,17 @@
         </div>
 
         <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(239,68,68,.1)">
+                <i class="material-icons-round" style="color:#dc2626">currency_exchange</i>
+            </div>
+            <div class="stat-body">
+                <div class="stat-value" style="color:#dc2626">৳{{ number_format($stats['refunds'], 0) }}</div>
+                <div class="stat-label">Refunded This Month (in Taka, already taken off revenue)</div>
+            </div>
+            <div class="stat-bg-circle" style="background:rgba(239,68,68,.06)"></div>
+        </div>
+
+        <div class="stat-card">
             <div class="stat-icon" style="background:rgba(59,130,246,.1)">
                 <i class="material-icons-round" style="color:#3b82f6">{{ $stats['growth'] >= 0 ? 'arrow_upward' : 'arrow_downward' }}</i>
             </div>

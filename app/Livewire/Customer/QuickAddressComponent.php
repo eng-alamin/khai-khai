@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Customer;
 
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
@@ -46,7 +47,7 @@ class QuickAddressComponent extends Component
         return [
             'label'       => 'required|in:home,office,other',
             'fullAddress' => 'required|string|max:500',
-            'city'        => 'required|string|max:60',
+            'city'        => ['required', 'string', 'max:60', Rule::in(config('delivery.cities', []))],
             'postalCode'  => 'nullable|string|max:10',
             // Lat/Lng are required here (unlike the full AddressComponent)
             // because delivery-fee calculation and rider navigation depend

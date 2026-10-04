@@ -327,10 +327,13 @@
 
                     <div class="form-group">
                         <label class="form-label">Zone / Area</label>
-                        <input type="text"
-                            class="form-control @error('zone') is-invalid @enderror"
-                            wire:model="zone"
-                            placeholder="e.g. Dhaka-Metro">
+                        <select class="form-control @error('zone') is-invalid @enderror"
+                            wire:model="zone">
+                            <option value="">— Select zone —</option>
+                            @foreach($this->zones as $z)
+                                <option value="{{ $z }}">{{ $z }}</option>
+                            @endforeach
+                        </select>
                         @error('zone') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 

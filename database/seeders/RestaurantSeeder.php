@@ -33,7 +33,7 @@ class RestaurantSeeder extends Seeder
                 [
                     'name'             => $name,
                     'slug'             => Str::slug($name) . '-' . $vendor->id,
-                    'category'         => 'Bangladeshi',
+                    'category'         => 'Bangla Food',
                     'emoji'            => '🍛',
                     'address'          => 'House ' . (10 + $index) . ', Road ' . (5 + $index) . ', Dhaka',
                     'city'             => 'Dhaka',

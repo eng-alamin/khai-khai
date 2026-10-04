@@ -6,14 +6,6 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
-/**
- * Creates the first real admin on a live server.
- *
- * .env:  SEED_ADMIN_EMAIL=you@yourdomain.com
- *        SEED_ADMIN_PASSWORD=<at least 12 characters>
- * Run:   php artisan db:seed --class=AdminUserSeeder --force
- * Then remove SEED_ADMIN_PASSWORD from .env.
- */
 class AdminUserSeeder extends Seeder
 {
     public function run(): void

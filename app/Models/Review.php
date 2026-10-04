@@ -18,6 +18,12 @@ class Review extends Model
         'comment',
     ];
 
+    protected $casts = [
+        'food_rating'     => 'integer',
+        'delivery_rating' => 'integer',
+        'helpful_count'   => 'integer',
+    ];
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
@@ -31,5 +37,10 @@ class Review extends Model
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function rider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rider_id');
     }
 }
