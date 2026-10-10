@@ -413,7 +413,7 @@ class OrderNotifier
             return;
         }
 
-        Notification::create([
+        $notification = Notification::create([
             'user_id'    => $userId,
             'type'       => Str::limit($type, 60, ''),
             'title'      => Str::limit($title, 120, ''),
@@ -422,6 +422,17 @@ class OrderNotifier
             'action_url' => $url,
             'priority'   => $priority,
         ]);
+
+        // Also push it to the person's phone (mobile app). Runs after the
+        // response is sent and never throws, so it cannot break the order flow.
+        if ($userId !== null) {
+            app(PushNotificationService::class)->queue(
+                $userId,
+                $notification->title,
+                $notification->body,
+                $this->data($order) + ['type' => $type, 'notification_id' => $notification->id],
+            );
+        }
     }
 
     /** @return array<string,mixed> */
