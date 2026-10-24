@@ -103,3 +103,15 @@ Route::prefix('customer')->controller(CustomerCatalogController::class)->group(f
 
 // Offers screen (public, same as the website /offer page)
 Route::get('customer/coupons', [CouponController::class, 'index'])->middleware('throttle:60,1');
+
+
+
+// routes/api.php
+Route::prefix('rider')->middleware(['auth:sanctum', 'role:rider'])->group(function () {
+    Route::get('dashboard', [App\Http\Controllers\Api\RiderApiController::class, 'dashboard']);
+    Route::post('toggle-duty', [App\Http\Controllers\Api\RiderApiController::class, 'toggleDuty']);
+    Route::post('location', [App\Http\Controllers\Api\RiderApiController::class, 'updateLocation']);
+    Route::post('orders/{id}/accept', [App\Http\Controllers\Api\RiderApiController::class, 'acceptOrder']);
+    Route::post('orders/{id}/pickup', [App\Http\Controllers\Api\RiderApiController::class, 'confirmPickup']);
+    Route::post('orders/{id}/delivered', [App\Http\Controllers\Api\RiderApiController::class, 'completeDelivery']);
+});
