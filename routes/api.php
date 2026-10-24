@@ -107,11 +107,18 @@ Route::get('customer/coupons', [CouponController::class, 'index'])->middleware('
 
 
 // routes/api.php
-Route::prefix('rider')->middleware(['auth:sanctum', 'role:rider'])->group(function () {
-    Route::get('dashboard', [App\Http\Controllers\Api\RiderApiController::class, 'dashboard']);
-    Route::post('toggle-duty', [App\Http\Controllers\Api\RiderApiController::class, 'toggleDuty']);
-    Route::post('location', [App\Http\Controllers\Api\RiderApiController::class, 'updateLocation']);
-    Route::post('orders/{id}/accept', [App\Http\Controllers\Api\RiderApiController::class, 'acceptOrder']);
-    Route::post('orders/{id}/pickup', [App\Http\Controllers\Api\RiderApiController::class, 'confirmPickup']);
-    Route::post('orders/{id}/delivered', [App\Http\Controllers\Api\RiderApiController::class, 'completeDelivery']);
+use App\Http\Controllers\Api\RiderApiController;
+
+// Rider API
+Route::prefix('rider')->group(function () {
+    Route::post('login', [RiderApiController::class, 'login']);
+
+    Route::middleware(['auth:sanctum', 'api.active'])->group(function () {
+        Route::get('dashboard', [RiderApiController::class, 'dashboard']);
+        Route::post('toggle-duty', [RiderApiController::class, 'toggleDuty']);
+        Route::post('location', [RiderApiController::class, 'updateLocation']);
+        Route::post('orders/{id}/accept', [RiderApiController::class, 'acceptOrder'])->whereNumber('id');
+        Route::post('orders/{id}/pickup', [RiderApiController::class, 'confirmPickup'])->whereNumber('id');
+        Route::post('orders/{id}/delivered', [RiderApiController::class, 'completeDelivery'])->whereNumber('id');
+    });
 });
