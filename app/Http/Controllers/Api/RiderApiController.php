@@ -59,21 +59,27 @@ class RiderApiController extends Controller
         $rider = $request->user();
         $profile = RiderProfile::where('user_id', $rider->id)->first();
 
+        // 1. Today's earnings
         $todayEarnings = RiderEarning::where('rider_id', $rider->id)
             ->whereDate('created_at', today())
             ->selectRaw('COUNT(*) as deliveries, COALESCE(SUM(amount), 0) as total')
             ->first();
 
+        // 2. Cash in hand (COD orders)
         $cashService = app(RiderCashService::class);
         $cashInHand = $cashService->cashInHand($rider->id);
 
+        // 3. Ongoing active order (if any)
         $activeOrder = Order::where('rider_id', $rider->id)
             ->whereIn('status', ['ready', 'picked_up'])
             ->with(['restaurant', 'items'])
             ->first();
 
+        // 4. Available orders in zone
         $availableOrders = [];
-        if ($profile && $profile->is_active && ! $activeOrder) {
+        $isOnline = (bool) ($profile?->is_online ?? false);
+
+        if ($profile && $isOnline && ! $activeOrder) {
             $availableOrders = Order::where('status', 'ready')
                 ->whereNull('rider_id')
                 ->with(['restaurant', 'items'])
@@ -89,7 +95,8 @@ class RiderApiController extends Controller
                     'id' => $rider->id,
                     'name' => $rider->name,
                     'phone' => $rider->phone,
-                    'is_active' => (bool) ($profile?->is_active ?? false),
+                    'is_online' => $isOnline,
+                    'is_active' => $isOnline,
                     'zone' => $profile?->zone ?? 'Dhaka',
                 ],
                 'summary' => [
@@ -106,13 +113,25 @@ class RiderApiController extends Controller
     /** POST /api/rider/toggle-duty */
     public function toggleDuty(Request $request): JsonResponse
     {
-        $profile = RiderProfile::firstOrCreate(['user_id' => $request->user()->id]);
-        $profile->is_active = ! $profile->is_active;
+        $rider = $request->user();
+        $profile = RiderProfile::where('user_id', $rider->id)->first();
+
+        if (! $profile) {
+            $profile = new RiderProfile();
+            $profile->user_id = $rider->id;
+            $profile->vehicle_type = 'bike';
+            $profile->is_approved = true;
+            $profile->is_online = false;
+        }
+
+        // Database uses is_online column
+        $profile->is_online = ! $profile->is_online;
         $profile->save();
 
         return response()->json([
-            'message' => $profile->is_active ? 'Online' : 'Offline',
-            'is_active' => $profile->is_active,
+            'message' => $profile->is_online ? 'Online' : 'Offline',
+            'is_online' => (bool) $profile->is_online,
+            'is_active' => (bool) $profile->is_online,
         ]);
     }
 
@@ -127,7 +146,7 @@ class RiderApiController extends Controller
         RiderProfile::where('user_id', $request->user()->id)->update([
             'current_lat' => $validated['latitude'],
             'current_lng' => $validated['longitude'],
-            'last_location_at' => now(),
+            'location_updated_at' => now(),
         ]);
 
         return response()->json(['success' => true]);
@@ -137,6 +156,7 @@ class RiderApiController extends Controller
     public function acceptOrder(int $id, Request $request): JsonResponse
     {
         $rider = $request->user();
+
         $affected = Order::where('id', $id)
             ->where('status', 'ready')
             ->whereNull('rider_id')
